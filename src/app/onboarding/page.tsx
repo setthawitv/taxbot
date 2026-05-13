@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { initLiff, getLiffProfile, isInLineClient } from "@/lib/liff";
+import { initLiff, getLiffProfile } from "@/lib/liff";
 
 type Step = {
   key: string;
@@ -33,20 +33,23 @@ export default function OnboardingPage() {
   const [state, setState] = useState<Record<string, boolean>>({});
   const [open, setOpen] = useState(true);
   const [lineProfile, setLineProfile] = useState<{ displayName: string } | null>(null);
+  const [liffReady, setLiffReady] = useState(false);
 
   useEffect(() => {
     const saved = loadState();
     const next = { ...saved };
 
-    // Auto-complete LINE step if running inside LINE or LIFF
-    if (isInLineClient()) {
-      next.lineConnected = true;
-      initLiff().then(() =>
-        getLiffProfile().then((p) => {
-          if (p) setLineProfile(p);
-        })
-      );
-    }
+    // Init LIFF, then check login state (works both in LINE app and desktop browser)
+    initLiff().then(async () => {
+      setLiffReady(true);
+      const profile = await getLiffProfile(); // triggers liff.login() if not logged in
+      if (profile) {
+        setLineProfile(profile);
+        next.lineConnected = true;
+        setState({ ...next });
+        saveState({ ...next });
+      }
+    }).catch(() => setLiffReady(true));
 
     // Auto-complete Google step if NextAuth session exists
     if (session?.user) {
@@ -69,9 +72,11 @@ export default function OnboardingPage() {
     {
       key: "lineConnected",
       label: "เชื่อมต่อ LINE",
-      sublabel: lineProfile ? `สวัสดี ${lineProfile.displayName}` : "เปิดผ่าน LINE App",
-      action: isInLineClient() ? undefined : () => alert("กรุณาเปิดผ่าน LINE"),
-      actionLabel: "เปิด LINE",
+      sublabel: lineProfile ? `สวัสดี ${lineProfile.displayName}` : "กำลังเชื่อมต่อ...",
+      action: liffReady && !state.lineConnected
+        ? () => initLiff().then(() => getLiffProfile())
+        : undefined,
+      actionLabel: "เข้าสู่ระบบ LINE",
     },
     {
       key: "businessCreated",
