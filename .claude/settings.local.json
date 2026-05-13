@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(New-Item -ItemType Directory -Path \"C:\\\\Users\\\\mos_b\\\\Desktop\\\\TaxBot\\\\src\\\\app\\\\api\\\\webhook\" -Force)"
+    ]
+  }
+}
