@@ -1,17 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { initLiff, getLiffProfile } from "@/lib/liff";
-
-type Step = {
-  key: string;
-  label: string;
-  sublabel?: string;
-  action?: () => void;
-  actionLabel?: string;
-};
 
 const STORAGE_KEY = "taxbot_onboarding";
 
@@ -34,15 +26,17 @@ export default function OnboardingPage() {
   const [open, setOpen] = useState(true);
   const [lineProfile, setLineProfile] = useState<{ displayName: string } | null>(null);
   const [liffReady, setLiffReady] = useState(false);
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const saved = loadState();
     const next = { ...saved };
 
-    // Init LIFF, then check login state (works both in LINE app and desktop browser)
     initLiff().then(async () => {
       setLiffReady(true);
-      const profile = await getLiffProfile(); // triggers liff.login() if not logged in
+      const profile = await getLiffProfile();
       if (profile) {
         setLineProfile(profile);
         next.lineConnected = true;
@@ -51,10 +45,13 @@ export default function OnboardingPage() {
       }
     }).catch(() => setLiffReady(true));
 
-    // Auto-complete Google step if NextAuth session exists
     if (session?.user) {
       next.googleConnected = true;
     }
+
+    // Restore saved receipt preview
+    const savedPreview = localStorage.getItem("taxbot_receipt_preview");
+    if (savedPreview) setReceiptPreview(savedPreview);
 
     setState(next);
     saveState(next);
@@ -68,7 +65,25 @@ export default function OnboardingPage() {
     });
   }
 
-  const steps: Step[] = [
+  function handleReceiptFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result as string;
+      setReceiptPreview(base64);
+      // Save for Day 3 (Claude API will read this)
+      localStorage.setItem("taxbot_receipt_preview", base64);
+      localStorage.setItem("taxbot_receipt_base64", base64.split(",")[1]);
+      mark("firstReceiptUploaded");
+      setUploading(false);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  const steps = [
     {
       key: "lineConnected",
       label: "เชื่อมต่อ LINE",
@@ -98,9 +113,9 @@ export default function OnboardingPage() {
     {
       key: "firstReceiptUploaded",
       label: "อัปโหลดใบเสร็จแรก",
-      sublabel: "ส่งรูปสลิปใน LINE Chat",
-      action: () => mark("firstReceiptUploaded"),
-      actionLabel: "ทำแล้ว",
+      sublabel: receiptPreview ? "ได้รับใบเสร็จแล้ว ✓" : "เลือกรูปสลิปหรือใบเสร็จ",
+      action: () => fileInputRef.current?.click(),
+      actionLabel: uploading ? "กำลังอัปโหลด..." : "เลือกรูป",
     },
     {
       key: "signatureAdded",
@@ -128,19 +143,23 @@ export default function OnboardingPage() {
 
   return (
     <main className="min-h-screen bg-gray-50 flex flex-col items-center justify-start px-4 py-10">
-      <div className="w-full max-w-sm">
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleReceiptFile}
+      />
 
-        {/* Header */}
+      <div className="w-full max-w-sm">
         <div className="text-center mb-6">
           <div className="text-4xl mb-2">🤖</div>
           <h1 className="text-xl font-bold text-gray-800">ยินดีต้อนรับสู่ TaxBot</h1>
           <p className="text-gray-400 text-sm mt-1">ทำตามขั้นตอนเพื่อเริ่มใช้งาน</p>
         </div>
 
-        {/* Checklist card */}
         <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-
-          {/* Card header */}
           <button
             onClick={() => setOpen((o) => !o)}
             className="w-full flex items-center justify-between px-5 py-4 text-left"
@@ -149,7 +168,6 @@ export default function OnboardingPage() {
             <span className="text-gray-400 text-sm">{open ? "∧" : "∨"}</span>
           </button>
 
-          {/* Progress bar */}
           <div className="h-1 bg-gray-100 mx-5 mb-1 rounded-full overflow-hidden">
             <div
               className="h-1 bg-green-400 rounded-full transition-all duration-500"
@@ -160,7 +178,6 @@ export default function OnboardingPage() {
             {completed}/{steps.length} ขั้นตอน
           </p>
 
-          {/* Steps */}
           {open && (
             <ul className="divide-y divide-gray-100">
               {steps.map((step, i) => {
@@ -169,36 +186,46 @@ export default function OnboardingPage() {
                 const locked = !prevDone && !done;
 
                 return (
-                  <li
-                    key={step.key}
-                    className={`flex items-center gap-3 px-5 py-3 ${locked ? "opacity-40" : ""}`}
-                  >
-                    {/* Icon */}
-                    <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-sm
-                        ${done ? "bg-green-500 text-white" : "border-2 border-gray-300 text-transparent"}`}
-                    >
-                      {done ? "✓" : "○"}
-                    </div>
+                  <li key={step.key} className={`px-5 py-3 ${locked ? "opacity-40" : ""}`}>
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-sm
+                          ${done ? "bg-green-500 text-white" : "border-2 border-gray-300 text-transparent"}`}
+                      >
+                        {done ? "✓" : "○"}
+                      </div>
 
-                    {/* Label */}
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium ${done ? "line-through text-gray-400" : "text-gray-700"}`}>
-                        {step.label}
-                      </p>
-                      {step.sublabel && (
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-medium ${done ? "line-through text-gray-400" : "text-gray-700"}`}>
+                          {step.label}
+                        </p>
                         <p className="text-xs text-gray-400 truncate">{step.sublabel}</p>
+                      </div>
+
+                      {!done && !locked && step.action && (
+                        <button
+                          onClick={step.action}
+                          disabled={uploading && step.key === "firstReceiptUploaded"}
+                          className="text-xs bg-gray-800 text-white px-3 py-1.5 rounded-lg hover:bg-gray-700 transition-colors flex-shrink-0 disabled:opacity-50"
+                        >
+                          {step.actionLabel}
+                        </button>
                       )}
                     </div>
 
-                    {/* Action */}
-                    {!done && !locked && step.action && (
-                      <button
-                        onClick={step.action}
-                        className="text-xs bg-gray-800 text-white px-3 py-1.5 rounded-lg hover:bg-gray-700 transition-colors flex-shrink-0"
-                      >
-                        {step.actionLabel}
-                      </button>
+                    {/* Receipt preview */}
+                    {step.key === "firstReceiptUploaded" && receiptPreview && (
+                      <div className="mt-3 ml-9">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={receiptPreview}
+                          alt="receipt preview"
+                          className="w-full max-h-48 object-contain rounded-xl border border-gray-200"
+                        />
+                        <p className="text-xs text-gray-400 mt-1 text-center">
+                          AI จะอ่านใบเสร็จนี้ในขั้นตอนถัดไป
+                        </p>
+                      </div>
                     )}
                   </li>
                 );
@@ -207,7 +234,6 @@ export default function OnboardingPage() {
           )}
         </div>
 
-        {/* Done button */}
         {allDone && (
           <button
             onClick={finishOnboarding}
