@@ -73,10 +73,14 @@ async function handleText(replyToken: string, text: string) {
 async function handleImage(replyToken: string, msg: webhook.ImageMessageContent) {
   // Download image from LINE — Day 3 will pass this to Claude API
   const stream = await blobClient.getMessageContent(msg.id);
-  const buffer = await stream.arrayBuffer();
-  const base64Image = Buffer.from(buffer).toString("base64");
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  const imageBuffer = Buffer.concat(chunks);
+  const base64Image = imageBuffer.toString("base64");
 
-  console.log(`Received image ${msg.id}, size: ${buffer.byteLength} bytes, base64 ready: ${base64Image.length > 0}`);
+  console.log(`Received image ${msg.id}, size: ${imageBuffer.length} bytes, base64 ready: ${base64Image.length > 0}`);
 
   await client.replyMessage({
     replyToken,
