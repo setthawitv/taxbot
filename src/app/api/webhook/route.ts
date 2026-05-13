@@ -36,6 +36,8 @@ async function handleEvent(event: webhook.Event) {
   const msg = (event as webhook.MessageEvent).message;
   const replyToken = (event as webhook.MessageEvent).replyToken;
 
+  if (!replyToken) return;
+
   if (msg.type === "text") {
     await handleText(replyToken, (msg as webhook.TextMessageContent).text);
   } else if (msg.type === "image") {
