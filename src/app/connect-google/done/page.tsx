@@ -10,6 +10,7 @@ function ConnectGoogleDoneInner() {
   const lid = params.get("lid") ?? "";
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const [googleEmail, setGoogleEmail] = useState("");
 
   useEffect(() => {
     if (!lid || saved) return;
@@ -20,6 +21,8 @@ function ConnectGoogleDoneInner() {
       if (!session) { setError("ไม่พบ session กรุณาลองใหม่"); return; }
 
       const s = session as typeof session & { accessToken?: string; refreshToken?: string };
+      const email = session.user?.email ?? "";
+      setGoogleEmail(email);
 
       console.log("[connect-google/done] accessToken:", s.accessToken ? "✓" : "null");
       console.log("[connect-google/done] refreshToken:", s.refreshToken ? "✓" : "null");
@@ -28,11 +31,11 @@ function ConnectGoogleDoneInner() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          lineUserId:        lid,
-          googleAccessToken: s.accessToken  ?? null,
-          googleRefreshToken:s.refreshToken ?? null,
-          googleEmail:       session.user?.email ?? null,
-          businessName:      "ธุรกิจของฉัน",
+          lineUserId:         lid,
+          googleAccessToken:  s.accessToken  ?? null,
+          googleRefreshToken: s.refreshToken ?? null,
+          googleEmail:        email,
+          businessName:       "ธุรกิจของฉัน",
         }),
       });
     })
@@ -44,17 +47,6 @@ function ConnectGoogleDoneInner() {
       .catch(() => setError("บันทึกไม่สำเร็จ กรุณาลองใหม่"));
   }, [lid, saved]);
 
-  if (status === "loading") {
-    return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <div className="text-center">
-          <div className="text-5xl mb-4">⏳</div>
-          <p className="text-gray-600">กำลังโหลด...</p>
-        </div>
-      </main>
-    );
-  }
-
   return (
     <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="text-center max-w-xs">
@@ -63,7 +55,7 @@ function ConnectGoogleDoneInner() {
             <div className="text-6xl mb-4">✅</div>
             <h1 className="text-xl font-bold text-gray-800 mb-2">เชื่อมต่อสำเร็จ!</h1>
             <p className="text-gray-500 text-sm mb-1">
-              {session?.user?.email}
+              {googleEmail}
             </p>
             <a
               href={`https://line.me/R/ti/p/${process.env.NEXT_PUBLIC_LINE_OA_ID ?? "@074ebvus"}`}
