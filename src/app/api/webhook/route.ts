@@ -1,10 +1,46 @@
 import { validateSignature, messagingApi, webhook } from "@line/bot-sdk";
 import { NextRequest, NextResponse } from "next/server";
+import { google } from "googleapis";
 import { supabaseAdmin } from "@/lib/supabase";
 import { readReceipt, ReceiptData } from "@/lib/groq";
 import { appendTransaction, createSheet } from "@/lib/sheets";
 import { createRootFolder, ensureReceiptFolder, uploadFileToDrive } from "@/lib/drive";
 import { generateReceiptPdf } from "@/lib/receipt-pdf";
+
+/**
+ * Returns a valid Google access token, refreshing it automatically if expired.
+ * Saves the new token back to Supabase so future calls also work.
+ */
+async function getFreshGoogleToken(
+  userId: string,
+  accessToken: string,
+  refreshToken: string | null
+): Promise<string> {
+  if (!refreshToken) return accessToken;
+  try {
+    const auth = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID!,
+      process.env.GOOGLE_CLIENT_SECRET!
+    );
+    auth.setCredentials({ access_token: accessToken, refresh_token: refreshToken });
+
+    // getAccessToken() auto-refreshes when the stored token is expired
+    const { token } = await auth.getAccessToken();
+    const fresh = token ?? accessToken;
+
+    if (fresh !== accessToken) {
+      console.log("[google-auth] token refreshed, saving...");
+      await supabaseAdmin
+        .from("users")
+        .update({ google_access_token: fresh })
+        .eq("id", userId);
+    }
+    return fresh;
+  } catch (err) {
+    console.error("[google-auth] refresh failed:", err);
+    return accessToken;   // fall back to existing token
+  }
+}
 
 const { MessagingApiClient, MessagingApiBlobClient } = messagingApi;
 
@@ -229,7 +265,7 @@ async function processConfirmedReceipt(lineUserId: string, pendingId: string) {
     // Look up user
     const { data: user } = await supabaseAdmin
       .from("users")
-      .select("id, sheet_id, drive_folder_id, google_access_token, business_name")
+      .select("id, sheet_id, drive_folder_id, google_access_token, google_refresh_token, business_name")
       .eq("line_user_id", lineUserId)
       .single();
 
@@ -260,25 +296,30 @@ async function processConfirmedReceipt(lineUserId: string, pendingId: string) {
     let driveFolderUrl: string | undefined;
 
     if (user.google_access_token) {
+      // Refresh the access token if expired
+      const gToken = await getFreshGoogleToken(
+        user.id,
+        user.google_access_token,
+        user.google_refresh_token ?? null
+      );
+
       // Ensure Sheet exists
       let sheetId = user.sheet_id;
       if (!sheetId) {
-        sheetId = await createSheet(user.google_access_token, user.business_name ?? "ธุรกิจของฉัน");
+        sheetId = await createSheet(gToken, user.business_name ?? "ธุรกิจของฉัน");
         await supabaseAdmin.from("users").update({ sheet_id: sheetId }).eq("id", user.id);
       }
 
       // Ensure root Drive folder exists
       let driveFolderId = user.drive_folder_id;
       if (!driveFolderId) {
-        driveFolderId = await createRootFolder(
-          user.google_access_token, user.business_name ?? "TaxBot"
-        );
+        driveFolderId = await createRootFolder(gToken, user.business_name ?? "TaxBot");
         await supabaseAdmin.from("users").update({ drive_folder_id: driveFolderId }).eq("id", user.id);
       }
 
       // Create folder structure
       const { folderId, folderUrl, accountingFolderId } = await ensureReceiptFolder(
-        user.google_access_token, driveFolderId, receipt.date, receipt.vendor
+        gToken, driveFolderId, receipt.date, receipt.vendor
       );
       driveFolderUrl = folderUrl;
 
@@ -287,8 +328,7 @@ async function processConfirmedReceipt(lineUserId: string, pendingId: string) {
 
       // Upload original image
       await uploadFileToDrive(
-        user.google_access_token, folderId,
-        `${receipt.date}_${safeName}.jpg`, imageBuffer, "image/jpeg"
+        gToken, folderId, `${receipt.date}_${safeName}.jpg`, imageBuffer, "image/jpeg"
       );
 
       // Generate + upload PDF to both folders
@@ -297,13 +337,13 @@ async function processConfirmedReceipt(lineUserId: string, pendingId: string) {
       const pdfName   = `${receipt.date}_${safeName}_${bizSafe}_${txId.slice(0, 8)}.pdf`;
 
       await Promise.all([
-        uploadFileToDrive(user.google_access_token, folderId,             pdfName, pdfBuffer, "application/pdf"),
-        uploadFileToDrive(user.google_access_token, accountingFolderId,   pdfName, pdfBuffer, "application/pdf"),
+        uploadFileToDrive(gToken, folderId,           pdfName, pdfBuffer, "application/pdf"),
+        uploadFileToDrive(gToken, accountingFolderId, pdfName, pdfBuffer, "application/pdf"),
       ]);
 
       // Append to Sheet
       if (sheetId) {
-        await appendTransaction(user.google_access_token, sheetId, receipt, txId);
+        await appendTransaction(gToken, sheetId, receipt, txId);
       }
     }
 

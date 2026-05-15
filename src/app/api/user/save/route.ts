@@ -14,6 +14,7 @@ export async function POST(req: NextRequest) {
       phone,
       vatRegistered,
       googleAccessToken,
+      googleRefreshToken,
       googleEmail,
     } = await req.json();
 
@@ -55,8 +56,9 @@ export async function POST(req: NextRequest) {
         business_name:    businessName   ?? null,
         phone:            phone          ?? null,
         vat_registered:   vatRegistered  ?? false,
-        google_access_token: googleAccessToken ?? null,
-        google_email:     googleEmail    ?? null,
+        google_access_token:   googleAccessToken  ?? null,
+        google_refresh_token:  googleRefreshToken ?? null,
+        google_email:          googleEmail        ?? null,
         sheet_id:         sheetId        ?? null,
         drive_folder_id:  driveFolderId  ?? null,
       },

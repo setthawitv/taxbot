@@ -15,16 +15,17 @@ function ConnectGoogleDoneInner() {
   useEffect(() => {
     if (status !== "authenticated" || !session || !lid || saved) return;
 
-    const token = (session as typeof session & { accessToken?: string })?.accessToken;
+    const s = session as typeof session & { accessToken?: string; refreshToken?: string };
 
     fetch("/api/user/save", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        lineUserId: lid,
-        googleAccessToken: token,
-        googleEmail: session.user?.email,
-        businessName: "ธุรกิจของฉัน",
+        lineUserId:           lid,
+        googleAccessToken:    s.accessToken,
+        googleRefreshToken:   s.refreshToken,
+        googleEmail:          session.user?.email,
+        businessName:         "ธุรกิจของฉัน",
       }),
     })
       .then((r) => {

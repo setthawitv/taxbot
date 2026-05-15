@@ -25,9 +25,10 @@ const handler = NextAuth({
       return token;
     },
     async session({ session, token }) {
-      (session as typeof session & { accessToken?: string }).accessToken =
-        token.accessToken as string;
-      return session;
+      const s = session as typeof session & { accessToken?: string; refreshToken?: string };
+      s.accessToken  = token.accessToken  as string;
+      s.refreshToken = token.refreshToken as string;
+      return s;
     },
   },
   secret: process.env.NEXTAUTH_SECRET,

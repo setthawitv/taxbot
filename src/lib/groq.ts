@@ -63,7 +63,7 @@ export async function readReceipt(base64Image: string): Promise<ReceiptData> {
                 "Required JSON fields:",
                 '- type: "income" or "expense"',
                 "- amount: total paid as a number",
-                "- vendor: payer/payee name",
+                "- vendor: the name of the RECIPIENT (who is receiving the money). For bank transfer slips, this is the DESTINATION account holder shown at the bottom of the arrow, NOT the sender at the top.",
                 `- date: "YYYY-MM-DD" (use ${today} if not visible)`,
                 "- description: short Thai description",
                 '- docType: "สลิปโอนเงิน" or "ใบเสร็จรับเงิน" or "ใบกำกับภาษี" or "อื่นๆ"',
