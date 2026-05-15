@@ -139,6 +139,27 @@ async function handleImage(
       .limit(1).single();
     if (vendorRule) receipt.type = vendorRule.type as "income" | "expense";
 
+    // 4b. Duplicate detection — check by bank transaction ID
+    if (receipt.transactionId) {
+      const { data: dup } = await supabaseAdmin
+        .from("transactions")
+        .select("id, transaction_date, amount")
+        .eq("user_id", user.id)
+        .eq("external_transaction_id", receipt.transactionId)
+        .single();
+
+      if (dup) {
+        await client.pushMessage({
+          to: lineUserId,
+          messages: [{
+            type: "text",
+            text: `⚠️ สลิปนี้เคยบันทึกแล้วครับ!\n\nTransaction ID: ${receipt.transactionId}\nวันที่: ${dup.transaction_date}\nจำนวน: ฿${Number(dup.amount).toLocaleString("th-TH")}\n\nหากต้องการบันทึกใหม่กรุณาติดต่อผู้ดูแลระบบครับ`,
+          }],
+        });
+        return;
+      }
+    }
+
     // 5. Save as pending (awaiting user confirmation)
     const { data: pendingRow, error: pendingErr } = await supabaseAdmin
       .from("pending_receipts")
@@ -218,12 +239,13 @@ async function processConfirmedReceipt(lineUserId: string, pendingId: string) {
     const { data: txRow, error: txErr } = await supabaseAdmin
       .from("transactions")
       .insert({
-        user_id:          user.id,
-        type:             receipt.type,
-        amount:           receipt.amount,
-        vendor:           receipt.vendor,
-        description:      receipt.description,
-        transaction_date: receipt.date,
+        user_id:                  user.id,
+        type:                     receipt.type,
+        amount:                   receipt.amount,
+        vendor:                   receipt.vendor,
+        description:              receipt.description,
+        transaction_date:         receipt.date,
+        external_transaction_id:  receipt.transactionId || null,
       })
       .select("id")
       .single();
@@ -366,6 +388,9 @@ function buildConfirmFlex(receipt: ReceiptData, pendingId: string): messagingApi
           row("รายละเอียด",    receipt.description),
           row("ประเภทเอกสาร",  receipt.docType),
           row("หมวดหมู่",      receipt.expenseCategory),
+          ...(receipt.transactionId
+            ? [row("Transaction ID", receipt.transactionId)]
+            : []),
           { type: "separator", margin: "md" },
           { type: "text", text: "ข้อมูลถูกต้องไหมครับ?", size: "sm", color: "#555555",
             margin: "md", align: "center" },
