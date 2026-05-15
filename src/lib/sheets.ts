@@ -29,6 +29,7 @@ export async function createSheet(accessToken: string, businessName: string): Pr
                     { userEnteredValue: { stringValue: "ร้านค้า/ผู้รับ" } },
                     { userEnteredValue: { stringValue: "จำนวนเงิน (฿)" } },
                     { userEnteredValue: { stringValue: "รายละเอียด" } },
+                    { userEnteredValue: { stringValue: "ลิงก์หลักฐาน" } },
                     { userEnteredValue: { stringValue: "บันทึกเมื่อ" } },
                   ],
                 },
@@ -43,11 +44,12 @@ export async function createSheet(accessToken: string, businessName: string): Pr
   return response.data.spreadsheetId!;
 }
 
-// Append one transaction row to the sheet
+// Append one transaction row — includes Drive evidence folder link
 export async function appendTransaction(
   accessToken: string,
   sheetId: string,
-  data: ReceiptData
+  data: ReceiptData,
+  driveFolderUrl?: string
 ): Promise<void> {
   const auth = getAuth(accessToken);
   const sheets = google.sheets({ version: "v4", auth });
@@ -57,10 +59,18 @@ export async function appendTransaction(
 
   await sheets.spreadsheets.values.append({
     spreadsheetId: sheetId,
-    range: "รายการ!A:F",
+    range: "รายการ!A:G",
     valueInputOption: "USER_ENTERED",
     requestBody: {
-      values: [[data.date, typeLabel, data.vendor, data.amount, data.description, now]],
+      values: [[
+        data.date,
+        typeLabel,
+        data.vendor,
+        data.amount,
+        data.description,
+        driveFolderUrl ?? "",
+        now,
+      ]],
     },
   });
 }

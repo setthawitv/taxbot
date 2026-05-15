@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { createSheet } from "@/lib/sheets";
+import { createRootFolder } from "@/lib/drive";
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,33 +21,44 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing lineUserId" }, { status: 400 });
     }
 
-    // Check if user already exists (to preserve sheet_id)
+    // Check if user already exists (preserve sheet_id and drive_folder_id)
     const { data: existing } = await supabaseAdmin
       .from("users")
-      .select("id, sheet_id")
+      .select("id, sheet_id, drive_folder_id")
       .eq("line_user_id", lineUserId)
       .single();
 
-    let sheetId = existing?.sheet_id;
+    let sheetId       = existing?.sheet_id;
+    let driveFolderId = existing?.drive_folder_id;
 
-    // Create Google Sheet if token provided and no sheet yet
-    if (!sheetId && googleAccessToken) {
-      sheetId = await createSheet(googleAccessToken, businessName || "ธุรกิจของฉัน");
+    if (googleAccessToken) {
+      // Create Google Sheet if not yet created
+      if (!sheetId) {
+        sheetId = await createSheet(googleAccessToken, businessName || "ธุรกิจของฉัน");
+      }
+      // Create root Drive folder (TaxBot/{businessName}) if not yet created
+      if (!driveFolderId) {
+        driveFolderId = await createRootFolder(
+          googleAccessToken,
+          businessName || "ธุรกิจของฉัน"
+        );
+      }
     }
 
     // Upsert user with all fields
     const { error } = await supabaseAdmin.from("users").upsert(
       {
-        line_user_id: lineUserId,
-        first_name: firstName ?? null,
-        last_name: lastName ?? null,
-        business_type: businessType ?? null,
-        business_name: businessName ?? null,
-        phone: phone ?? null,
-        vat_registered: vatRegistered ?? false,
+        line_user_id:     lineUserId,
+        first_name:       firstName      ?? null,
+        last_name:        lastName       ?? null,
+        business_type:    businessType   ?? null,
+        business_name:    businessName   ?? null,
+        phone:            phone          ?? null,
+        vat_registered:   vatRegistered  ?? false,
         google_access_token: googleAccessToken ?? null,
-        google_email: googleEmail ?? null,
-        sheet_id: sheetId ?? null,
+        google_email:     googleEmail    ?? null,
+        sheet_id:         sheetId        ?? null,
+        drive_folder_id:  driveFolderId  ?? null,
       },
       { onConflict: "line_user_id" }
     );

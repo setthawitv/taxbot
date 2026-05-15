@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { readReceipt } from "@/lib/groq";
 import { appendTransaction, createSheet } from "@/lib/sheets";
+import { createRootFolder, ensureReceiptFolder, uploadFileToDrive } from "@/lib/drive";
+import { generateReceiptPdf } from "@/lib/receipt-pdf";
 
 const { MessagingApiClient, MessagingApiBlobClient } = messagingApi;
 
@@ -52,7 +54,6 @@ async function handleText(replyToken: string, lineUserId: string, text: string) 
   let reply = "";
 
   if (lower.includes("ยอด") || lower.includes("สรุป")) {
-    // Fetch real totals from Supabase
     const { data: user } = await supabaseAdmin
       .from("users")
       .select("id")
@@ -71,7 +72,7 @@ async function handleText(replyToken: string, lineUserId: string, text: string) 
         .gte("transaction_date", firstDay)
         .lte("transaction_date", lastDay);
 
-      const income = txns?.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0) ?? 0;
+      const income  = txns?.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0) ?? 0;
       const expense = txns?.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0) ?? 0;
 
       reply = `📊 ยอดเดือนนี้\n💰 รายรับ: ฿${income.toLocaleString("th-TH")}\n🧾 รายจ่าย: ฿${expense.toLocaleString("th-TH")}\n✅ คงเหลือ: ฿${(income - expense).toLocaleString("th-TH")}`;
@@ -94,7 +95,6 @@ async function handleText(replyToken: string, lineUserId: string, text: string) 
 }
 
 async function handleImage(replyToken: string, lineUserId: string, msg: webhook.ImageMessageContent) {
-  // Tell user we're processing
   await client.replyMessage({
     replyToken,
     messages: [{ type: "text", text: "📸 ได้รับสลิปแล้ว กำลังอ่านข้อมูล..." }],
@@ -107,15 +107,16 @@ async function handleImage(replyToken: string, lineUserId: string, msg: webhook.
     for await (const chunk of stream) {
       chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
     }
-    const base64Image = Buffer.concat(chunks).toString("base64");
+    const imageBuffer = Buffer.concat(chunks);
+    const base64Image = imageBuffer.toString("base64");
 
-    // 2. Read receipt with Gemini
+    // 2. AI reads the receipt
     const receipt = await readReceipt(base64Image);
 
-    // 3. Look up user in Supabase
+    // 3. Look up user
     const { data: user } = await supabaseAdmin
       .from("users")
-      .select("id, sheet_id, google_access_token, business_name")
+      .select("id, sheet_id, drive_folder_id, google_access_token, business_name")
       .eq("line_user_id", lineUserId)
       .single();
 
@@ -127,7 +128,7 @@ async function handleImage(replyToken: string, lineUserId: string, msg: webhook.
       return;
     }
 
-    // 4. Check vendor rules — override AI type if user has a matching rule
+    // 4. Apply vendor rules
     const { data: vendorRule } = await supabaseAdmin
       .from("vendor_rules")
       .select("type")
@@ -136,11 +137,9 @@ async function handleImage(replyToken: string, lineUserId: string, msg: webhook.
       .limit(1)
       .single();
 
-    if (vendorRule) {
-      receipt.type = vendorRule.type as "income" | "expense";
-    }
+    if (vendorRule) receipt.type = vendorRule.type as "income" | "expense";
 
-    // 5. Save transaction to Supabase
+    // 5. Save to Supabase
     await supabaseAdmin.from("transactions").insert({
       user_id: user.id,
       type: receipt.type,
@@ -150,15 +149,60 @@ async function handleImage(replyToken: string, lineUserId: string, msg: webhook.
       transaction_date: receipt.date,
     });
 
-    // 6. Append to Google Sheet (create if missing)
-    let sheetId = user.sheet_id;
-    if (!sheetId && user.google_access_token) {
-      sheetId = await createSheet(user.google_access_token, user.business_name ?? "ธุรกิจของฉัน");
-      await supabaseAdmin.from("users").update({ sheet_id: sheetId }).eq("id", user.id);
-    }
+    // 6. Google Drive + Sheet (only if user has connected Google)
+    let driveFolderUrl: string | undefined;
 
-    if (sheetId && user.google_access_token) {
-      await appendTransaction(user.google_access_token, sheetId, receipt);
+    if (user.google_access_token) {
+      // 6a. Ensure Google Sheet exists
+      let sheetId = user.sheet_id;
+      if (!sheetId) {
+        sheetId = await createSheet(user.google_access_token, user.business_name ?? "ธุรกิจของฉัน");
+        await supabaseAdmin.from("users").update({ sheet_id: sheetId }).eq("id", user.id);
+      }
+
+      // 6b. Ensure root Drive folder exists
+      let driveFolderId = user.drive_folder_id;
+      if (!driveFolderId) {
+        driveFolderId = await createRootFolder(
+          user.google_access_token,
+          user.business_name ?? "TaxBot"
+        );
+        await supabaseAdmin.from("users").update({ drive_folder_id: driveFolderId }).eq("id", user.id);
+      }
+
+      // 6c. Create year/month/รวมหลักฐาน/transaction folder structure
+      const { folderId, folderUrl } = await ensureReceiptFolder(
+        user.google_access_token,
+        driveFolderId,
+        receipt.date,
+        receipt.vendor
+      );
+      driveFolderUrl = folderUrl;
+
+      // 6d. Upload original receipt image
+      const ext   = "jpg";
+      const imgName = `${receipt.date}_${receipt.vendor.replace(/[/\\:*?"<>|]/g, "").trim().slice(0, 30)}.${ext}`;
+      await uploadFileToDrive(user.google_access_token, folderId, imgName, imageBuffer, "image/jpeg");
+
+      // 6e. Generate and upload receipt substitute PDF
+      const receiptNo = `RC-${Date.now()}`;
+      const pdfBuffer = await generateReceiptPdf(
+        receipt,
+        user.business_name ?? "ธุรกิจของฉัน",
+        receiptNo
+      );
+      await uploadFileToDrive(
+        user.google_access_token,
+        folderId,
+        "ใบรับรองแทนใบเสร็จรับเงิน.pdf",
+        pdfBuffer,
+        "application/pdf"
+      );
+
+      // 6f. Append to Google Sheet (with Drive folder link)
+      if (sheetId) {
+        await appendTransaction(user.google_access_token, sheetId, receipt, driveFolderUrl);
+      }
     }
 
     // 7. Push summary back to user
@@ -169,8 +213,8 @@ async function handleImage(replyToken: string, lineUserId: string, msg: webhook.
       `ร้านค้า: ${receipt.vendor}\n` +
       `จำนวน: ฿${receipt.amount.toLocaleString("th-TH")}\n` +
       `วันที่: ${receipt.date}\n` +
-      `รายละเอียด: ${receipt.description}\n\n` +
-      `📊 ดูในชีทได้เลยครับ`;
+      `รายละเอียด: ${receipt.description}` +
+      (driveFolderUrl ? `\n\n📁 หลักฐาน: ${driveFolderUrl}` : "\n\n📊 ดูในชีทได้เลยครับ");
 
     await client.pushMessage({ to: lineUserId, messages: [{ type: "text", text: summary }] });
   } catch (err) {
