@@ -441,12 +441,12 @@ function buildConfirmFlex(receipt: ReceiptData, pendingId: string): messagingApi
         spacing: "sm",
         paddingAll: "16px",
         contents: [
-          row(vendorLabel,     receipt.vendor),
+          row(vendorLabel,     receipt.vendor  || "-"),
           row("จำนวนเงิน",     `฿${receipt.amount.toLocaleString("th-TH")}`),
-          row("วันที่",         receipt.date),
-          row("รายละเอียด",    receipt.description),
-          row("ประเภทเอกสาร",  receipt.docType),
-          row("หมวดหมู่",      receipt.expenseCategory),
+          row("วันที่",         receipt.date    || "-"),
+          row("รายละเอียด",    receipt.description || "-"),
+          row("ประเภทเอกสาร",  receipt.docType || "-"),
+          row("หมวดหมู่",      receipt.expenseCategory || "-"),
           ...(receipt.transactionId
             ? [row("Transaction ID", receipt.transactionId)]
             : []),

@@ -55,7 +55,7 @@ const PROMPT_LINES = [
   "- amount: total paid as a number",
   "- vendor: the name of the RECIPIENT (who is receiving the money). For bank transfer slips, this is the DESTINATION account holder shown at the bottom of the arrow, NOT the sender at the top.",
   '- date: "YYYY-MM-DD"',
-  "- description: short Thai description",
+  "- description: short Thai description (e.g. 'โอนเงิน', 'ค่าสินค้า', 'ชำระค่าบริการ' — never leave empty; use vendor name if nothing else)",
   '- docType: "สลิปโอนเงิน" or "ใบเสร็จรับเงิน" or "ใบกำกับภาษี" or "อื่นๆ"',
   '- expenseCategory: "บุคลากร & ค่าจ้าง" or "สินค้า" or "บริการ" or "ค่าขนส่ง" or "ค่าเช่า" or "อื่นๆ"',
   "- quantity: number (default 1)",
