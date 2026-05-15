@@ -17,8 +17,9 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [lineUserId, setLineUserId] = useState<string>("");
   const [googleEmail, setGoogleEmail] = useState<string>("");
+  const [connecting, setConnecting] = useState(false);
 
-  // Init LIFF to get LINE user ID
+  // Init LIFF to get LINE user ID + current Google status
   useEffect(() => {
     const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
     if (!liffId) return;
@@ -27,7 +28,6 @@ export default function SettingsPage() {
         if (liff.isLoggedIn()) {
           const profile = await liff.getProfile();
           setLineUserId(profile.userId);
-          // Fetch user info to show current Google connection status
           const res = await fetch(`/api/user/status?lineUserId=${profile.userId}`);
           if (res.ok) {
             const data = await res.json();
@@ -37,6 +37,39 @@ export default function SettingsPage() {
       }).catch(() => {});
     });
   }, []);
+
+  // Open Google connect in external browser (same as onboarding)
+  async function handleGoogleConnect() {
+    if (!lineUserId) return;
+    setConnecting(true);
+
+    const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
+    if (liffId) {
+      const { default: liff } = await import("@line/liff");
+      // Open in external browser so Google OAuth works properly
+      liff.openWindow({
+        url: `${window.location.origin}/connect-google?lid=${lineUserId}`,
+        external: true,
+      });
+      // Poll every 3s to detect when user finishes connecting in external browser
+      const poll = setInterval(async () => {
+        const res = await fetch(`/api/user/status?lineUserId=${lineUserId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.connected && data.email) {
+            setGoogleEmail(data.email);
+            setConnecting(false);
+            clearInterval(poll);
+          }
+        }
+      }, 3000);
+      // Stop polling after 3 minutes
+      setTimeout(() => { clearInterval(poll); setConnecting(false); }, 180000);
+    } else {
+      // Fallback: open in same tab (non-LINE browser)
+      window.location.href = `/connect-google?lid=${lineUserId}`;
+    }
+  }
 
   async function load() {
     const res = await fetch("/api/vendors");
@@ -100,23 +133,22 @@ export default function SettingsPage() {
                   <p className="text-sm font-medium text-gray-700">{googleEmail}</p>
                 </div>
               </div>
-              {lineUserId && (
-                <a
-                  href={`/connect-google?lid=${lineUserId}`}
-                  className="block text-center bg-gray-100 text-gray-600 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-200 transition-colors"
-                >
-                  🔄 เชื่อมต่อใหม่อีกครั้ง
-                </a>
-              )}
+              <button
+                onClick={handleGoogleConnect}
+                disabled={!lineUserId || connecting}
+                className="w-full bg-gray-100 text-gray-600 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-200 transition-colors disabled:opacity-40"
+              >
+                {connecting ? "⏳ รอการเชื่อมต่อ..." : "🔄 เชื่อมต่อใหม่อีกครั้ง"}
+              </button>
             </div>
           ) : (
-            <a
-              href={lineUserId ? `/connect-google?lid=${lineUserId}` : "#"}
-              className={`block text-center py-3 rounded-xl text-sm font-semibold text-white transition-colors
-                ${lineUserId ? "bg-blue-500 hover:bg-blue-600" : "bg-gray-300 cursor-not-allowed"}`}
+            <button
+              onClick={handleGoogleConnect}
+              disabled={!lineUserId || connecting}
+              className="w-full py-3 rounded-xl text-sm font-semibold text-white bg-blue-500 hover:bg-blue-600 transition-colors disabled:opacity-40"
             >
-              <span className="mr-2">🔗</span>เชื่อมต่อ Google
-            </a>
+              {connecting ? "⏳ รอการเชื่อมต่อ..." : "🔗 เชื่อมต่อ Google"}
+            </button>
           )}
         </div>
 
