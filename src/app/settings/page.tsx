@@ -15,6 +15,28 @@ export default function SettingsPage() {
   const [name, setName] = useState("");
   const [type, setType] = useState<"income" | "expense">("expense");
   const [saving, setSaving] = useState(false);
+  const [lineUserId, setLineUserId] = useState<string>("");
+  const [googleEmail, setGoogleEmail] = useState<string>("");
+
+  // Init LIFF to get LINE user ID
+  useEffect(() => {
+    const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
+    if (!liffId) return;
+    import("@line/liff").then(({ default: liff }) => {
+      liff.init({ liffId }).then(async () => {
+        if (liff.isLoggedIn()) {
+          const profile = await liff.getProfile();
+          setLineUserId(profile.userId);
+          // Fetch user info to show current Google connection status
+          const res = await fetch(`/api/user/status?lineUserId=${profile.userId}`);
+          if (res.ok) {
+            const data = await res.json();
+            setGoogleEmail(data.email ?? "");
+          }
+        }
+      }).catch(() => {});
+    });
+  }, []);
 
   async function load() {
     const res = await fetch("/api/vendors");
@@ -61,6 +83,41 @@ export default function SettingsPage() {
             <h1 className="text-xl font-bold text-gray-800">ตั้งค่าบัญชี</h1>
             <p className="text-gray-400 text-sm">Account Settings</p>
           </div>
+        </div>
+
+        {/* Google connection section */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-4">
+          <h2 className="font-semibold text-gray-700 mb-1">เชื่อมต่อ Google</h2>
+          <p className="text-xs text-gray-400 mb-4">
+            เชื่อมต่อเพื่อบันทึกหลักฐานไปยัง Google Drive และ Google Sheet อัตโนมัติ
+          </p>
+          {googleEmail ? (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2 bg-emerald-50 rounded-xl px-4 py-3">
+                <span className="text-emerald-500 text-lg">✅</span>
+                <div>
+                  <p className="text-xs text-gray-500">เชื่อมต่อแล้ว</p>
+                  <p className="text-sm font-medium text-gray-700">{googleEmail}</p>
+                </div>
+              </div>
+              {lineUserId && (
+                <a
+                  href={`/connect-google?lid=${lineUserId}`}
+                  className="block text-center bg-gray-100 text-gray-600 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-200 transition-colors"
+                >
+                  🔄 เชื่อมต่อใหม่อีกครั้ง
+                </a>
+              )}
+            </div>
+          ) : (
+            <a
+              href={lineUserId ? `/connect-google?lid=${lineUserId}` : "#"}
+              className={`block text-center py-3 rounded-xl text-sm font-semibold text-white transition-colors
+                ${lineUserId ? "bg-blue-500 hover:bg-blue-600" : "bg-gray-300 cursor-not-allowed"}`}
+            >
+              <span className="mr-2">🔗</span>เชื่อมต่อ Google
+            </a>
+          )}
         </div>
 
         {/* Vendor rules section */}
