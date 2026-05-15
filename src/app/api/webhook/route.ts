@@ -149,11 +149,17 @@ async function handleImage(
     console.log("[webhook] image size (original):", imageBuffer.length);
 
     // Compress to max 1024px JPEG — prevents 400 Bad Request on large KBank screenshots
-    const compressedBuffer = await sharp(imageBuffer)
-      .resize(1024, 1024, { fit: "inside", withoutEnlargement: true })
-      .jpeg({ quality: 85 })
-      .toBuffer();
-    console.log("[webhook] image size (compressed):", compressedBuffer.length);
+    let compressedBuffer: Buffer = imageBuffer;
+    try {
+      const sharpResult = await sharp(imageBuffer)
+        .resize(1024, 1024, { fit: "inside", withoutEnlargement: true })
+        .jpeg({ quality: 80 })
+        .toBuffer();
+      compressedBuffer = Buffer.from(sharpResult);
+      console.log("[webhook] compressed:", imageBuffer.length, "→", compressedBuffer.length, "bytes");
+    } catch (sharpErr) {
+      console.error("[webhook] sharp failed, using original:", sharpErr);
+    }
 
     const base64Image = compressedBuffer.toString("base64");
 
