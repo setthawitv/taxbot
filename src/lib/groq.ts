@@ -123,7 +123,18 @@ async function callWithFallback(base64Image: string, today: string): Promise<str
 export async function readReceipt(base64Image: string): Promise<ReceiptData> {
   const today = new Date().toISOString().split("T")[0];
 
-  const rawText = await callWithFallback(base64Image, today);
+  let rawText: string;
+  try {
+    rawText = await callWithFallback(base64Image, today);
+  } catch (groqErr) {
+    // All Groq models failed — try Claude if the key is available
+    if (process.env.ANTHROPIC_API_KEY) {
+      console.warn("[groq] all models failed, falling back to Claude:", groqErr);
+      const { readReceipt: claudeRead } = await import("./claude");
+      return claudeRead(base64Image);
+    }
+    throw groqErr;
+  }
 
   let parsed: Partial<ReceiptData> = {};
   try {

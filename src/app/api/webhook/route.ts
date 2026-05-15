@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { google } from "googleapis";
 import sharp from "sharp";
 import { supabaseAdmin } from "@/lib/supabase";
-import { readReceipt, ReceiptData } from "@/lib/claude";
+import { readReceipt, ReceiptData } from "@/lib/groq";
 import { appendTransaction, createSheet } from "@/lib/sheets";
 import { createRootFolder, ensureReceiptFolder, uploadFileToDrive } from "@/lib/drive";
 import { generateReceiptPdf } from "@/lib/receipt-pdf";
