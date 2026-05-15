@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import liff from "@line/liff";
 import { initLiff, isInLineClient, getLiffUrl } from "@/lib/liff";
 
@@ -200,10 +200,13 @@ function AddFriendScreen({ onDone }: { onDone: () => void }) {
 // ─── Main page ─────────────────────────────────────────────────────────────────
 type Screen = "loading" | "not-in-line" | "add-friend" | "slides";
 
-export default function IntroPage() {
+function IntroPageInner() {
   const [screen, setScreen] = useState<Screen>("loading");
   const [slide, setSlide] = useState(0);
   const router = useRouter();
+  const params = useSearchParams();
+  // ?to=/settings allows Rich Menu to open any page via LIFF URL (for LIFF context)
+  const redirectTo = params.get("to") ?? "/";
   const isLast = slide === SLIDES.length - 1;
   const s = SLIDES[slide];
 
@@ -223,9 +226,9 @@ export default function IntroPage() {
         const status = await res.json();
 
         if (status.onboarded) {
-          // Already registered — restore cookie and go straight to dashboard
+          // Already registered — go to requested page (or dashboard)
           document.cookie = "taxbot_onboarded=1; path=/; max-age=31536000";
-          router.replace("/");
+          router.replace(redirectTo);
           return;
         }
 
@@ -334,5 +337,20 @@ export default function IntroPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function IntroPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-5xl mb-4 animate-pulse">🤖</div>
+          <p className="text-gray-400 text-sm">กำลังโหลด...</p>
+        </div>
+      </main>
+    }>
+      <IntroPageInner />
+    </Suspense>
   );
 }

@@ -3,12 +3,14 @@ import { ImageResponse } from "next/og";
 
 const TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN!;
 const APP_URL = process.env.NEXTAUTH_URL ?? "https://taxbot-sage.vercel.app";
+// LIFF URL — opens pages WITH LIFF context so liff.openWindow(external) works
+const LIFF_URL = `https://liff.line.me/${process.env.NEXT_PUBLIC_LIFF_ID}`;
 
 const SECTIONS = [
-  { emoji: "📱", label: "หน้าหลัก",      color: "#059669", href: `${APP_URL}/` },
-  { emoji: "📋", label: "Google Sheets", color: "#0f766e", href: `${APP_URL}/sheets` },
-  { emoji: "📁", label: "Google Drive",  color: "#1d4ed8", href: `${APP_URL}/drive` },
-  { emoji: "⚙️", label: "ตั้งค่า",       color: "#374151", href: `${APP_URL}/settings` },
+  { emoji: "📱", label: "หน้าหลัก",      color: "#059669", href: `${LIFF_URL}?to=/` },
+  { emoji: "📋", label: "Google Sheets", color: "#0f766e", href: `${LIFF_URL}?to=/sheets` },
+  { emoji: "📁", label: "Google Drive",  color: "#1d4ed8", href: `${LIFF_URL}?to=/drive` },
+  { emoji: "⚙️", label: "ตั้งค่า",       color: "#374151", href: `${LIFF_URL}?to=/settings` },
 ];
 
 async function loadThaiFont(): Promise<ArrayBuffer | null> {
