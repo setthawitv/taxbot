@@ -1,7 +1,7 @@
 import { validateSignature, messagingApi, webhook } from "@line/bot-sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import { readReceipt } from "@/lib/claude";
+import { readReceipt } from "@/lib/groq";
 import { appendTransaction, createSheet } from "@/lib/sheets";
 
 const { MessagingApiClient, MessagingApiBlobClient } = messagingApi;
