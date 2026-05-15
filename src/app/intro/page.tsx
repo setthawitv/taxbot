@@ -226,8 +226,18 @@ function IntroPageInner() {
         const status = await res.json();
 
         if (status.onboarded) {
-          // Already registered — go to requested page (or dashboard)
+          // Already registered
           document.cookie = "taxbot_onboarded=1; path=/; max-age=31536000";
+
+          // Check for pending Google reconnect triggered from settings (localStorage bridge)
+          const pendingLid = localStorage.getItem("reconnect_google_lid");
+          if (pendingLid) {
+            localStorage.removeItem("reconnect_google_lid");
+            router.replace("/settings?reconnect=1");
+            return;
+          }
+
+          // Go to requested page (or dashboard)
           router.replace(redirectTo);
           return;
         }

@@ -10,8 +10,7 @@ const SECTIONS = [
   { emoji: "📱", label: "หน้าหลัก",      color: "#059669", href: `${APP_URL}/` },
   { emoji: "📋", label: "Google Sheets", color: "#0f766e", href: `${APP_URL}/sheets` },
   { emoji: "📁", label: "Google Drive",  color: "#1d4ed8", href: `${APP_URL}/drive` },
-  // Settings opens via LIFF URL so the Google reconnect button can open Safari
-  { emoji: "⚙️", label: "ตั้งค่า",       color: "#374151", href: `${LIFF_URL}?to=/settings` },
+  { emoji: "⚙️", label: "ตั้งค่า",       color: "#374151", href: `${APP_URL}/settings` },
 ];
 
 async function loadThaiFont(): Promise<ArrayBuffer | null> {

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 
 type VendorRule = {
   id: string;
@@ -9,7 +10,10 @@ type VendorRule = {
   type: "income" | "expense";
 };
 
-export default function SettingsPage() {
+function SettingsPageInner() {
+  const searchParams = useSearchParams();
+  const shouldAutoReconnect = searchParams.get("reconnect") === "1";
+
   const [vendors, setVendors] = useState<VendorRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("");
@@ -18,6 +22,7 @@ export default function SettingsPage() {
   const [lineUserId, setLineUserId] = useState<string>("");
   const [googleEmail, setGoogleEmail] = useState<string>("");
   const [connecting, setConnecting] = useState(false);
+  const autoReconnectFired = useRef(false);
 
   // Init LIFF to get LINE user ID + current Google status
   useEffect(() => {
@@ -38,20 +43,38 @@ export default function SettingsPage() {
     });
   }, []);
 
+  // Auto-trigger Google connect when arriving via ?reconnect=1 (from localStorage bridge)
+  useEffect(() => {
+    if (shouldAutoReconnect && lineUserId && !autoReconnectFired.current) {
+      autoReconnectFired.current = true;
+      handleGoogleConnect();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shouldAutoReconnect, lineUserId]);
+
   // Open Google connect in external browser (same as onboarding)
   async function handleGoogleConnect() {
     if (!lineUserId) return;
     setConnecting(true);
 
     const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
-    if (liffId) {
-      const { default: liff } = await import("@line/liff");
-      // Open in external browser so Google OAuth works properly
+    if (!liffId) {
+      // Non-LINE browser fallback
+      window.location.href = `/connect-google?lid=${lineUserId}`;
+      return;
+    }
+
+    const { default: liff } = await import("@line/liff");
+
+    // Check whether we have real LIFF context (page was opened via liff.line.me URL)
+    const liffContext = liff.getContext();
+    if (liffContext) {
+      // We have LIFF context — can open external browser directly
       liff.openWindow({
         url: `${window.location.origin}/connect-google?lid=${lineUserId}`,
         external: true,
       });
-      // Poll every 3s to detect when user finishes connecting in external browser
+      // Poll every 3s to detect when user finishes connecting
       const poll = setInterval(async () => {
         const res = await fetch(`/api/user/status?lineUserId=${lineUserId}`);
         if (res.ok) {
@@ -64,10 +87,12 @@ export default function SettingsPage() {
         }
       }, 3000);
       // Stop polling after 3 minutes
-      setTimeout(() => { clearInterval(poll); setConnecting(false); }, 180000);
+      setTimeout(() => { clearInterval(poll); setConnecting(false); }, 180_000);
     } else {
-      // Fallback: open in same tab (non-LINE browser)
-      window.location.href = `/connect-google?lid=${lineUserId}`;
+      // No LIFF context (page opened via direct URL) —
+      // Store user ID then redirect through LIFF URL so openWindow will work next time
+      localStorage.setItem("reconnect_google_lid", lineUserId);
+      window.location.href = `https://liff.line.me/${liffId}`;
     }
   }
 
@@ -222,5 +247,20 @@ export default function SettingsPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-4xl mb-3 animate-pulse">⚙️</div>
+          <p className="text-gray-400 text-sm">กำลังโหลด...</p>
+        </div>
+      </main>
+    }>
+      <SettingsPageInner />
+    </Suspense>
   );
 }
