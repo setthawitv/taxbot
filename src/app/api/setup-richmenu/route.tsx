@@ -5,10 +5,10 @@ const TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN!;
 const APP_URL = process.env.NEXTAUTH_URL ?? "https://taxbot-sage.vercel.app";
 
 const SECTIONS = [
-  { emoji: "💰", label: "รายรับ",  color: "#059669", href: `${APP_URL}/rairab` },
-  { emoji: "🧾", label: "รายจ่าย", color: "#dc2626", href: `${APP_URL}/raijhai` },
-  { emoji: "📊", label: "ภาษี",   color: "#2563eb", href: `${APP_URL}/phasi` },
-  { emoji: "⚙️", label: "ตั้งค่า", color: "#374151", href: `${APP_URL}/settings` },
+  { emoji: "📱", label: "หน้าหลัก",      color: "#059669", href: `${APP_URL}/` },
+  { emoji: "📋", label: "Google Sheets", color: "#0f766e", href: `${APP_URL}/sheets` },
+  { emoji: "📁", label: "Google Drive",  color: "#1d4ed8", href: `${APP_URL}/drive` },
+  { emoji: "⚙️", label: "ตั้งค่า",       color: "#374151", href: `${APP_URL}/settings` },
 ];
 
 async function loadThaiFont(): Promise<ArrayBuffer | null> {
