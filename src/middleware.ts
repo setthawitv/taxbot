@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PUBLIC_PATHS = ["/onboarding", "/api/auth", "/api/webhook", "/api/user", "/api/setup-richmenu"];
+const PUBLIC_PATHS = [
+  "/onboarding",
+  "/connect-google",     // Google OAuth flow opened in external browser
+  "/api/auth",
+  "/api/webhook",
+  "/api/user",
+  "/api/setup-richmenu",
+];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

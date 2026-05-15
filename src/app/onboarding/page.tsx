@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { initLiff, getLiffProfile } from "@/lib/liff";
+import { initLiff, getLiffProfile, isInLineClient } from "@/lib/liff";
 
 const STORAGE_KEY = "taxbot_onboarding";
 
@@ -24,11 +24,14 @@ export default function OnboardingPage() {
   const router = useRouter();
   const [state, setState] = useState<Record<string, boolean>>({});
   const [open, setOpen] = useState(true);
-  const [lineProfile, setLineProfile] = useState<{ displayName: string } | null>(null);
+  const [lineProfile, setLineProfile] = useState<{ displayName: string; userId?: string } | null>(null);
   const [liffReady, setLiffReady] = useState(false);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [googleEmail, setGoogleEmail] = useState<string | null>(null);
+  const [pollingGoogle, setPollingGoogle] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     const saved = loadState();
@@ -40,6 +43,18 @@ export default function OnboardingPage() {
       if (profile) {
         setLineProfile(profile);
         next.lineConnected = true;
+
+        // If not yet connected, check Supabase in case user already did Google OAuth
+        // in external browser previously
+        if (!next.googleConnected) {
+          const res = await fetch(`/api/user/status?lineUserId=${profile.userId}`);
+          const data = await res.json();
+          if (data.connected) {
+            next.googleConnected = true;
+            setGoogleEmail(data.email);
+          }
+        }
+
         setState({ ...next });
         saveState({ ...next });
       }
@@ -47,6 +62,7 @@ export default function OnboardingPage() {
 
     if (session?.user) {
       next.googleConnected = true;
+      setGoogleEmail(session.user.email ?? null);
     }
 
     // Restore saved receipt preview
@@ -56,6 +72,41 @@ export default function OnboardingPage() {
     setState(next);
     saveState(next);
   }, [session]);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    };
+  }, []);
+
+  function startGooglePolling(lineUserId: string) {
+    setPollingGoogle(true);
+    if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+
+    pollTimerRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/user/status?lineUserId=${lineUserId}`);
+        const data = await res.json();
+        if (data.connected) {
+          clearInterval(pollTimerRef.current!);
+          setPollingGoogle(false);
+          setGoogleEmail(data.email);
+          mark("googleConnected");
+        }
+      } catch {
+        // keep polling
+      }
+    }, 3000);
+
+    // Stop polling after 5 minutes
+    setTimeout(() => {
+      if (pollTimerRef.current) {
+        clearInterval(pollTimerRef.current);
+        setPollingGoogle(false);
+      }
+    }, 5 * 60 * 1000);
+  }
 
   function mark(key: string) {
     setState((prev) => {
@@ -109,9 +160,27 @@ export default function OnboardingPage() {
     {
       key: "googleConnected",
       label: "เชื่อมต่อ Google",
-      sublabel: session?.user?.email ?? "Drive + Sheets",
-      action: () => signIn("google", { callbackUrl: "/onboarding" }),
-      actionLabel: "เชื่อมต่อ",
+      sublabel: googleEmail ?? session?.user?.email ?? "Drive + Sheets",
+      action: async () => {
+        if (isInLineClient()) {
+          // Google OAuth blocks LINE's WebView (Error 403 disallowed_useragent).
+          // Open OAuth in the system browser (Safari / Chrome) instead.
+          const userId = lineProfile?.userId;
+          if (!userId) return;
+
+          const liffModule = await import("@line/liff");
+          liffModule.default.openWindow({
+            url: `${window.location.origin}/connect-google?lid=${userId}`,
+            external: true,
+          });
+
+          // Poll Supabase every 3 s — mark done once token is saved by the external browser
+          startGooglePolling(userId);
+        } else {
+          signIn("google", { callbackUrl: "/onboarding" });
+        }
+      },
+      actionLabel: pollingGoogle ? "รอการเชื่อมต่อ..." : "เชื่อมต่อ",
     },
     {
       key: "firstReceiptUploaded",
@@ -228,8 +297,11 @@ export default function OnboardingPage() {
 
                       {!done && !locked && step.action && (
                         <button
-                          onClick={step.action}
-                          disabled={uploading && step.key === "firstReceiptUploaded"}
+                          onClick={() => void step.action?.()}
+                          disabled={
+                            (uploading && step.key === "firstReceiptUploaded") ||
+                            (pollingGoogle && step.key === "googleConnected")
+                          }
                           className="text-xs bg-gray-800 text-white px-3 py-1.5 rounded-lg hover:bg-gray-700 transition-colors flex-shrink-0 disabled:opacity-50"
                         >
                           {step.actionLabel}
