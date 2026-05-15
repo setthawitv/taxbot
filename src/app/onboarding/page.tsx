@@ -304,21 +304,40 @@ export default function OnboardingPage() {
   useEffect(() => {
     initLiff()
       .then(async () => {
-        // If not inside LINE's in-app browser, show the "Open in LINE" screen
         if (!isInLineClient()) {
           setNotInLine(true);
           return;
         }
-        // Inside LINE — LIFF auto-logs in after init(), no manual login() needed
+
         const profile = await getLiffProfile();
-        if (profile) {
-          setLiffProfile(profile);
-          const res = await fetch(`/api/user/status?lineUserId=${profile.userId}`);
-          const data = await res.json();
-          if (data.connected) {
-            setGoogleConnected(true);
-            setGoogleEmail(data.email);
-          }
+        if (!profile) return;
+        setLiffProfile(profile);
+
+        // Check Supabase — skip onboarding entirely if already done
+        const res = await fetch(`/api/user/status?lineUserId=${profile.userId}`);
+        const status = await res.json();
+
+        if (status.onboarded) {
+          // User has registered before — restore cookie and go to dashboard
+          document.cookie = "taxbot_onboarded=1; path=/; max-age=31536000";
+          router.replace("/");
+          return;
+        }
+
+        // Pre-fill any data they saved in a previous partial session
+        if (status.profile) {
+          const p = status.profile;
+          if (p.firstName)    setFirstName(p.firstName);
+          if (p.lastName)     setLastName(p.lastName);
+          if (p.businessName) setBusinessName(p.businessName);
+          if (p.businessType) setBusinessType(p.businessType);
+          if (p.phone)        setPhone(p.phone);
+          setVatRegistered(p.vatRegistered ?? false);
+        }
+
+        if (status.connected) {
+          setGoogleConnected(true);
+          setGoogleEmail(status.email);
         }
       })
       .catch(() => setNotInLine(true));
@@ -327,7 +346,7 @@ export default function OnboardingPage() {
       setGoogleConnected(true);
       setGoogleEmail(session.user.email);
     }
-  }, [session]);
+  }, [session, router]);
 
   useEffect(() => {
     return () => { if (pollTimerRef.current) clearInterval(pollTimerRef.current); };

@@ -214,17 +214,32 @@ export default function IntroPage() {
           setScreen("not-in-line");
           return;
         }
-        // Check if user has already added TaxBot as friend
+
+        // 1. Get LINE profile
+        const profile = await liff.getProfile();
+
+        // 2. Check if this user already completed onboarding in Supabase
+        const res = await fetch(`/api/user/status?lineUserId=${profile.userId}`);
+        const status = await res.json();
+
+        if (status.onboarded) {
+          // Already registered — restore cookie and go straight to dashboard
+          document.cookie = "taxbot_onboarded=1; path=/; max-age=31536000";
+          router.replace("/");
+          return;
+        }
+
+        // 3. New user — check friendship before showing slides
         try {
           const { friendFlag } = await liff.getFriendship();
           setScreen(friendFlag ? "slides" : "add-friend");
         } catch {
-          // getFriendship() fails when Login channel isn't linked to OA — skip the step
+          // getFriendship() fails when Login channel isn't linked to OA — skip
           setScreen("slides");
         }
       })
       .catch(() => setScreen("not-in-line"));
-  }, []);
+  }, [router]);
 
   function next() {
     if (isLast) router.push("/onboarding");
