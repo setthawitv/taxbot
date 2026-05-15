@@ -17,7 +17,7 @@ const blobClient = new MessagingApiBlobClient({
 });
 
 export async function POST(req: NextRequest) {
-  const body = await req.text();
+  const body      = await req.text();
   const signature = req.headers.get("x-line-signature") ?? "";
 
   const isValid = validateSignature(body, process.env.LINE_CHANNEL_SECRET!, signature);
@@ -61,9 +61,9 @@ async function handleText(replyToken: string, lineUserId: string, text: string) 
       .single();
 
     if (user) {
-      const now = new Date();
+      const now      = new Date();
       const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
-      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
+      const lastDay  = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
 
       const { data: txns } = await supabaseAdmin
         .from("transactions")
@@ -102,16 +102,20 @@ async function handleImage(replyToken: string, lineUserId: string, msg: webhook.
 
   try {
     // 1. Download image from LINE
+    console.log("[webhook] downloading image", msg.id);
     const stream = await blobClient.getMessageContent(msg.id);
     const chunks: Buffer[] = [];
     for await (const chunk of stream) {
       chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
     }
     const imageBuffer = Buffer.concat(chunks);
+    console.log("[webhook] image size:", imageBuffer.length, "bytes");
     const base64Image = imageBuffer.toString("base64");
 
     // 2. AI reads the receipt
+    console.log("[webhook] calling readReceipt...");
     const receipt = await readReceipt(base64Image);
+    console.log("[webhook] receipt parsed:", JSON.stringify(receipt));
 
     // 3. Look up user
     const { data: user } = await supabaseAdmin
@@ -139,15 +143,22 @@ async function handleImage(replyToken: string, lineUserId: string, msg: webhook.
 
     if (vendorRule) receipt.type = vendorRule.type as "income" | "expense";
 
-    // 5. Save to Supabase
-    await supabaseAdmin.from("transactions").insert({
-      user_id: user.id,
-      type: receipt.type,
-      amount: receipt.amount,
-      vendor: receipt.vendor,
-      description: receipt.description,
-      transaction_date: receipt.date,
-    });
+    // 5. Save to Supabase — use the returned ID as txId
+    const { data: txRow, error: txErr } = await supabaseAdmin
+      .from("transactions")
+      .insert({
+        user_id:          user.id,
+        type:             receipt.type,
+        amount:           receipt.amount,
+        vendor:           receipt.vendor,
+        description:      receipt.description,
+        transaction_date: receipt.date,
+      })
+      .select("id")
+      .single();
+
+    if (txErr) throw txErr;
+    const txId: string = txRow?.id ?? `tx-${Date.now()}`;
 
     // 6. Google Drive + Sheet (only if user has connected Google)
     let driveFolderUrl: string | undefined;
@@ -170,8 +181,8 @@ async function handleImage(replyToken: string, lineUserId: string, msg: webhook.
         await supabaseAdmin.from("users").update({ drive_folder_id: driveFolderId }).eq("id", user.id);
       }
 
-      // 6c. Create year/month/รวมหลักฐาน/transaction folder structure
-      const { folderId, folderUrl } = await ensureReceiptFolder(
+      // 6c. Create year/month/รวมหลักฐาน and สำหรับสำนักงานบัญชี folder structure
+      const { folderId, folderUrl, accountingFolderId } = await ensureReceiptFolder(
         user.google_access_token,
         driveFolderId,
         receipt.date,
@@ -179,29 +190,32 @@ async function handleImage(replyToken: string, lineUserId: string, msg: webhook.
       );
       driveFolderUrl = folderUrl;
 
-      // 6d. Upload original receipt image
-      const ext   = "jpg";
-      const imgName = `${receipt.date}_${receipt.vendor.replace(/[/\\:*?"<>|]/g, "").trim().slice(0, 30)}.${ext}`;
+      // 6d. Upload original receipt image to transaction evidence folder
+      const safeName  = receipt.vendor.replace(/[/\\:*?"<>|]/g, "").trim().slice(0, 30);
+      const imgName   = `${receipt.date}_${safeName}.jpg`;
       await uploadFileToDrive(user.google_access_token, folderId, imgName, imageBuffer, "image/jpeg");
 
-      // 6e. Generate and upload receipt substitute PDF
-      const receiptNo = `RC-${Date.now()}`;
+      // 6e. Generate receipt-substitute PDF
+      const receiptNo = `RC-${txId.slice(0, 8).toUpperCase()}`;
       const pdfBuffer = await generateReceiptPdf(
         receipt,
         user.business_name ?? "ธุรกิจของฉัน",
         receiptNo
       );
-      await uploadFileToDrive(
-        user.google_access_token,
-        folderId,
-        "ใบรับรองแทนใบเสร็จรับเงิน.pdf",
-        pdfBuffer,
-        "application/pdf"
-      );
 
-      // 6f. Append to Google Sheet (with Drive folder link)
+      // PDF filename: date_vendor_businessName_txId(short).pdf
+      const bizSafe = (user.business_name ?? "TaxBot").replace(/[/\\:*?"<>|]/g, "").trim().slice(0, 20);
+      const pdfName = `${receipt.date}_${safeName}_${bizSafe}_${txId.slice(0, 8)}.pdf`;
+
+      // 6f. Upload PDF to รวมหลักฐาน/{tx}/ AND สำหรับสำนักงานบัญชี/
+      await Promise.all([
+        uploadFileToDrive(user.google_access_token, folderId, pdfName, pdfBuffer, "application/pdf"),
+        uploadFileToDrive(user.google_access_token, accountingFolderId, pdfName, pdfBuffer, "application/pdf"),
+      ]);
+
+      // 6g. Append 19-column row to Google Sheet (รวม + month tab)
       if (sheetId) {
-        await appendTransaction(user.google_access_token, sheetId, receipt, driveFolderUrl);
+        await appendTransaction(user.google_access_token, sheetId, receipt, txId);
       }
     }
 
@@ -218,10 +232,11 @@ async function handleImage(replyToken: string, lineUserId: string, msg: webhook.
 
     await client.pushMessage({ to: lineUserId, messages: [{ type: "text", text: summary }] });
   } catch (err) {
-    console.error("Error processing image:", err);
+    const msg2 = err instanceof Error ? err.message : String(err);
+    console.error("[webhook] handleImage error:", msg2, err);
     await client.pushMessage({
       to: lineUserId,
-      messages: [{ type: "text", text: "❌ อ่านสลิปไม่สำเร็จ กรุณาลองใหม่หรือส่งรูปที่ชัดกว่านี้ครับ" }],
+      messages: [{ type: "text", text: `❌ อ่านสลิปไม่สำเร็จครับ\n\nรายละเอียด: ${msg2.slice(0, 120)}\n\nกรุณาลองใหม่หรือส่งรูปที่ชัดกว่านี้ครับ` }],
     });
   }
 }
