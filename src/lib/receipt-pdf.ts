@@ -1,8 +1,8 @@
-import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import { PDFDocument, rgb, StandardFonts, RGB } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
-import { ReceiptData } from "./gemini";
+import { ReceiptData } from "./groq";
 
-// ─── Thai font (reuse the woff-via-IE-UA trick) ───────────────────────────────
+// ─── Thai font (woff via IE User-Agent trick) ─────────────────────────────────
 async function loadThaiFont(): Promise<ArrayBuffer | null> {
   try {
     const css = await fetch(
@@ -17,7 +17,6 @@ async function loadThaiFont(): Promise<ArrayBuffer | null> {
 
     const match = css.match(/url\((https:\/\/fonts\.gstatic\.com[^)]+)\)/);
     if (!match) return null;
-
     return fetch(match[1]).then((r) => r.arrayBuffer());
   } catch {
     return null;
@@ -25,11 +24,11 @@ async function loadThaiFont(): Promise<ArrayBuffer | null> {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function formatAmount(n: number) {
-  return n.toLocaleString("th-TH", { minimumFractionDigits: 2 }) + " บาท";
+function fmt2(n: number): string {
+  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function formatDate(iso: string) {
+function formatDate(iso: string): string {
   const [y, m, d] = iso.split("-");
   const months = [
     "", "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน",
@@ -48,122 +47,194 @@ export async function generateReceiptPdf(
   const pdfDoc = await PDFDocument.create();
   pdfDoc.registerFontkit(fontkit);
 
-  // Try to embed Thai font; fall back to built-in Helvetica
-  let font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  // Try to embed Thai font; fall back to Helvetica
+  let font     = await pdfDoc.embedFont(StandardFonts.Helvetica);
   let boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   try {
     const fontData = await loadThaiFont();
     if (fontData) {
-      font = await pdfDoc.embedFont(fontData as ArrayBuffer);
-      boldFont = font; // same font file contains both
+      font     = await pdfDoc.embedFont(fontData as ArrayBuffer);
+      boldFont = font;
     }
   } catch { /* use fallback */ }
 
   // A4 page
   const page = pdfDoc.addPage([595.28, 841.89]);
   const W = page.getWidth();
+  const H = page.getHeight();
 
-  const dark   = rgb(0.1, 0.1, 0.1);
-  const gray   = rgb(0.5, 0.5, 0.5);
-  const border = rgb(0.8, 0.8, 0.8);
+  // Colours
+  const cBlack  = rgb(0.08, 0.08, 0.08);
+  const cGray   = rgb(0.45, 0.45, 0.45);
+  const cLight  = rgb(0.93, 0.93, 0.93);
+  const cBorder = rgb(0.75, 0.75, 0.75);
+  const cBlue   = rgb(0.10, 0.30, 0.70);
 
-  // ── Border ─────────────────────────────────────────────────────────────────
-  page.drawRectangle({
-    x: 40, y: 40, width: W - 80, height: 762,
-    borderColor: border, borderWidth: 1,
-  });
+  const ML = 50;   // margin left
+  const MR = 50;   // margin right
+  const CW = W - ML - MR;  // content width
 
-  // ── Title ──────────────────────────────────────────────────────────────────
+  // ── Outer border ─────────────────────────────────────────────────────────────
+  page.drawRectangle({ x: ML - 10, y: 35, width: CW + 20, height: H - 65,
+    borderColor: cBorder, borderWidth: 1 });
+
+  // ── Header band ──────────────────────────────────────────────────────────────
+  page.drawRectangle({ x: ML - 10, y: H - 80, width: CW + 20, height: 45,
+    color: rgb(0.15, 0.35, 0.65) });
+
   const title = "ใบรับรองแทนใบเสร็จรับเงิน";
-  const titleSize = 20;
-  const titleW = boldFont.widthOfTextAtSize(title, titleSize);
-  page.drawText(title, {
-    x: (W - titleW) / 2, y: 755, size: titleSize, font: boldFont, color: dark,
-  });
+  const tw    = boldFont.widthOfTextAtSize(title, 18);
+  page.drawText(title, { x: (W - tw) / 2, y: H - 62, size: 18, font: boldFont, color: rgb(1,1,1) });
 
-  // Underline
-  page.drawLine({
-    start: { x: (W - titleW) / 2 - 4, y: 750 },
-    end:   { x: (W - titleW) / 2 + titleW + 4, y: 750 },
-    thickness: 1.5, color: dark,
-  });
+  // ── Sub-header: receipt no + date ────────────────────────────────────────────
+  page.drawText(`เลขที่ ${receiptNo}`, { x: ML, y: H - 100, size: 10, font, color: cGray });
+  const dateStr  = `วันที่ ${formatDate(receipt.date)}`;
+  const dateStrW = font.widthOfTextAtSize(dateStr, 10);
+  page.drawText(dateStr, { x: W - MR - dateStrW, y: H - 100, size: 10, font, color: cGray });
 
-  // ── Ref / Date row ─────────────────────────────────────────────────────────
-  page.drawText(`เลขที่: ${receiptNo}`, {
-    x: 60, y: 720, size: 11, font, color: gray,
-  });
-  page.drawText(`วันที่: ${formatDate(receipt.date)}`, {
-    x: W - 200, y: 720, size: 11, font, color: gray,
-  });
+  // ── Buyer / seller info box ───────────────────────────────────────────────────
+  const infoTop = H - 115;
+  page.drawRectangle({ x: ML, y: infoTop - 58, width: CW, height: 62,
+    color: rgb(0.97, 0.97, 0.97), borderColor: cBorder, borderWidth: 0.5 });
 
-  // ── Horizontal rule ────────────────────────────────────────────────────────
-  page.drawLine({
-    start: { x: 60, y: 710 }, end: { x: W - 60, y: 710 },
-    thickness: 0.5, color: border,
-  });
-
-  // ── Info rows ──────────────────────────────────────────────────────────────
-  function drawRow(label: string, value: string, y: number, valueIsBold = false) {
-    page.drawText(label, { x: 60, y, size: 12, font, color: gray });
-    page.drawText(value, {
-      x: 220, y, size: 12, font: valueIsBold ? boldFont : font, color: dark,
-    });
+  function infoRow(label: string, value: string, y: number) {
+    page.drawText(label, { x: ML + 8, y, size: 10, font, color: cGray });
+    page.drawText(value, { x: ML + 130, y, size: 10, font: boldFont, color: cBlack });
   }
 
-  drawRow("ผู้ซื้อ / ผู้รับบริการ:", businessName, 685);
-  drawRow("ร้านค้า / ผู้จ่าย:", receipt.vendor, 658);
-  drawRow("รายละเอียด:", receipt.description, 631);
-  drawRow("ประเภท:", receipt.type === "income" ? "รายรับ" : "รายจ่าย", 604);
+  infoRow("ผู้ซื้อ / ผู้รับบริการ :", businessName,      infoTop - 16);
+  infoRow("ผู้ขาย / ผู้ให้บริการ :", receipt.vendor,     infoTop - 33);
+  infoRow("ประเภทเอกสาร          :", receipt.docType,    infoTop - 50);
 
-  // ── Amount box ─────────────────────────────────────────────────────────────
-  page.drawRectangle({
-    x: 55, y: 560, width: W - 110, height: 34,
-    color: rgb(0.95, 0.97, 1), borderColor: rgb(0.6, 0.7, 0.9), borderWidth: 1,
-  });
-  const amountLabel = "จำนวนเงินรวมทั้งสิ้น";
-  const amountValue = formatAmount(receipt.amount);
-  page.drawText(amountLabel, { x: 70, y: 572, size: 13, font: boldFont, color: dark });
-  const valW = boldFont.widthOfTextAtSize(amountValue, 16);
-  page.drawText(amountValue, {
-    x: W - 60 - valW, y: 569, size: 16, font: boldFont, color: rgb(0.1, 0.3, 0.7),
-  });
+  // ── Table header ─────────────────────────────────────────────────────────────
+  const tableTop   = infoTop - 78;
+  const rowH       = 22;
+  const col = {
+    no:    { x: ML,          w: 30  },
+    name:  { x: ML + 30,     w: 220 },
+    qty:   { x: ML + 250,    w: 50  },
+    unit:  { x: ML + 300,    w: 90  },
+    total: { x: ML + 390,    w: CW - 390 },
+  };
 
-  // ── Horizontal rule ────────────────────────────────────────────────────────
-  page.drawLine({
-    start: { x: 60, y: 545 }, end: { x: W - 60, y: 545 },
-    thickness: 0.5, color: border,
-  });
+  // Header row background
+  page.drawRectangle({ x: ML, y: tableTop - rowH, width: CW, height: rowH, color: cLight });
 
-  // ── Signature section ──────────────────────────────────────────────────────
-  function sigBlock(label: string, name: string, x: number, y: number) {
-    // Signature line
+  // Header text
+  function thCell(text: string, cx: number, cw: number, y: number, bold = false) {
+    const tw = (bold ? boldFont : font).widthOfTextAtSize(text, 10);
+    page.drawText(text, { x: cx + (cw - tw) / 2, y: y + 6, size: 10,
+      font: bold ? boldFont : font, color: cBlack });
+  }
+
+  thCell("ลำดับ",            col.no.x,    col.no.w,    tableTop - rowH, true);
+  thCell("ชื่อสินค้า / บริการ", col.name.x, col.name.w, tableTop - rowH, true);
+  thCell("จำนวน",            col.qty.x,   col.qty.w,   tableTop - rowH, true);
+  thCell("ราคาต่อหน่วย",     col.unit.x,  col.unit.w,  tableTop - rowH, true);
+  thCell("ราคารวม",          col.total.x, col.total.w, tableTop - rowH, true);
+
+  // Table border lines (header bottom)
+  page.drawLine({ start: { x: ML, y: tableTop }, end: { x: ML + CW, y: tableTop },
+    thickness: 0.5, color: cBorder });
+  page.drawLine({ start: { x: ML, y: tableTop - rowH }, end: { x: ML + CW, y: tableTop - rowH },
+    thickness: 1, color: cBlack });
+
+  // ── Data row ─────────────────────────────────────────────────────────────────
+  const dataY = tableTop - rowH * 2;
+
+  function cell(text: string, cx: number, cw: number, y: number, align: "left"|"right"|"center" = "center") {
+    const tw2 = font.widthOfTextAtSize(text, 10);
+    let tx: number;
+    if (align === "left")   tx = cx + 6;
+    else if (align === "right") tx = cx + cw - tw2 - 6;
+    else tx = cx + (cw - tw2) / 2;
+    page.drawText(text, { x: tx, y: y + 6, size: 10, font, color: cBlack });
+  }
+
+  cell("1",                          col.no.x,    col.no.w,    dataY, "center");
+  cell(receipt.description,          col.name.x,  col.name.w,  dataY, "left");
+  cell(String(receipt.quantity),     col.qty.x,   col.qty.w,   dataY, "center");
+  cell(fmt2(receipt.unitPrice),      col.unit.x,  col.unit.w,  dataY, "right");
+  cell(fmt2(receipt.unitPrice * receipt.quantity), col.total.x, col.total.w, dataY, "right");
+
+  // Row bottom border
+  page.drawLine({ start: { x: ML, y: dataY }, end: { x: ML + CW, y: dataY },
+    thickness: 0.5, color: cBorder });
+
+  // Vertical column dividers (full table height)
+  for (const colX of [col.name.x, col.qty.x, col.unit.x, col.total.x, ML + CW]) {
     page.drawLine({
-      start: { x: x - 60, y: y + 30 }, end: { x: x + 60, y: y + 30 },
-      thickness: 0.8, color: dark,
+      start: { x: colX, y: tableTop },
+      end:   { x: colX, y: dataY },
+      thickness: 0.5, color: cBorder,
     });
-    // Label
+  }
+  page.drawLine({ start: { x: ML, y: tableTop }, end: { x: ML, y: dataY },
+    thickness: 0.5, color: cBorder });
+
+  // ── Totals section (right-aligned) ────────────────────────────────────────────
+  const totalsX    = ML + CW - 200;
+  const totalsW    = 200;
+  let   totalsY    = dataY - 10;
+  const preTax     = receipt.amount - receipt.vatAmount;
+
+  function totalRow(label: string, value: string, y: number, highlight = false, labelColor?: RGB) {
+    page.drawText(label, { x: totalsX, y: y + 5, size: 10, font,
+      color: labelColor ?? cGray });
+    const vw = boldFont.widthOfTextAtSize(value, 10);
+    page.drawText(value, { x: totalsX + totalsW - vw - 4, y: y + 5, size: 10,
+      font: highlight ? boldFont : font, color: highlight ? cBlue : cBlack });
+  }
+
+  totalRow("ยอดรวมก่อนภาษี",          fmt2(preTax),              totalsY); totalsY -= 18;
+  totalRow("ภาษีมูลค่าเพิ่ม 7%",      fmt2(receipt.vatAmount),   totalsY); totalsY -= 18;
+  totalRow("ภาษีหัก ณ ที่จ่าย",       fmt2(receipt.withholdingTax), totalsY); totalsY -= 6;
+
+  // Grand total box
+  page.drawRectangle({ x: totalsX - 4, y: totalsY - 22, width: totalsW + 8, height: 26,
+    color: rgb(0.93, 0.96, 1), borderColor: cBlue, borderWidth: 1 });
+  page.drawText("ยอดชำระทั้งสิ้น", { x: totalsX + 2, y: totalsY - 14, size: 11,
+    font: boldFont, color: cBlack });
+  const grandW = boldFont.widthOfTextAtSize(fmt2(receipt.amount) + " บาท", 12);
+  page.drawText(fmt2(receipt.amount) + " บาท", {
+    x: totalsX + totalsW - grandW - 4, y: totalsY - 14, size: 12,
+    font: boldFont, color: cBlue,
+  });
+
+  // ── Declaration note ──────────────────────────────────────────────────────────
+  const noteY = totalsY - 48;
+  page.drawText(
+    "ข้าพเจ้าขอรับรองว่าได้รับชำระเงินตามจำนวนข้างต้นจริง",
+    { x: ML, y: noteY, size: 10, font, color: cGray }
+  );
+
+  // ── Signature blocks ──────────────────────────────────────────────────────────
+  const sigY    = noteY - 60;
+  const leftCX  = ML + 80;
+  const rightCX = W - MR - 80;
+
+  function sigBlock(label: string, name: string, cx: number) {
+    page.drawLine({ start: { x: cx - 70, y: sigY + 30 }, end: { x: cx + 70, y: sigY + 30 },
+      thickness: 0.8, color: cBlack });
     const lw = font.widthOfTextAtSize(label, 10);
-    page.drawText(label, { x: x - lw / 2, y: y + 15, size: 10, font, color: gray });
-    // Name
+    page.drawText(label, { x: cx - lw / 2, y: sigY + 16, size: 10, font, color: cGray });
     if (name) {
       const nw = font.widthOfTextAtSize(`(${name})`, 10);
-      page.drawText(`(${name})`, { x: x - nw / 2, y: y, size: 10, font, color: dark });
+      page.drawText(`(${name})`, { x: cx - nw / 2, y: sigY + 2, size: 10, font, color: cBlack });
     }
+    const dw = font.widthOfTextAtSize("วันที่ ____________", 9);
+    page.drawText("วันที่ ____________", { x: cx - dw / 2, y: sigY - 13, size: 9, font, color: cGray });
   }
 
-  sigBlock("ผู้รับรอง", businessName, 155, 490);
-  sigBlock("ผู้อนุมัติ", "", 440, 490);
+  sigBlock("ผู้จ่ายเงิน / ผู้รับบริการ", businessName, leftCX);
+  sigBlock("Confirmed by / ผู้อนุมัติ", "",             rightCX);
 
-  // ── Footer note ────────────────────────────────────────────────────────────
-  page.drawLine({
-    start: { x: 60, y: 90 }, end: { x: W - 60, y: 90 },
-    thickness: 0.5, color: border,
-  });
-  const note = "เอกสารนี้ออกโดย TaxBot — ใช้แทนใบเสร็จในกรณีที่ไม่มีใบเสร็จต้นฉบับ";
-  const noteW = font.widthOfTextAtSize(note, 9);
-  page.drawText(note, {
-    x: (W - noteW) / 2, y: 75, size: 9, font, color: gray,
-  });
+  // ── Footer ───────────────────────────────────────────────────────────────────
+  page.drawLine({ start: { x: ML - 10, y: 55 }, end: { x: W - MR + 10, y: 55 },
+    thickness: 0.5, color: cBorder });
+  const footer = "เอกสารนี้ออกโดยระบบ TaxBot • ใช้แทนใบเสร็จในกรณีที่ไม่มีใบเสร็จต้นฉบับ";
+  const fw = font.widthOfTextAtSize(footer, 8);
+  page.drawText(footer, { x: (W - fw) / 2, y: 43, size: 8, font, color: cGray });
 
   const bytes = await pdfDoc.save();
   return Buffer.from(bytes);

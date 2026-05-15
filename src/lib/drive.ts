@@ -54,36 +54,41 @@ export async function createRootFolder(
 }
 
 /**
- * Ensure the full receipt folder path exists and return the leaf folder ID.
+ * Ensure the full receipt folder path exists and return the leaf folder ID,
+ * the accounting folder ID, and the transaction folder URL.
  *
- * Path: rootFolder / YYYY / MM_monthThai / รวมหลักฐาน / YYYY-MM-DD_vendor
- * Also creates สำหรับสำนักงานบัญชี alongside รวมหลักฐาน.
+ * Path:
+ *   rootFolder / YYYY / MM_monthThai / รวมหลักฐาน   / YYYY-MM-DD_vendor  ← evidence
+ *   rootFolder / YYYY / MM_monthThai / สำหรับสำนักงานบัญชี               ← accounting PDFs
  */
 export async function ensureReceiptFolder(
   accessToken: string,
   rootFolderId: string,
   date: string,   // YYYY-MM-DD
   vendor: string
-): Promise<{ folderId: string; folderUrl: string }> {
+): Promise<{ folderId: string; folderUrl: string; accountingFolderId: string }> {
   const drive = getDriveClient(accessToken);
 
   const [year, monthStr] = date.split("-");
   const monthFolder = THAI_MONTHS[parseInt(monthStr, 10) - 1];
 
-  const yearId    = await findOrCreateFolder(drive, rootFolderId, year);
-  const monthId   = await findOrCreateFolder(drive, yearId, monthFolder);
+  const yearId  = await findOrCreateFolder(drive, rootFolderId, year);
+  const monthId = await findOrCreateFolder(drive, yearId, monthFolder);
 
-  // Create both subfolders at the month level (fire-and-forget the accounting one)
-  await findOrCreateFolder(drive, monthId, "สำหรับสำนักงานบัญชี").catch(() => null);
-  const evidenceId = await findOrCreateFolder(drive, monthId, "รวมหลักฐาน");
+  // Create both subfolders at the month level in parallel
+  const [accountingFolderId, evidenceId] = await Promise.all([
+    findOrCreateFolder(drive, monthId, "สำหรับสำนักงานบัญชี"),
+    findOrCreateFolder(drive, monthId, "รวมหลักฐาน"),
+  ]);
 
   // Transaction folder — sanitise vendor name for file-system safety
   const safeName = `${date}_${vendor.replace(/[/\\:*?"<>|]/g, "").trim().slice(0, 40)}`;
-  const txId = await findOrCreateFolder(drive, evidenceId, safeName);
+  const txFolderId = await findOrCreateFolder(drive, evidenceId, safeName);
 
   return {
-    folderId: txId,
-    folderUrl: `https://drive.google.com/drive/folders/${txId}`,
+    folderId: txFolderId,
+    folderUrl: `https://drive.google.com/drive/folders/${txFolderId}`,
+    accountingFolderId,
   };
 }
 
