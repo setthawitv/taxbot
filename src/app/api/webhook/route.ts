@@ -155,8 +155,8 @@ async function handleImage(
     });
 
   } catch (err) {
-    const msg2 = err instanceof Error ? err.message : String(err);
-    console.error("[webhook] handleImage error:", msg2);
+    const msg2 = errMsg(err);
+    console.error("[webhook] handleImage error:", msg2, err);
     await client.pushMessage({
       to: lineUserId,
       messages: [{ type: "text", text: `❌ อ่านสลิปไม่สำเร็จครับ\n${msg2.slice(0, 120)}\n\nกรุณาลองใหม่ครับ` }],
@@ -299,13 +299,24 @@ async function processConfirmedReceipt(lineUserId: string, pendingId: string) {
     await client.pushMessage({ to: lineUserId, messages: [{ type: "text", text: summary }] });
 
   } catch (err) {
-    const msg2 = err instanceof Error ? err.message : String(err);
-    console.error("[webhook] processConfirmed error:", msg2);
+    const msg2 = errMsg(err);
+    console.error("[webhook] processConfirmed error:", msg2, err);
     await client.pushMessage({
       to: lineUserId,
       messages: [{ type: "text", text: `❌ บันทึกไม่สำเร็จครับ\n${msg2.slice(0, 120)}` }],
     });
   }
+}
+
+/** Safely extract a readable message from any thrown value */
+function errMsg(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (err && typeof err === "object") {
+    // Supabase errors have { message, details, code }
+    const e = err as Record<string, unknown>;
+    return String(e.message ?? e.details ?? e.code ?? JSON.stringify(err));
+  }
+  return String(err);
 }
 
 // ─── Flex Message builder ─────────────────────────────────────────────────────
