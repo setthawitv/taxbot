@@ -1,6 +1,7 @@
 import { validateSignature, messagingApi, webhook } from "@line/bot-sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { google } from "googleapis";
+import sharp from "sharp";
 import { supabaseAdmin } from "@/lib/supabase";
 import { readReceipt, ReceiptData } from "@/lib/groq";
 import { appendTransaction, createSheet } from "@/lib/sheets";
@@ -145,8 +146,16 @@ async function handleImage(
       chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
     }
     const imageBuffer = Buffer.concat(chunks);
-    const base64Image = imageBuffer.toString("base64");
-    console.log("[webhook] image size:", imageBuffer.length);
+    console.log("[webhook] image size (original):", imageBuffer.length);
+
+    // Compress to max 1024px JPEG — prevents 400 Bad Request on large KBank screenshots
+    const compressedBuffer = await sharp(imageBuffer)
+      .resize(1024, 1024, { fit: "inside", withoutEnlargement: true })
+      .jpeg({ quality: 85 })
+      .toBuffer();
+    console.log("[webhook] image size (compressed):", compressedBuffer.length);
+
+    const base64Image = compressedBuffer.toString("base64");
 
     // 2. AI reads receipt
     console.log("[webhook] calling readReceipt...");
