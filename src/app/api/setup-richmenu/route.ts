@@ -1,149 +1,121 @@
 import { NextResponse } from "next/server";
-import { deflateSync } from "zlib";
+import { ImageResponse } from "next/og";
 
 const TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN!;
 const APP_URL = process.env.NEXTAUTH_URL ?? "https://taxbot-sage.vercel.app";
 
-// ─── PNG Generator (no external deps) ────────────────────────────────────────
+const SECTIONS = [
+  { emoji: "💰", label: "รายรับ",  color: "#059669", href: `${APP_URL}/rairab` },
+  { emoji: "🧾", label: "รายจ่าย", color: "#dc2626", href: `${APP_URL}/raijhai` },
+  { emoji: "📊", label: "ภาษี",   color: "#2563eb", href: `${APP_URL}/phasi` },
+  { emoji: "⚙️", label: "ตั้งค่า", color: "#374151", href: `${APP_URL}/settings` },
+];
 
-function crc32(buf: Buffer): number {
-  const table = Array.from({ length: 256 }, (_, i) => {
-    let c = i;
-    for (let j = 0; j < 8; j++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-    return c >>> 0;
-  });
-  let crc = 0xffffffff;
-  for (const b of buf) crc = (table[(crc ^ b) & 0xff] ^ (crc >>> 8)) >>> 0;
-  return (~crc) >>> 0;
-}
+async function buildImage(): Promise<ArrayBuffer> {
+  // Load Thai font from Google Fonts
+  const fontData = await fetch(
+    "https://fonts.gstatic.com/s/sarabun/v15/DtVmJx26TKEr37c9YHZ5ibU.woff"
+  ).then((r) => r.arrayBuffer());
 
-function chunk(type: string, data: Buffer): Buffer {
-  const t = Buffer.from(type, "ascii");
-  const len = Buffer.alloc(4);
-  len.writeUInt32BE(data.length);
-  const crcBuf = Buffer.alloc(4);
-  crcBuf.writeUInt32BE(crc32(Buffer.concat([t, data])));
-  return Buffer.concat([len, t, data, crcBuf]);
-}
-
-// 2x2 grid: รายรับ(green) | รายจ่าย(red) / ภาษี(blue) | ตั้งค่า(gray)
-function buildRichMenuPNG(): Buffer {
-  const W = 2500, H = 1686;
-  const COLORS: [number, number, number][][] = [
-    [[16, 185, 129], [239, 68, 68]],   // top row: green | red
-    [[59, 130, 246], [75, 85, 99]],    // bottom row: blue | gray
-  ];
-
-  const raw = Buffer.alloc(H * (1 + W * 3));
-  for (let y = 0; y < H; y++) {
-    const row = y * (1 + W * 3);
-    raw[row] = 0;
-    const rowIdx = y < H / 2 ? 0 : 1;
-    for (let x = 0; x < W; x++) {
-      const colIdx = x < W / 2 ? 0 : 1;
-      const [r, g, b] = COLORS[rowIdx][colIdx];
-
-      // Draw divider lines
-      const isVDivider = x >= W / 2 - 3 && x < W / 2 + 3;
-      const isHDivider = y >= H / 2 - 3 && y < H / 2 + 3;
-      const [fr, fg, fb] = isVDivider || isHDivider ? [255, 255, 255] : [r, g, b];
-
-      const p = row + 1 + x * 3;
-      raw[p] = fr; raw[p + 1] = fg; raw[p + 2] = fb;
+  const response = new ImageResponse(
+    (
+      <div
+        style={{
+          display: "flex",
+          width: "100%",
+          height: "100%",
+          flexWrap: "wrap",
+          fontFamily: "Sarabun",
+        }}
+      >
+        {SECTIONS.map((s, i) => (
+          <div
+            key={i}
+            style={{
+              width: "50%",
+              height: "50%",
+              background: s.color,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "24px",
+              borderRight: i % 2 === 0 ? "6px solid rgba(255,255,255,0.25)" : "none",
+              borderBottom: i < 2 ? "6px solid rgba(255,255,255,0.25)" : "none",
+            }}
+          >
+            <div style={{ fontSize: 160, lineHeight: 1 }}>{s.emoji}</div>
+            <div style={{ fontSize: 96, color: "white", fontWeight: 700 }}>
+              {s.label}
+            </div>
+          </div>
+        ))}
+      </div>
+    ),
+    {
+      width: 2500,
+      height: 1686,
+      fonts: [{ name: "Sarabun", data: fontData, style: "normal", weight: 700 }],
     }
-  }
+  );
 
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(W, 0); ihdr.writeUInt32BE(H, 4);
-  ihdr[8] = 8; ihdr[9] = 2;
-
-  return Buffer.concat([
-    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
-    chunk("IHDR", ihdr),
-    chunk("IDAT", deflateSync(raw)),
-    chunk("IEND", Buffer.alloc(0)),
-  ]);
+  return response.arrayBuffer();
 }
-
-// ─── Rich Menu Definition ─────────────────────────────────────────────────────
 
 const RICH_MENU = {
   size: { width: 2500, height: 1686 },
   selected: true,
   name: "TaxBot Menu",
   chatBarText: "เมนู TaxBot",
-  areas: [
-    {
-      bounds: { x: 0, y: 0, width: 1250, height: 843 },
-      action: { type: "uri", label: "รายรับ", uri: `${APP_URL}/rairab` },
+  areas: SECTIONS.map((s, i) => ({
+    bounds: {
+      x: i % 2 === 0 ? 0 : 1250,
+      y: i < 2 ? 0 : 843,
+      width: 1250,
+      height: 843,
     },
-    {
-      bounds: { x: 1250, y: 0, width: 1250, height: 843 },
-      action: { type: "uri", label: "รายจ่าย", uri: `${APP_URL}/raijhai` },
-    },
-    {
-      bounds: { x: 0, y: 843, width: 1250, height: 843 },
-      action: { type: "uri", label: "ภาษี", uri: `${APP_URL}/phasi` },
-    },
-    {
-      bounds: { x: 1250, y: 843, width: 1250, height: 843 },
-      action: { type: "uri", label: "ตั้งค่า", uri: `${APP_URL}/settings` },
-    },
-  ],
+    action: { type: "uri", label: s.label, uri: s.href },
+  })),
 };
-
-// ─── Route ────────────────────────────────────────────────────────────────────
 
 export async function POST() {
   try {
     // 1. Create Rich Menu structure
     const createRes = await fetch("https://api.line.me/v2/bot/richmenu", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${TOKEN}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" },
       body: JSON.stringify(RICH_MENU),
     });
 
     if (!createRes.ok) {
-      const err = await createRes.text();
-      return NextResponse.json({ error: "Create failed", detail: err }, { status: 500 });
+      return NextResponse.json({ error: "Create failed", detail: await createRes.text() }, { status: 500 });
     }
 
     const { richMenuId } = await createRes.json();
 
-    // 2. Upload Rich Menu image
-    const image = buildRichMenuPNG();
+    // 2. Generate and upload image
+    const imageBuffer = await buildImage();
     const uploadRes = await fetch(
       `https://api-data.line.me/v2/bot/richmenu/${richMenuId}/content`,
       {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${TOKEN}`,
-          "Content-Type": "image/png",
-        },
-        body: new Uint8Array(image),
+        headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "image/png" },
+        body: imageBuffer,
       }
     );
 
     if (!uploadRes.ok) {
-      const err = await uploadRes.text();
-      return NextResponse.json({ error: "Upload failed", detail: err }, { status: 500 });
+      return NextResponse.json({ error: "Upload failed", detail: await uploadRes.text() }, { status: 500 });
     }
 
     // 3. Set as default for all users
     const setRes = await fetch(
       `https://api.line.me/v2/bot/user/all/richmenu/${richMenuId}`,
-      {
-        method: "POST",
-        headers: { Authorization: `Bearer ${TOKEN}` },
-      }
+      { method: "POST", headers: { Authorization: `Bearer ${TOKEN}` } }
     );
 
     if (!setRes.ok) {
-      const err = await setRes.text();
-      return NextResponse.json({ error: "Set default failed", detail: err }, { status: 500 });
+      return NextResponse.json({ error: "Set default failed", detail: await setRes.text() }, { status: 500 });
     }
 
     return NextResponse.json({ ok: true, richMenuId });
