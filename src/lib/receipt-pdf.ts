@@ -102,9 +102,15 @@ export async function generateReceiptPdf(
     page.drawText(value, { x: ML + 130, y, size: 10, font: boldFont, color: cBlack });
   }
 
-  infoRow("ผู้ซื้อ / ผู้รับบริการ :", businessName,      infoTop - 16);
-  infoRow("ผู้ขาย / ผู้ให้บริการ :", receipt.vendor,     infoTop - 33);
-  infoRow("ประเภทเอกสาร          :", receipt.docType,    infoTop - 50);
+  // Labels depend on transaction type
+  const labelPayer    = receipt.type === "expense" ? "ผู้จ่าย / ผู้ซื้อ        :" : "ผู้รับ / เจ้าของกิจการ :";
+  const labelReceiver = receipt.type === "expense" ? "ผู้รับ / ผู้ขาย         :" : "ผู้ชำระ / ลูกค้า       :";
+  const payerName     = receipt.type === "expense" ? businessName  : receipt.vendor;
+  const receiverName  = receipt.type === "expense" ? receipt.vendor : businessName;
+
+  infoRow(labelPayer,              payerName,         infoTop - 16);
+  infoRow(labelReceiver,           receiverName,      infoTop - 33);
+  infoRow("ประเภทเอกสาร          :", receipt.docType, infoTop - 50);
 
   // ── Table header ─────────────────────────────────────────────────────────────
   const tableTop   = infoTop - 78;
