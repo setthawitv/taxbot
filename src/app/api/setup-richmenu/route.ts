@@ -123,7 +123,7 @@ export async function POST() {
           Authorization: `Bearer ${TOKEN}`,
           "Content-Type": "image/png",
         },
-        body: image,
+        body: new Uint8Array(image),
       }
     );
 
