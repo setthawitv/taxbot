@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { initLiff, getLiffProfile, isInLineClient } from "@/lib/liff";
+import { initLiff, getLiffProfile, isInLineClient, getLiffUrl } from "@/lib/liff";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type LiffProfile = { userId: string; displayName: string; pictureUrl?: string };
@@ -283,6 +283,7 @@ export default function OnboardingPage() {
 
   const [step, setStep] = useState(1);
   const [liffProfile, setLiffProfile] = useState<LiffProfile | null>(null);
+  const [notInLine, setNotInLine] = useState(false);
 
   // Step 1
   const [firstName, setFirstName] = useState("");
@@ -303,10 +304,15 @@ export default function OnboardingPage() {
   useEffect(() => {
     initLiff()
       .then(async () => {
+        // If not inside LINE's in-app browser, show the "Open in LINE" screen
+        if (!isInLineClient()) {
+          setNotInLine(true);
+          return;
+        }
+        // Inside LINE — LIFF auto-logs in after init(), no manual login() needed
         const profile = await getLiffProfile();
         if (profile) {
           setLiffProfile(profile);
-          // Auto-check if Google already linked
           const res = await fetch(`/api/user/status?lineUserId=${profile.userId}`);
           const data = await res.json();
           if (data.connected) {
@@ -315,7 +321,7 @@ export default function OnboardingPage() {
           }
         }
       })
-      .catch(() => {});
+      .catch(() => setNotInLine(true));
 
     if (session?.user?.email) {
       setGoogleConnected(true);
@@ -387,6 +393,29 @@ export default function OnboardingPage() {
     }
     document.cookie = "taxbot_onboarded=1; path=/; max-age=31536000";
     router.push("/");
+  }
+
+  // ── Not opened inside LINE ──────────────────────────────────────────────────
+  if (notInLine) {
+    return (
+      <main className="min-h-screen bg-white flex flex-col items-center justify-center px-8 text-center">
+        <div className="text-6xl mb-6">🤖</div>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">TaxBot</h1>
+        <p className="text-gray-500 text-sm mb-8 leading-relaxed">
+          แอปนี้ออกแบบมาสำหรับ LINE<br />
+          กรุณาเปิดผ่านแอป LINE เพื่อใช้งาน
+        </p>
+        <a
+          href={getLiffUrl()}
+          className="w-full max-w-xs flex items-center justify-center gap-3 bg-[#06C755] text-white font-bold py-4 rounded-2xl text-lg active:scale-95 transition-all shadow-lg shadow-green-200"
+        >
+          <svg viewBox="0 0 24 24" className="w-6 h-6 fill-white">
+            <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.630 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.494.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.630 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/>
+          </svg>
+          เปิดใน LINE
+        </a>
+      </main>
+    );
   }
 
   return (
