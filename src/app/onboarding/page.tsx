@@ -99,7 +99,10 @@ export default function OnboardingPage() {
       sublabel: "ตั้งชื่อธุรกิจของคุณ",
       action: () => {
         const name = prompt("ชื่อธุรกิจของคุณ:");
-        if (name?.trim()) mark("businessCreated");
+        if (name?.trim()) {
+          localStorage.setItem("taxbot_business_name", name.trim());
+          mark("businessCreated");
+        }
       },
       actionLabel: "สร้างเลย",
     },
@@ -136,7 +139,28 @@ export default function OnboardingPage() {
   const completed = steps.filter((s) => state[s.key]).length;
   const allDone = completed === steps.length;
 
-  function finishOnboarding() {
+  async function finishOnboarding() {
+    try {
+      // Get LINE profile for user ID
+      const profile = await getLiffProfile();
+      const token = (session as { accessToken?: string } & typeof session)?.accessToken;
+
+      if (profile && token) {
+        await fetch("/api/user/save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            lineUserId: profile.userId,
+            googleAccessToken: token,
+            googleEmail: session?.user?.email,
+            businessName: localStorage.getItem("taxbot_business_name") ?? "ธุรกิจของฉัน",
+          }),
+        });
+      }
+    } catch (err) {
+      console.error("Failed to save user:", err);
+    }
+
     document.cookie = "taxbot_onboarded=1; path=/; max-age=31536000";
     router.push("/");
   }
