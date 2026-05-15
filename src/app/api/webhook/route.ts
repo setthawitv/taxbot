@@ -186,7 +186,10 @@ async function handleImage(
       return;
     }
 
-    // 4. Apply vendor rules
+    // 4. Image receipts are always expenses (income comes from PDF/Excel only)
+    receipt.type = "expense";
+
+    // 4b. Apply vendor rules
     const { data: vendorRule } = await supabaseAdmin
       .from("vendor_rules").select("type")
       .eq("user_id", user.id).ilike("vendor_name", `%${receipt.vendor}%`)

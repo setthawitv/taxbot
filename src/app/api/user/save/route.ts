@@ -46,24 +46,31 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Upsert user with all fields
-    const { error } = await supabaseAdmin.from("users").upsert(
-      {
-        line_user_id:     lineUserId,
-        first_name:       firstName      ?? null,
-        last_name:        lastName       ?? null,
-        business_type:    businessType   ?? null,
-        business_name:    businessName   ?? null,
-        phone:            phone          ?? null,
-        vat_registered:   vatRegistered  ?? false,
-        google_access_token:   googleAccessToken  ?? null,
-        google_refresh_token:  googleRefreshToken ?? null,
-        google_email:          googleEmail        ?? null,
-        sheet_id:         sheetId        ?? null,
-        drive_folder_id:  driveFolderId  ?? null,
-      },
+    // Upsert user — try with refresh token first, fall back without if column missing
+    const basePayload = {
+      line_user_id:          lineUserId,
+      first_name:            firstName      ?? null,
+      last_name:             lastName       ?? null,
+      business_type:         businessType   ?? null,
+      business_name:         businessName   ?? null,
+      phone:                 phone          ?? null,
+      vat_registered:        vatRegistered  ?? false,
+      google_access_token:   googleAccessToken  ?? null,
+      google_email:          googleEmail        ?? null,
+      sheet_id:              sheetId        ?? null,
+      drive_folder_id:       driveFolderId  ?? null,
+    };
+
+    let { error } = await supabaseAdmin.from("users").upsert(
+      { ...basePayload, google_refresh_token: googleRefreshToken ?? null },
       { onConflict: "line_user_id" }
     );
+
+    // If google_refresh_token column doesn't exist yet, retry without it
+    if (error && (String(error.message ?? "").includes("google_refresh_token") || String(error.code ?? "") === "PGRST204")) {
+      console.warn("[user/save] google_refresh_token column missing, saving without it");
+      ({ error } = await supabaseAdmin.from("users").upsert(basePayload, { onConflict: "line_user_id" }));
+    }
 
     if (error) throw error;
 

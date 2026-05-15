@@ -43,14 +43,20 @@ export async function readReceipt(base64Image: string): Promise<ReceiptData> {
           },
           {
             type: "text",
-            text: `You are a Thai receipt/slip reader. Extract data from the image and reply with a single JSON object only — no explanation, no markdown, no extra text.
+            text: `You are a Thai receipt/slip reader for an e-commerce business owner. Extract data from the image and reply with a single JSON object only — no explanation, no markdown, no extra text.
+
+IMPORTANT RULES:
+- type: ALWAYS "expense" for any image slip or receipt. Income comes from other sources, not image slips.
+- vendor: the RECIPIENT of the money — person/business RECEIVING payment.
+  * For bank transfer slips: recipient is the name at the BOTTOM (destination). The sender is at the TOP — do NOT use the top name.
+  * For store receipts/invoices: the store name is the vendor.
 
 Required fields:
-- type: "income" or "expense"
+- type: always "expense"
 - amount: total paid as a number
-- vendor: the RECIPIENT of the money (destination account holder for transfers, store name for purchases — NOT the sender)
+- vendor: recipient name (BOTTOM name on transfer slips, store name on receipts)
 - date: "YYYY-MM-DD" (use ${today} if not visible)
-- description: short Thai description
+- description: short Thai description (never empty — use vendor name if nothing else)
 - docType: "สลิปโอนเงิน" or "ใบเสร็จรับเงิน" or "ใบกำกับภาษี" or "อื่นๆ"
 - expenseCategory: "บุคลากร & ค่าจ้าง" or "สินค้า" or "บริการ" or "ค่าขนส่ง" or "ค่าเช่า" or "อื่นๆ"
 - quantity: number (default 1)

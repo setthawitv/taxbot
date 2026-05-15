@@ -47,13 +47,19 @@ function safeNum(v: unknown, fallback = 0): number {
 }
 
 const PROMPT_LINES = [
-  "You are a Thai receipt/slip reader.",
+  "You are a Thai receipt/slip reader for an e-commerce business owner.",
   "Extract data from the image and reply with a single JSON object only — no explanation, no markdown, no extra text.",
   "",
+  "IMPORTANT RULES:",
+  '- type: ALWAYS "expense" for any image slip or receipt. Income comes from other sources, not image slips.',
+  "- vendor: the RECIPIENT of the money — the person/business RECEIVING payment.",
+  "  * For bank transfer slips (สลิปโอนเงิน): the recipient is the name shown at the BOTTOM (destination). The sender is at the TOP — do NOT use the top name.",
+  "  * For store receipts/invoices: the store/business name is the vendor.",
+  "",
   "Required JSON fields:",
-  '- type: "income" or "expense"',
+  '- type: always "expense"',
   "- amount: total paid as a number",
-  "- vendor: the name of the RECIPIENT (who is receiving the money). For bank transfer slips, this is the DESTINATION account holder shown at the bottom of the arrow, NOT the sender at the top.",
+  "- vendor: recipient name (BOTTOM name on transfer slips, store name on receipts)",
   '- date: "YYYY-MM-DD"',
   "- description: short Thai description (e.g. 'โอนเงิน', 'ค่าสินค้า', 'ชำระค่าบริการ' — never leave empty; use vendor name if nothing else)",
   '- docType: "สลิปโอนเงิน" or "ใบเสร็จรับเงิน" or "ใบกำกับภาษี" or "อื่นๆ"',
