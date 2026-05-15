@@ -127,7 +127,20 @@ async function handleImage(replyToken: string, lineUserId: string, msg: webhook.
       return;
     }
 
-    // 4. Save transaction to Supabase
+    // 4. Check vendor rules — override AI type if user has a matching rule
+    const { data: vendorRule } = await supabaseAdmin
+      .from("vendor_rules")
+      .select("type")
+      .eq("user_id", user.id)
+      .ilike("vendor_name", `%${receipt.vendor}%`)
+      .limit(1)
+      .single();
+
+    if (vendorRule) {
+      receipt.type = vendorRule.type as "income" | "expense";
+    }
+
+    // 5. Save transaction to Supabase
     await supabaseAdmin.from("transactions").insert({
       user_id: user.id,
       type: receipt.type,
@@ -137,7 +150,7 @@ async function handleImage(replyToken: string, lineUserId: string, msg: webhook.
       transaction_date: receipt.date,
     });
 
-    // 5. Append to Google Sheet (create if missing)
+    // 6. Append to Google Sheet (create if missing)
     let sheetId = user.sheet_id;
     if (!sheetId && user.google_access_token) {
       sheetId = await createSheet(user.google_access_token, user.business_name ?? "ธุรกิจของฉัน");
@@ -148,7 +161,7 @@ async function handleImage(replyToken: string, lineUserId: string, msg: webhook.
       await appendTransaction(user.google_access_token, sheetId, receipt);
     }
 
-    // 6. Push summary back to user
+    // 7. Push summary back to user
     const typeLabel = receipt.type === "income" ? "💰 รายรับ" : "🧾 รายจ่าย";
     const summary =
       `✅ บันทึกแล้วครับ!\n\n` +

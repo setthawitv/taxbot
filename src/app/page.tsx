@@ -58,6 +58,13 @@ export default function Home() {
             </Link>
           ))}
         </div>
+
+        <Link
+          href="/settings"
+          className="mt-4 flex items-center justify-center gap-2 text-gray-400 hover:text-gray-600 text-sm py-3 transition-colors"
+        >
+          ⚙️ ตั้งค่าบัญชี
+        </Link>
       </div>
     </main>
   );

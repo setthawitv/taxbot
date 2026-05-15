@@ -20,3 +20,12 @@ CREATE TABLE IF NOT EXISTS transactions (
   transaction_date DATE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS vendor_rules (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  vendor_name TEXT NOT NULL,
+  type TEXT CHECK (type IN ('income', 'expense')) NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, vendor_name)
+);
