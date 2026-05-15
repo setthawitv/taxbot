@@ -132,6 +132,9 @@ async function handleImage(
   lineUserId: string,
   msg: webhook.ImageMessageContent
 ) {
+  // Show typing indicator (up to 60 s) while processing
+  await client.showLoadingAnimation({ chatId: lineUserId, loadingSeconds: 60 }).catch(() => null);
+
   await client.replyMessage({
     replyToken,
     messages: [{ type: "text", text: "📸 ได้รับสลิปแล้ว กำลังอ่านข้อมูล..." }],
@@ -240,6 +243,7 @@ async function handleImage(
 async function handlePostback(replyToken: string, lineUserId: string, data: string) {
   if (data.startsWith("confirm_")) {
     const pendingId = data.slice("confirm_".length);
+    await client.showLoadingAnimation({ chatId: lineUserId, loadingSeconds: 60 }).catch(() => null);
     await client.replyMessage({
       replyToken,
       messages: [{ type: "text", text: "⏳ กำลังบันทึกข้อมูล..." }],

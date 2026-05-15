@@ -21,6 +21,13 @@ function safeNum(v: unknown, fallback = 0): number {
 }
 
 export async function readReceipt(base64Image: string): Promise<ReceiptData> {
+  // Fall back to Groq if Anthropic key is not configured
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.warn("[claude] ANTHROPIC_API_KEY not set, falling back to Groq");
+    const { readReceipt: groqRead } = await import("./groq");
+    return groqRead(base64Image);
+  }
+
   const today = new Date().toISOString().split("T")[0];
 
   const response = await client.messages.create({
