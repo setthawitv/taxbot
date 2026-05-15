@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const PUBLIC_PATHS = [
-  "/onboarding",
-  "/connect-google",     // Google OAuth flow opened in external browser
+  "/intro",             // Feature intro slides (first-time users land here)
+  "/onboarding",        // 3-step onboarding wizard
+  "/connect-google",    // Google OAuth flow opened in external browser
   "/api/auth",
   "/api/webhook",
   "/api/user",
@@ -17,7 +18,8 @@ export function middleware(request: NextRequest) {
 
   const onboarded = request.cookies.get("taxbot_onboarded")?.value;
   if (!onboarded) {
-    return NextResponse.redirect(new URL("/onboarding", request.url));
+    // First-time users see feature intro slides before onboarding
+    return NextResponse.redirect(new URL("/intro", request.url));
   }
 
   return NextResponse.next();
