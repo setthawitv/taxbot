@@ -11,7 +11,7 @@ export type ReceiptData = {
 };
 
 export async function readReceipt(base64Image: string): Promise<ReceiptData> {
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
   const prompt = `คุณคือผู้ช่วยอ่านใบเสร็จ/สลิปสำหรับร้านค้าออนไลน์ไทย
 จากรูปภาพนี้ กรุณาดึงข้อมูลต่อไปนี้:
