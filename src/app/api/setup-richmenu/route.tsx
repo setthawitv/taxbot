@@ -11,11 +11,25 @@ const SECTIONS = [
   { emoji: "⚙️", label: "ตั้งค่า", color: "#374151", href: `${APP_URL}/settings` },
 ];
 
+async function loadThaiFont(): Promise<ArrayBuffer | null> {
+  try {
+    // Fetch Google Fonts CSS to get the real woff2 URL
+    const css = await fetch(
+      "https://fonts.googleapis.com/css2?family=Sarabun:wght@700&subset=thai",
+      { headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36" } }
+    ).then((r) => r.text());
+
+    const match = css.match(/url\((https:\/\/fonts\.gstatic\.com[^)]+)\)/);
+    if (!match) return null;
+
+    return fetch(match[1]).then((r) => r.arrayBuffer());
+  } catch {
+    return null;
+  }
+}
+
 async function buildImage(): Promise<ArrayBuffer> {
-  // Load Thai font from Google Fonts
-  const fontData = await fetch(
-    "https://fonts.gstatic.com/s/sarabun/v15/DtVmJx26TKEr37c9YHZ5ibU.woff"
-  ).then((r) => r.arrayBuffer());
+  const fontData = await loadThaiFont();
 
   const response = new ImageResponse(
     (
@@ -55,7 +69,7 @@ async function buildImage(): Promise<ArrayBuffer> {
     {
       width: 2500,
       height: 1686,
-      fonts: [{ name: "Sarabun", data: fontData, style: "normal", weight: 700 }],
+      ...(fontData ? { fonts: [{ name: "Sarabun", data: fontData, style: "normal" as const, weight: 700 as const }] } : {}),
     }
   );
 
