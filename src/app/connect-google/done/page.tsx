@@ -1,40 +1,48 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
+import { getSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
 function ConnectGoogleDoneInner() {
-  const { data: session, status } = useSession();
   const params = useSearchParams();
   const lid = params.get("lid") ?? "";
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (status !== "authenticated" || !session || !lid || saved) return;
+    if (!lid || saved) return;
 
-    const s = session as typeof session & { accessToken?: string; refreshToken?: string };
+    // Use getSession() instead of useSession() to always get fresh tokens
+    // useSession() may return a stale cached session without the new refresh_token
+    getSession().then((session) => {
+      if (!session) { setError("ไม่พบ session กรุณาลองใหม่"); return; }
 
-    fetch("/api/user/save", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        lineUserId:           lid,
-        googleAccessToken:    s.accessToken,
-        googleRefreshToken:   s.refreshToken,
-        googleEmail:          session.user?.email,
-        businessName:         "ธุรกิจของฉัน",
-      }),
+      const s = session as typeof session & { accessToken?: string; refreshToken?: string };
+
+      console.log("[connect-google/done] accessToken:", s.accessToken ? "✓" : "null");
+      console.log("[connect-google/done] refreshToken:", s.refreshToken ? "✓" : "null");
+
+      return fetch("/api/user/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lineUserId:        lid,
+          googleAccessToken: s.accessToken  ?? null,
+          googleRefreshToken:s.refreshToken ?? null,
+          googleEmail:       session.user?.email ?? null,
+          businessName:      "ธุรกิจของฉัน",
+        }),
+      });
     })
       .then((r) => {
-        if (!r.ok) throw new Error("save failed");
+        if (!r || !r.ok) throw new Error("save failed");
         return r.json();
       })
       .then(() => setSaved(true))
       .catch(() => setError("บันทึกไม่สำเร็จ กรุณาลองใหม่"));
-  }, [status, session, lid, saved]);
+  }, [lid, saved]);
 
   if (status === "loading") {
     return (
