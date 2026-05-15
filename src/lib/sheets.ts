@@ -8,6 +8,8 @@ const MONTH_TABS = [
   "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม",
 ];
 
+const ALL_TABS = ["รวม", ...MONTH_TABS];
+
 // ── 19 columns A–S ────────────────────────────────────────────────────────────
 const HEADERS = [
   "วันที่",                    // A
@@ -46,8 +48,7 @@ export async function createSheet(accessToken: string, businessName: string): Pr
   const auth   = getAuth(accessToken);
   const sheets = google.sheets({ version: "v4", auth });
 
-  // Build sheet tabs: รวม first, then each month
-  const sheetDefs = ["รวม", ...MONTH_TABS].map((title) => ({
+  const sheetDefs = ALL_TABS.map((title) => ({
     properties: { title },
     data: [{ startRow: 0, rowData: headerRow() }],
   }));
@@ -62,10 +63,53 @@ export async function createSheet(accessToken: string, businessName: string): Pr
   return response.data.spreadsheetId!;
 }
 
-// ── Format date as DD/MM/YYYY (Thai) ─────────────────────────────────────────
+/**
+ * Ensure all required tabs (รวม + 12 months) exist on an existing sheet.
+ * Called automatically when appendTransaction detects missing tabs.
+ */
+async function ensureSheetTabs(
+  sheets: ReturnType<typeof google.sheets>,
+  sheetId: string
+): Promise<void> {
+  // Get existing tab titles
+  const meta = await sheets.spreadsheets.get({
+    spreadsheetId: sheetId,
+    fields: "sheets.properties.title",
+  });
+  const existing = new Set(
+    meta.data.sheets?.map((s) => s.properties?.title ?? "") ?? []
+  );
+
+  const missing = ALL_TABS.filter((t) => !existing.has(t));
+  if (missing.length === 0) return;
+
+  // Add missing sheet tabs
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId: sheetId,
+    requestBody: {
+      requests: missing.map((title) => ({
+        addSheet: { properties: { title } },
+      })),
+    },
+  });
+
+  // Write headers to each new tab
+  await sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId: sheetId,
+    requestBody: {
+      valueInputOption: "USER_ENTERED",
+      data: missing.map((title) => ({
+        range: `${title}!A1:S1`,
+        values: [HEADERS],
+      })),
+    },
+  });
+}
+
+// ── Format date as DD/MM/YYYY ─────────────────────────────────────────────────
 function formatDateTH(iso: string): string {
   const [y, m, d] = iso.split("-");
-  return `${d}/${m}/${parseInt(y, 10)}`;   // keep CE year to match screenshot
+  return `${d}/${m}/${parseInt(y, 10)}`;
 }
 
 // ── Build a 19-value row array ────────────────────────────────────────────────
@@ -86,7 +130,7 @@ function buildRow(data: ReceiptData, txId: string): (string | number)[] {
     data.withholdingTax,       // L ภาษีที่ ณ ที่จ่าย
     data.amount,               // M ยอดชำระ
     data.expenseCategory,      // N ประเภทค่าใช้จ่าย
-    data.amount,               // O จำนวนหมวดหมู่ (same amount per category)
+    data.amount,               // O จำนวนหมวดหมู่
     data.expenseCategory,      // P หมวดหมู่ย่อย
     data.vendor,               // Q ผู้รับ/ผู้ให้บริการ
     data.taxId,                // R เลขประจำตัวผู้เสียภาษี
@@ -95,8 +139,8 @@ function buildRow(data: ReceiptData, txId: string): (string | number)[] {
 }
 
 /**
- * Append one transaction row to both the "รวม" tab and the relevant month tab.
- * txId must be provided (generate on the caller side).
+ * Append one transaction row to both "รวม" and the relevant month tab.
+ * Auto-creates missing tabs for old-format sheets.
  */
 export async function appendTransaction(
   accessToken: string,
@@ -107,23 +151,36 @@ export async function appendTransaction(
   const auth   = getAuth(accessToken);
   const sheets = google.sheets({ version: "v4", auth });
 
-  const row        = buildRow(data, txId);
-  const monthIndex = parseInt(data.date.split("-")[1], 10) - 1;  // 0-based
-  const monthTab   = MONTH_TABS[monthIndex];
+  const row      = buildRow(data, txId);
+  const monthTab = MONTH_TABS[parseInt(data.date.split("-")[1], 10) - 1];
 
-  // Append to both tabs simultaneously
-  await Promise.all([
-    sheets.spreadsheets.values.append({
-      spreadsheetId: sheetId,
-      range: "รวม!A:S",
-      valueInputOption: "USER_ENTERED",
-      requestBody: { values: [row] },
-    }),
-    sheets.spreadsheets.values.append({
-      spreadsheetId: sheetId,
-      range: `${monthTab}!A:S`,
-      valueInputOption: "USER_ENTERED",
-      requestBody: { values: [row] },
-    }),
-  ]);
+  const doAppend = () =>
+    Promise.all([
+      sheets.spreadsheets.values.append({
+        spreadsheetId: sheetId,
+        range: "รวม!A:S",
+        valueInputOption: "USER_ENTERED",
+        requestBody: { values: [row] },
+      }),
+      sheets.spreadsheets.values.append({
+        spreadsheetId: sheetId,
+        range: `${monthTab}!A:S`,
+        valueInputOption: "USER_ENTERED",
+        requestBody: { values: [row] },
+      }),
+    ]);
+
+  try {
+    await doAppend();
+  } catch (err: unknown) {
+    // Old sheet is missing the new tabs — create them and retry once
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("Unable to parse range")) {
+      console.log("[sheets] missing tabs detected, creating them...");
+      await ensureSheetTabs(sheets, sheetId);
+      await doAppend();
+    } else {
+      throw err;
+    }
+  }
 }
