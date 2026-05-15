@@ -14,9 +14,11 @@ const SECTIONS = [
 async function loadThaiFont(): Promise<ArrayBuffer | null> {
   try {
     // Fetch Google Fonts CSS to get the real woff2 URL
+    // Use old CSS API + IE user-agent → Google returns woff (not woff2)
+    // Satori (ImageResponse) only supports TTF/OTF/WOFF, not WOFF2
     const css = await fetch(
-      "https://fonts.googleapis.com/css2?family=Sarabun:wght@700&subset=thai",
-      { headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36" } }
+      "https://fonts.googleapis.com/css?family=Sarabun:700&subset=thai",
+      { headers: { "User-Agent": "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0)" } }
     ).then((r) => r.text());
 
     const match = css.match(/url\((https:\/\/fonts\.gstatic\.com[^)]+)\)/);
