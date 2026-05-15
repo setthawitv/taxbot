@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import liff from "@line/liff";
 import { initLiff, isInLineClient, getLiffUrl } from "@/lib/liff";
 
+// ─── Slide data ────────────────────────────────────────────────────────────────
 const SLIDES = [
   {
-    emoji: "🤖",
     badge: "หน้า 1 / 4",
     titleHighlight: "TaxBot มาช่วยจัดการ",
     titleNormal: "รายรับ-รายจ่าย และภาษี แล้วจ้า~",
@@ -27,7 +28,6 @@ const SLIDES = [
     ),
   },
   {
-    emoji: "🏷️",
     badge: "หน้า 2 / 4",
     titleHighlight: "จัดหมวดหมู่รายรับ-รายจ่าย",
     titleNormal: "ได้ตามใจ 💙",
@@ -50,7 +50,6 @@ const SLIDES = [
     ),
   },
   {
-    emoji: "📸",
     badge: "หน้า 3 / 4",
     titleHighlight: "AI อ่านสลิป",
     titleNormal: "บันทึกอัตโนมัติทันที ✨",
@@ -76,7 +75,6 @@ const SLIDES = [
     ),
   },
   {
-    emoji: "📊",
     badge: "หน้า 4 / 4",
     titleHighlight: "สรุปภาษีอัตโนมัติ",
     titleNormal: "ไม่ต้องคำนวณเอง 🧾",
@@ -101,33 +99,152 @@ const SLIDES = [
   },
 ];
 
+// ─── LINE logo SVG (reused in multiple screens) ────────────────────────────────
+function LineLogo({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className ?? "w-6 h-6 fill-white"}>
+      <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.494.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314" />
+    </svg>
+  );
+}
+
+// ─── Add Friend screen ─────────────────────────────────────────────────────────
+function AddFriendScreen({ onDone }: { onDone: () => void }) {
+  const [checking, setChecking] = useState(false);
+  const [added, setAdded] = useState(false);
+  const [error, setError] = useState("");
+
+  const oaId = process.env.NEXT_PUBLIC_LINE_OA_ID ?? "";
+
+  function openAddFriend() {
+    if (!oaId || oaId === "@YOUR_OA_BASIC_ID") return;
+    // Open the OA profile inside LINE (no external browser needed)
+    liff.openWindow({
+      url: `https://line.me/R/ti/p/${oaId}`,
+      external: false,
+    });
+  }
+
+  async function checkFriendship() {
+    setChecking(true);
+    setError("");
+    try {
+      const { friendFlag } = await liff.getFriendship();
+      if (friendFlag) {
+        setAdded(true);
+        setTimeout(onDone, 1000);
+      } else {
+        setError("ยังไม่พบการเพิ่มเพื่อน กรุณาเพิ่มแล้วลองใหม่");
+      }
+    } catch {
+      // If getFriendship fails (channel not linked), skip this step
+      onDone();
+    }
+    setChecking(false);
+  }
+
+  return (
+    <main className="min-h-screen bg-white flex flex-col items-center justify-center px-8 text-center">
+      {/* Bot mascot */}
+      <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center text-5xl mb-6">
+        🤖
+      </div>
+
+      <h1 className="text-2xl font-bold text-gray-900 mb-2">เพิ่ม TaxBot เป็นเพื่อน</h1>
+      <p className="text-gray-500 text-sm leading-relaxed mb-8">
+        เพิ่มเพื่อนเพื่อรับการแจ้งเตือนภาษี<br />
+        และส่งสลิปผ่านแชทได้เลย
+      </p>
+
+      {added ? (
+        <div className="flex flex-col items-center gap-2">
+          <div className="w-14 h-14 rounded-full bg-green-500 flex items-center justify-center text-white text-2xl">✓</div>
+          <p className="text-green-600 font-semibold mt-2">เพิ่มเพื่อนสำเร็จ!</p>
+        </div>
+      ) : (
+        <div className="w-full max-w-xs flex flex-col gap-3">
+          {/* Add friend button */}
+          <button
+            onClick={openAddFriend}
+            disabled={!oaId || oaId === "@YOUR_OA_BASIC_ID"}
+            className="w-full flex items-center justify-center gap-3 bg-[#06C755] text-white font-bold py-4 rounded-2xl text-base active:scale-95 transition-all shadow-md shadow-green-200 disabled:opacity-50"
+          >
+            <LineLogo />
+            เพิ่มเพื่อน TaxBot
+          </button>
+
+          {/* Confirm button */}
+          <button
+            onClick={checkFriendship}
+            disabled={checking}
+            className="w-full border-2 border-gray-200 text-gray-600 font-semibold py-3.5 rounded-2xl hover:border-gray-400 active:scale-95 transition-all disabled:opacity-50"
+          >
+            {checking ? "กำลังตรวจสอบ..." : "ฉันเพิ่มแล้ว →"}
+          </button>
+
+          {error && <p className="text-red-500 text-xs text-center">{error}</p>}
+
+          {/* Skip for existing friends */}
+          <button
+            onClick={onDone}
+            className="text-xs text-gray-400 mt-1 underline"
+          >
+            ข้ามขั้นตอนนี้
+          </button>
+        </div>
+      )}
+    </main>
+  );
+}
+
+// ─── Main page ─────────────────────────────────────────────────────────────────
+type Screen = "loading" | "not-in-line" | "add-friend" | "slides";
+
 export default function IntroPage() {
+  const [screen, setScreen] = useState<Screen>("loading");
   const [slide, setSlide] = useState(0);
-  const [notInLine, setNotInLine] = useState(false);
   const router = useRouter();
   const isLast = slide === SLIDES.length - 1;
   const s = SLIDES[slide];
 
   useEffect(() => {
-    // Check if we're inside LINE's in-app browser.
-    // initLiff may throw if LIFF_ID is wrong; treat that as "not in LINE".
     initLiff()
-      .then(() => {
-        if (!isInLineClient()) setNotInLine(true);
+      .then(async () => {
+        if (!isInLineClient()) {
+          setScreen("not-in-line");
+          return;
+        }
+        // Check if user has already added TaxBot as friend
+        try {
+          const { friendFlag } = await liff.getFriendship();
+          setScreen(friendFlag ? "slides" : "add-friend");
+        } catch {
+          // getFriendship() fails when Login channel isn't linked to OA — skip the step
+          setScreen("slides");
+        }
       })
-      .catch(() => setNotInLine(true));
+      .catch(() => setScreen("not-in-line"));
   }, []);
 
   function next() {
-    if (isLast) {
-      router.push("/onboarding");
-    } else {
-      setSlide((i) => i + 1);
-    }
+    if (isLast) router.push("/onboarding");
+    else setSlide((i) => i + 1);
   }
 
-  // ── Not opened inside LINE ────────────────────────────────────────────────
-  if (notInLine) {
+  // ── Loading ─────────────────────────────────────────────────────────────────
+  if (screen === "loading") {
+    return (
+      <main className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-5xl mb-4 animate-pulse">🤖</div>
+          <p className="text-gray-400 text-sm">กำลังโหลด...</p>
+        </div>
+      </main>
+    );
+  }
+
+  // ── Not in LINE ─────────────────────────────────────────────────────────────
+  if (screen === "not-in-line") {
     return (
       <main className="min-h-screen bg-white flex flex-col items-center justify-center px-8 text-center">
         <div className="text-6xl mb-6">🤖</div>
@@ -136,56 +253,41 @@ export default function IntroPage() {
           แอปนี้ออกแบบมาสำหรับ LINE<br />
           กรุณาเปิดผ่านแอป LINE เพื่อใช้งาน
         </p>
-
-        {/* Open in LINE button */}
         <a
           href={getLiffUrl()}
           className="w-full max-w-xs flex items-center justify-center gap-3 bg-[#06C755] text-white font-bold py-4 rounded-2xl text-lg active:scale-95 transition-all shadow-lg shadow-green-200"
         >
-          <svg viewBox="0 0 24 24" className="w-6 h-6 fill-white">
-            <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.494.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/>
-          </svg>
+          <LineLogo />
           เปิดใน LINE
         </a>
-
-        <p className="text-xs text-gray-400 mt-6">
-          หรือสแกน QR Code ด้านล่างด้วยแอป LINE
-        </p>
-        {/* QR code via LINE API */}
-        <img
-          src={`https://qr-official.line.me/sid/L/taxbot.png`}
-          alt="QR Code"
-          className="w-32 h-32 mt-3 opacity-60"
-          onError={(e) => (e.currentTarget.style.display = "none")}
-        />
       </main>
     );
   }
 
+  // ── Add friend gate ─────────────────────────────────────────────────────────
+  if (screen === "add-friend") {
+    return <AddFriendScreen onDone={() => setScreen("slides")} />;
+  }
+
+  // ── Feature slides ──────────────────────────────────────────────────────────
   return (
     <main className="min-h-screen bg-white flex flex-col px-6 pt-12 pb-8">
-      {/* Preview card */}
       <div className="flex-1 flex flex-col items-center justify-center gap-6">
         {s.preview}
       </div>
 
-      {/* Text content */}
       <div className="mt-4">
         <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
           {s.badge}
         </span>
-
         <h2 className="mt-3 text-2xl font-bold text-gray-900 leading-tight">
           <span className="text-blue-600">{s.titleHighlight}</span>{" "}
           {s.titleNormal}
         </h2>
-
         <p className="mt-2 text-gray-500 text-sm leading-relaxed">{s.description}</p>
       </div>
 
-      {/* Navigation */}
       <div className="mt-6">
-        {/* Dot indicators */}
         <div className="flex justify-center gap-2 mb-5">
           {SLIDES.map((_, i) => (
             <button
@@ -197,7 +299,6 @@ export default function IntroPage() {
             />
           ))}
         </div>
-
         <div className="flex items-center gap-4">
           {slide > 0 ? (
             <button
