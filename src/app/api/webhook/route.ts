@@ -313,69 +313,86 @@ async function processConfirmedReceipt(lineUserId: string, pendingId: string) {
 
     // Google Drive + Sheet
     let driveFolderUrl: string | undefined;
+    let googleAuthExpired = false;
 
     if (user.google_access_token) {
-      // Refresh the access token if expired
-      const gToken = await getFreshGoogleToken(
-        user.id,
-        user.google_access_token,
-        user.google_refresh_token ?? null
-      );
+      try {
+        // Refresh the access token if expired
+        const gToken = await getFreshGoogleToken(
+          user.id,
+          user.google_access_token,
+          user.google_refresh_token ?? null
+        );
 
-      // Ensure Sheet exists
-      let sheetId = user.sheet_id;
-      if (!sheetId) {
-        sheetId = await createSheet(gToken, user.business_name ?? "ธุรกิจของฉัน");
-        await supabaseAdmin.from("users").update({ sheet_id: sheetId }).eq("id", user.id);
-      }
+        // Ensure Sheet exists
+        let sheetId = user.sheet_id;
+        if (!sheetId) {
+          sheetId = await createSheet(gToken, user.business_name ?? "ธุรกิจของฉัน");
+          await supabaseAdmin.from("users").update({ sheet_id: sheetId }).eq("id", user.id);
+        }
 
-      // Ensure root Drive folder exists
-      let driveFolderId = user.drive_folder_id;
-      if (!driveFolderId) {
-        driveFolderId = await createRootFolder(gToken, user.business_name ?? "TaxBot");
-        await supabaseAdmin.from("users").update({ drive_folder_id: driveFolderId }).eq("id", user.id);
-      }
+        // Ensure root Drive folder exists
+        let driveFolderId = user.drive_folder_id;
+        if (!driveFolderId) {
+          driveFolderId = await createRootFolder(gToken, user.business_name ?? "TaxBot");
+          await supabaseAdmin.from("users").update({ drive_folder_id: driveFolderId }).eq("id", user.id);
+        }
 
-      // Create folder structure
-      const { folderId, folderUrl, accountingFolderId } = await ensureReceiptFolder(
-        gToken, driveFolderId, receipt.date, receipt.vendor
-      );
-      driveFolderUrl = folderUrl;
+        // Create folder structure
+        const { folderId, folderUrl, accountingFolderId } = await ensureReceiptFolder(
+          gToken, driveFolderId, receipt.date, receipt.vendor
+        );
+        driveFolderUrl = folderUrl;
 
-      const safeName = receipt.vendor.replace(/[/\\:*?"<>|]/g, "").trim().slice(0, 30);
-      const bizSafe  = (user.business_name ?? "TaxBot").replace(/[/\\:*?"<>|]/g, "").trim().slice(0, 20);
+        const safeName = receipt.vendor.replace(/[/\\:*?"<>|]/g, "").trim().slice(0, 30);
+        const bizSafe  = (user.business_name ?? "TaxBot").replace(/[/\\:*?"<>|]/g, "").trim().slice(0, 20);
 
-      // Upload original image
-      await uploadFileToDrive(
-        gToken, folderId, `${receipt.date}_${safeName}.jpg`, imageBuffer, "image/jpeg"
-      );
+        // Upload original image
+        await uploadFileToDrive(
+          gToken, folderId, `${receipt.date}_${safeName}.jpg`, imageBuffer, "image/jpeg"
+        );
 
-      // Generate + upload PDF to both folders
-      const receiptNo = `RC-${txId.slice(0, 8).toUpperCase()}`;
-      const pdfBuffer = await generateReceiptPdf(receipt, user.business_name ?? "ธุรกิจของฉัน", receiptNo);
-      const pdfName   = `${receipt.date}_${safeName}_${bizSafe}_${txId.slice(0, 8)}.pdf`;
+        // Generate + upload PDF to both folders
+        const receiptNo = `RC-${txId.slice(0, 8).toUpperCase()}`;
+        const pdfBuffer = await generateReceiptPdf(receipt, user.business_name ?? "ธุรกิจของฉัน", receiptNo);
+        const pdfName   = `${receipt.date}_${safeName}_${bizSafe}_${txId.slice(0, 8)}.pdf`;
 
-      await Promise.all([
-        uploadFileToDrive(gToken, folderId,           pdfName, pdfBuffer, "application/pdf"),
-        uploadFileToDrive(gToken, accountingFolderId, pdfName, pdfBuffer, "application/pdf"),
-      ]);
+        await Promise.all([
+          uploadFileToDrive(gToken, folderId,           pdfName, pdfBuffer, "application/pdf"),
+          uploadFileToDrive(gToken, accountingFolderId, pdfName, pdfBuffer, "application/pdf"),
+        ]);
 
-      // Append to Sheet
-      if (sheetId) {
-        await appendTransaction(gToken, sheetId, receipt, txId);
+        // Append to Sheet
+        if (sheetId) {
+          await appendTransaction(gToken, sheetId, receipt, txId);
+        }
+      } catch (gErr) {
+        const gMsg = errMsg(gErr);
+        console.error("[webhook] Google Drive/Sheet error:", gMsg);
+        // If token expired / auth failed — flag it but don't throw; data is already in Supabase
+        if (gMsg.includes("401") || gMsg.includes("invalid authentication") || gMsg.includes("Invalid Credentials")) {
+          googleAuthExpired = true;
+        } else {
+          throw gErr; // re-throw unexpected errors
+        }
       }
     }
 
     // Push success message
     const typeLabel = receipt.type === "income" ? "💰 รายรับ" : "🧾 รายจ่าย";
-    const summary =
+    let summary =
       `✅ บันทึกแล้วครับ!\n\n` +
       `${typeLabel}\n` +
       `ร้านค้า: ${receipt.vendor}\n` +
       `จำนวน: ฿${receipt.amount.toLocaleString("th-TH")}\n` +
       `วันที่: ${receipt.date}\n` +
-      `รายละเอียด: ${receipt.description}` +
-      (driveFolderUrl ? `\n\n📁 หลักฐาน: ${driveFolderUrl}` : "\n\n📊 ดูในชีทได้เลยครับ");
+      `รายละเอียด: ${receipt.description || "-"}`;
+
+    if (googleAuthExpired) {
+      summary += `\n\n⚠️ บันทึกใน TaxBot แล้ว แต่ยังอัปโหลดไปยัง Google Drive/Sheet ไม่ได้\nกรุณาเชื่อมต่อ Google ใหม่อีกครั้งที่ Settings ครับ`;
+    } else {
+      summary += driveFolderUrl ? `\n\n📁 หลักฐาน: ${driveFolderUrl}` : "\n\n📊 ดูในชีทได้เลยครับ";
+    }
 
     await client.pushMessage({ to: lineUserId, messages: [{ type: "text", text: summary }] });
 
