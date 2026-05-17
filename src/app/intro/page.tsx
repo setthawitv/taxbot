@@ -229,12 +229,17 @@ function IntroPageInner() {
           // Already registered
           document.cookie = "taxbot_onboarded=1; path=/; max-age=31536000";
 
-          // Check for pending Google reconnect triggered from settings (localStorage bridge)
+          // Check for pending Google reconnect triggered from settings (localStorage bridge).
+          // This page is always opened via liff.line.me URL so liff.openWindow({ external })
+          // works reliably here — unlike the settings page which is opened via direct URL.
           const pendingLid = localStorage.getItem("reconnect_google_lid");
           if (pendingLid) {
             localStorage.removeItem("reconnect_google_lid");
-            router.replace("/settings?reconnect=1");
-            return;
+            liff.openWindow({
+              url: `${window.location.origin}/connect-google?lid=${pendingLid}`,
+              external: true,
+            });
+            return; // stay on intro — Safari will handle the OAuth
           }
 
           // Go to requested page (or dashboard)
