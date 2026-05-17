@@ -18,6 +18,7 @@ function SettingsPageInner() {
   const [lineUserId, setLineUserId] = useState<string>("");
   const [googleEmail, setGoogleEmail] = useState<string>("");
   const [connecting, setConnecting] = useState(false);
+  const [showLiffLink, setShowLiffLink] = useState(false);
 
   // Init LIFF to get LINE user ID + current Google status
   useEffect(() => {
@@ -38,25 +39,19 @@ function SettingsPageInner() {
     });
   }, []);
 
-  // Open Google connect in external browser
-  // Strategy: liff.openWindow({ external: true }) only works when the page was opened
-  // via the LIFF URL (liff.line.me/...). Settings is opened via direct URL from the
-  // Rich Menu, so it has no LIFF context. We store the user ID in localStorage and
-  // redirect to the LIFF URL; the intro page detects the key and calls openWindow
-  // from there (where it always has full LIFF context).
-  async function handleGoogleConnect() {
+  // Open Google connect in external browser.
+  // liff.openWindow({ external: true }) requires a user gesture AND proper LIFF context
+  // (page opened via liff.line.me). Settings opens via direct Rich Menu URL, so we:
+  // 1. Save lineUserId to localStorage
+  // 2. Show a real <a> link to the LIFF URL — tapping it = user gesture + LIFF context
+  // 3. Intro page detects the key and shows a "tap to open Safari" button
+  function handleGoogleConnect() {
     if (!lineUserId) return;
-    setConnecting(true);
-
     const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
-
-    if (liffId && typeof window !== "undefined") {
-      // Store the pending reconnect so intro page can pick it up
+    if (liffId) {
       localStorage.setItem("reconnect_google_lid", lineUserId);
-      // Redirect to LIFF URL — intro will call liff.openWindow({ external: true })
-      window.location.href = `https://liff.line.me/${liffId}`;
+      setShowLiffLink(true);
     } else {
-      // Fallback for non-LINE / no LIFF ID
       window.location.href = `/connect-google?lid=${lineUserId}&ext=1`;
     }
   }
@@ -114,7 +109,16 @@ function SettingsPageInner() {
           <p className="text-xs text-gray-400 mb-4">
             เชื่อมต่อเพื่อบันทึกหลักฐานไปยัง Google Drive และ Google Sheet อัตโนมัติ
           </p>
-          {googleEmail ? (
+          {showLiffLink ? (
+            // Step 2: show a real anchor link — tapping is a user gesture that opens
+            // the LIFF URL with proper context so liff.openWindow can fire in intro page
+            <a
+              href={`https://liff.line.me/${process.env.NEXT_PUBLIC_LIFF_ID}`}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold text-white bg-blue-500 active:bg-blue-600 transition-colors text-center"
+            >
+              🌐 กดที่นี่เพื่อเปิด Safari / Chrome
+            </a>
+          ) : googleEmail ? (
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-2 bg-emerald-50 rounded-xl px-4 py-3">
                 <span className="text-emerald-500 text-lg">✅</span>
@@ -125,19 +129,19 @@ function SettingsPageInner() {
               </div>
               <button
                 onClick={handleGoogleConnect}
-                disabled={!lineUserId || connecting}
+                disabled={!lineUserId}
                 className="w-full bg-gray-100 text-gray-600 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-200 transition-colors disabled:opacity-40"
               >
-                {connecting ? "⏳ รอการเชื่อมต่อ..." : "🔄 เชื่อมต่อใหม่อีกครั้ง"}
+                🔄 เชื่อมต่อใหม่อีกครั้ง
               </button>
             </div>
           ) : (
             <button
               onClick={handleGoogleConnect}
-              disabled={!lineUserId || connecting}
+              disabled={!lineUserId}
               className="w-full py-3 rounded-xl text-sm font-semibold text-white bg-blue-500 hover:bg-blue-600 transition-colors disabled:opacity-40"
             >
-              {connecting ? "⏳ รอการเชื่อมต่อ..." : "🔗 เชื่อมต่อ Google"}
+              🔗 เชื่อมต่อ Google
             </button>
           )}
         </div>
