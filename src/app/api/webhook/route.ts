@@ -9,7 +9,9 @@ import { createRootFolder, ensureReceiptFolder, uploadFileToDrive } from "@/lib/
 import { generateReceiptPdf } from "@/lib/receipt-pdf";
 
 /**
- * Returns a valid Google access token, refreshing it automatically if expired.
+ * Returns a fresh Google access token by forcing a refresh via the refresh token.
+ * We never store expiry_date, so getAccessToken() won't know the token is stale —
+ * instead we always call refreshAccessToken() to guarantee a valid token.
  * Saves the new token back to Supabase so future calls also work.
  */
 async function getFreshGoogleToken(
@@ -23,20 +25,21 @@ async function getFreshGoogleToken(
       process.env.GOOGLE_CLIENT_ID!,
       process.env.GOOGLE_CLIENT_SECRET!
     );
-    auth.setCredentials({ access_token: accessToken, refresh_token: refreshToken });
+    // Only set the refresh token — don't pass the stale access token
+    auth.setCredentials({ refresh_token: refreshToken });
 
-    // getAccessToken() auto-refreshes when the stored token is expired
-    const { token } = await auth.getAccessToken();
-    const fresh = token ?? accessToken;
+    // Force-refresh to always get a new valid access token
+    const { credentials } = await auth.refreshAccessToken();
+    const fresh = credentials.access_token ?? accessToken;
 
-    if (fresh !== accessToken) {
-      console.log("[google-auth] token refreshed, saving...");
+    if (fresh && fresh !== accessToken) {
+      console.log("[google-auth] token refreshed, saving new access token...");
       await supabaseAdmin
         .from("users")
         .update({ google_access_token: fresh })
         .eq("id", userId);
     }
-    return fresh;
+    return fresh ?? accessToken;
   } catch (err) {
     console.error("[google-auth] refresh failed:", err);
     return accessToken;   // fall back to existing token
