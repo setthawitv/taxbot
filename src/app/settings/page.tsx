@@ -47,13 +47,7 @@ function SettingsPageInner() {
   // 3. Intro page detects the key and shows a "tap to open Safari" button
   function handleGoogleConnect() {
     if (!lineUserId) return;
-    const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
-    if (liffId) {
-      localStorage.setItem("reconnect_google_lid", lineUserId);
-      setShowLiffLink(true);
-    } else {
-      window.location.href = `/connect-google?lid=${lineUserId}&ext=1`;
-    }
+    setShowLiffLink(true);
   }
 
   async function load() {
@@ -110,10 +104,10 @@ function SettingsPageInner() {
             เชื่อมต่อเพื่อบันทึกหลักฐานไปยัง Google Drive และ Google Sheet อัตโนมัติ
           </p>
           {showLiffLink ? (
-            // Step 2: show a real anchor link — tapping is a user gesture that opens
-            // the LIFF URL with proper context so liff.openWindow can fire in intro page
+            // openExternalBrowser=1 tells LINE to open the URL in Safari/Chrome directly.
+            // ext=1 tells connect-google to skip the LINE-browser check and trigger OAuth.
             <a
-              href={`https://liff.line.me/${process.env.NEXT_PUBLIC_LIFF_ID}`}
+              href={`${typeof window !== "undefined" ? window.location.origin : ""}/connect-google?lid=${lineUserId}&ext=1&openExternalBrowser=1`}
               className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold text-white bg-blue-500 active:bg-blue-600 transition-colors text-center"
             >
               🌐 กดที่นี่เพื่อเปิด Safari / Chrome

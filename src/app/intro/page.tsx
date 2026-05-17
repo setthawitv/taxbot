@@ -198,12 +198,11 @@ function AddFriendScreen({ onDone }: { onDone: () => void }) {
 }
 
 // ─── Main page ─────────────────────────────────────────────────────────────────
-type Screen = "loading" | "not-in-line" | "add-friend" | "slides" | "google-reconnect";
+type Screen = "loading" | "not-in-line" | "add-friend" | "slides";
 
 function IntroPageInner() {
   const [screen, setScreen] = useState<Screen>("loading");
   const [slide, setSlide] = useState(0);
-  const [reconnectLid, setReconnectLid] = useState("");
   const router = useRouter();
   const params = useSearchParams();
   // ?to=/settings allows Rich Menu to open any page via LIFF URL (for LIFF context)
@@ -229,17 +228,6 @@ function IntroPageInner() {
         if (status.onboarded) {
           // Already registered
           document.cookie = "taxbot_onboarded=1; path=/; max-age=31536000";
-
-          // Check for pending Google reconnect (set by settings page localStorage bridge).
-          // We show a button so liff.openWindow is called from a real tap (user gesture)
-          // rather than from useEffect — LINE won't block it.
-          const pendingLid = localStorage.getItem("reconnect_google_lid");
-          if (pendingLid) {
-            localStorage.removeItem("reconnect_google_lid");
-            setReconnectLid(pendingLid);
-            setScreen("google-reconnect");
-            return;
-          }
 
           // Go to requested page (or dashboard)
           router.replace(redirectTo);
@@ -301,30 +289,6 @@ function IntroPageInner() {
     return <AddFriendScreen onDone={() => setScreen("slides")} />;
   }
 
-  // ── Google reconnect (via settings localStorage bridge) ──────────────────────
-  if (screen === "google-reconnect") {
-    return (
-      <main className="min-h-screen bg-white flex flex-col items-center justify-center px-8 text-center">
-        <div className="text-6xl mb-5">🔗</div>
-        <h1 className="text-xl font-bold text-gray-900 mb-2">เชื่อมต่อ Google</h1>
-        <p className="text-gray-500 text-sm mb-8 leading-relaxed">
-          กดปุ่มด้านล่างเพื่อเปิด Safari / Chrome<br />
-          แล้วเข้าสู่ระบบ Google ของคุณ
-        </p>
-        <button
-          onClick={() => {
-            liff.openWindow({
-              url: `${window.location.origin}/connect-google?lid=${reconnectLid}`,
-              external: true,
-            });
-          }}
-          className="w-full max-w-xs bg-blue-500 text-white font-bold py-4 rounded-2xl text-base active:scale-95 transition-all shadow-md"
-        >
-          🌐 เปิด Safari / Chrome
-        </button>
-      </main>
-    );
-  }
 
   // ── Feature slides ──────────────────────────────────────────────────────────
   return (
