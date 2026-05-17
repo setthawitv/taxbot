@@ -34,12 +34,20 @@ export default function RaiRab() {
           <Link href="/" className="text-emerald-600 text-sm">← กลับ</Link>
         </div>
 
-        <div className="flex items-center gap-3 mb-4">
-          <div className="text-4xl">💰</div>
-          <div>
-            <h1 className="text-xl font-bold text-emerald-700">รายรับ</h1>
-            <p className="text-emerald-500 text-sm">Income</p>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="text-4xl">💰</div>
+            <div>
+              <h1 className="text-xl font-bold text-emerald-700">รายรับ</h1>
+              <p className="text-emerald-500 text-sm">Income</p>
+            </div>
           </div>
+          <Link
+            href="/rairab/import"
+            className="flex items-center gap-1.5 bg-emerald-500 text-white text-xs font-semibold px-3 py-2 rounded-xl active:scale-95 transition-all"
+          >
+            📤 นำเข้าไฟล์
+          </Link>
         </div>
 
         {/* Total card */}
