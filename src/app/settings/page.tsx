@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, Suspense } from "react";
+import { useSession } from "next-auth/react";
 
 type VendorRule = {
   id: string;
@@ -31,33 +32,53 @@ function SettingsPageInner() {
   const [staffCopied,    setStaffCopied]    = useState(false);
   const [staffResetting, setStaffResetting] = useState(false);
 
-  // Init LIFF to get LINE user ID + current Google status
+  const { data: session, status: sessionStatus } = useSession();
+
+  // Init LIFF → fallback to Google session for browser users
   useEffect(() => {
+    if (sessionStatus === "loading") return;
     const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
-    if (!liffId) return;
-    import("@line/liff").then(({ default: liff }) => {
-      liff.init({ liffId }).then(async () => {
-        if (!liff.isLoggedIn() && !liff.isInClient() && /Line\//i.test(navigator.userAgent)) {
-          window.location.replace(`https://liff.line.me/${liffId}`);
-          return;
-        }
-        if (liff.isLoggedIn()) {
-          const profile = await liff.getProfile();
-          setLineUserId(profile.userId);
-          const res = await fetch(`/api/user/status?lineUserId=${profile.userId}`);
-          if (res.ok) {
-            const data = await res.json();
-            setGoogleEmail(data.email ?? "");
+
+    async function resolve() {
+      if (liffId) {
+        try {
+          const { default: liff } = await import("@line/liff");
+          await liff.init({ liffId });
+          if (!liff.isLoggedIn() && !liff.isInClient() && /Line\//i.test(navigator.userAgent)) {
+            window.location.replace(`https://liff.line.me/${liffId}`);
+            return;
           }
-          return;
-        }
-        // Inside LINE app but not logged in → force LIFF login
-        if (liff.isInClient()) {
-          liff.login();
-        }
-      }).catch(() => {});
-    });
-  }, []);
+          if (liff.isLoggedIn()) {
+            const profile = await liff.getProfile();
+            setLineUserId(profile.userId);
+            const res = await fetch(`/api/user/status?lineUserId=${profile.userId}`);
+            if (res.ok) {
+              const data = await res.json();
+              setGoogleEmail(data.email ?? "");
+            }
+            return;
+          }
+          if (liff.isInClient()) { liff.login(); return; }
+        } catch { /* not in LINE */ }
+      }
+
+      // Fallback: Google session (browser)
+      if (session?.user?.email) {
+        try {
+          const res = await fetch("/api/user/by-email");
+          if (res.ok) {
+            const d = await res.json();
+            if (d.lineUserId) {
+              setLineUserId(d.lineUserId);
+              setGoogleEmail(session.user.email ?? "");
+            }
+          }
+        } catch { /* ignore */ }
+      }
+    }
+
+    resolve();
+  }, [sessionStatus, session]);
 
   // Open Google connect in external browser.
   // liff.openWindow({ external: true }) requires a user gesture AND proper LIFF context
