@@ -123,7 +123,8 @@ export async function GET(req: NextRequest) {
   if (txRes.error) return NextResponse.json({ error: txRes.error.message }, { status: 500 });
   if (poRes.error) return NextResponse.json({ error: poRes.error.message }, { status: 500 });
 
-  const platformTxns = (poRes.data ?? []).map((o) => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const platformTxns = (poRes.data ?? []).map((o: any) => ({
     id:               o.id,
     type:             "income" as const,
     amount:           o.amount,
