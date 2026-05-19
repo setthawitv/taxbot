@@ -77,6 +77,15 @@ async function handleEvent(event: webhook.Event) {
     const lineUserId = (msg.source as { userId?: string }).userId;
     if (!lineUserId) return;
 
+    // Save latest LINE profile (display_name, picture_url) in background
+    client.getProfile(lineUserId).then((profile) => {
+      supabaseAdmin
+        .from("users")
+        .update({ display_name: profile.displayName, picture_url: profile.pictureUrl ?? null })
+        .eq("line_user_id", lineUserId)
+        .then(() => {});
+    }).catch(() => {});
+
     if (msg.message.type === "text") {
       await handleText(msg.replyToken, lineUserId, (msg.message as webhook.TextMessageContent).text);
     } else if (msg.message.type === "image") {

@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   const { data } = await supabaseAdmin
     .from("users")
     .select(
-      "google_access_token, google_email, business_name, first_name, last_name, business_type, phone, vat_registered"
+      "google_access_token, google_email, business_name, first_name, last_name, business_type, phone, vat_registered, display_name, picture_url"
     )
     .eq("line_user_id", lineUserId)
     .single();
@@ -24,10 +24,11 @@ export async function GET(req: NextRequest) {
   const onboarded = !!data.business_name;
 
   return NextResponse.json({
-    connected: !!data.google_access_token,
-    email: data.google_email ?? null,
+    connected:    !!data.google_access_token,
+    email:        data.google_email  ?? null,
+    displayName:  data.display_name  ?? null,
+    pictureUrl:   data.picture_url   ?? null,
     onboarded,
-    // Return saved data so onboarding can pre-fill if partially done
     profile: {
       firstName: data.first_name ?? "",
       lastName: data.last_name ?? "",

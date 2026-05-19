@@ -97,7 +97,7 @@ async function ensureSheetTabs(
   await sheets.spreadsheets.values.batchUpdate({
     spreadsheetId: sheetId,
     requestBody: {
-      valueInputOption: "USER_ENTERED",
+      valueInputOption: "RAW",
       data: missing.map((title) => ({
         range: `${title}!A1:S1`,
         values: [HEADERS],
@@ -159,13 +159,13 @@ export async function appendTransaction(
       sheets.spreadsheets.values.append({
         spreadsheetId: sheetId,
         range: "รวม!A:S",
-        valueInputOption: "USER_ENTERED",
+        valueInputOption: "RAW",
         requestBody: { values: [row] },
       }),
       sheets.spreadsheets.values.append({
         spreadsheetId: sheetId,
         range: `${monthTab}!A:S`,
-        valueInputOption: "USER_ENTERED",
+        valueInputOption: "RAW",
         requestBody: { values: [row] },
       }),
     ]);

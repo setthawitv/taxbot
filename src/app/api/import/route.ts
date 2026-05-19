@@ -42,18 +42,60 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "ไฟล์ว่างหรือไม่มีข้อมูล" }, { status: 400 });
     }
 
+    // Debug: log header row so we can see actual column names
+    console.log("[import] headers:", rows[0]);
+
     // ── Parse into normalised rows ────────────────────────────────────────────
     const parsed = parseFile(platform as "tiktok" | "shopee" | "lazada", rows);
 
     if (preview) {
-      // Return summary without saving
+      // ── Check which line_keys already exist in DB ───────────────────────────
+      let existingKeys  = new Set<string>();
+      const lineKeys    = parsed.rows.map((r) => r.lineKey);
+
+      if (lineUserId !== "preview" && lineKeys.length > 0) {
+        const { data: user } = await supabaseAdmin
+          .from("users")
+          .select("id")
+          .eq("line_user_id", lineUserId)
+          .single();
+
+        if (user) {
+          const { data: existing } = await supabaseAdmin
+            .from("platform_orders")
+            .select("line_key")
+            .eq("user_id", user.id)
+            .in("line_key", lineKeys);
+
+          existingKeys = new Set((existing ?? []).map((e) => e.line_key));
+        }
+      }
+
+      const newRows     = parsed.rows.filter((r) => !existingKeys.has(r.lineKey));
+      const newCount    = newRows.length;
+      const existingCount = parsed.rows.length - newCount;
+      const newTotal    = newRows.reduce((s, r) => s + r.amount, 0);
+
+      // Normalise to the shape the UI expects — show raw orderId (not lineKey) in preview
+      const previewRows = parsed.rows.slice(0, 5).map((r) => ({
+        orderId:     r.orderId,
+        date:        r.date,
+        amount:      r.amount,
+        description: r.variant ? `${r.productName} (${r.variant})` : r.productName,
+      }));
+
       return NextResponse.json({
-        ok: true,
-        preview: true,
-        count:   parsed.rows.length,
-        skipped: parsed.skipped,
-        total:   parsed.total,
-        rows:    parsed.rows.slice(0, 5), // first 5 for UI preview
+        ok:            true,
+        preview:       true,
+        count:         parsed.rows.length,   // total successful in file
+        newCount,                            // not yet in DB
+        newTotal,                            // amount of new rows only
+        existingCount,                       // already imported before
+        cancelled:     parsed.cancelled,
+        returned:      parsed.returned,
+        skipped:       parsed.skipped,
+        total:         parsed.total,         // total amount in file (all)
+        rows:          previewRows,
         platform,
       });
     }
@@ -73,37 +115,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, saved: 0, skipped: parsed.skipped, total: 0 });
     }
 
-    // Upsert using (user_id + source + external_order_id) to prevent duplicates
+    // Build platform_orders records
     const records = parsed.rows.map((r) => ({
-      user_id:           user.id,
-      type:              "income" as const,
-      amount:            r.amount,
-      vendor:            r.vendor,
-      description:       r.description,
-      source:            r.source,
-      transaction_date:  r.date,
-      external_order_id: r.orderId,
+      user_id:      user.id,
+      platform:     r.platform,
+      order_id:     r.orderId,
+      sku_line_id:  r.skuLineId || null,
+      line_key:     r.lineKey,
+      product_name: r.productName,
+      variant:      r.variant || null,
+      amount:       r.amount,
+      order_date:   r.date,
     }));
 
-    // Insert with conflict ignore so re-importing the same file is safe
-    const { error } = await supabaseAdmin
-      .from("transactions")
-      .upsert(records, {
-        onConflict:       "user_id,external_order_id",
-        ignoreDuplicates: true,
-      });
+    // Upsert into platform_orders — (user_id, line_key) is unique
+    const { error: upsertErr } = await supabaseAdmin
+      .from("platform_orders")
+      .upsert(records, { onConflict: "user_id,line_key", ignoreDuplicates: true });
 
-    if (error) {
-      // Fallback: if external_order_id column or unique constraint missing, do plain insert
-      if (String(error.message).includes("external_order_id") ||
-          String(error.code) === "PGRST204") {
-        const { error: e2 } = await supabaseAdmin
-          .from("transactions")
-          .insert(records);
-        if (e2) throw e2;
-      } else {
-        throw error;
-      }
+    if (upsertErr) {
+      const errMsg = upsertErr.message ?? JSON.stringify(upsertErr);
+      console.error("[import] upsert error:", errMsg);
+      return NextResponse.json({ error: errMsg }, { status: 500 });
     }
 
     return NextResponse.json({
@@ -113,8 +146,9 @@ export async function POST(req: NextRequest) {
       total:   parsed.total,
     });
 
-  } catch (err) {
-    console.error("[import] error:", err);
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : JSON.stringify(err);
+    console.error("[import] error:", msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { useSession, signIn } from "next-auth/react";
 
 type Platform = "tiktok" | "shopee" | "lazada";
 
@@ -13,11 +14,16 @@ type PreviewRow = {
 };
 
 type PreviewData = {
-  count:    number;
-  skipped:  number;
-  total:    number;
-  rows:     PreviewRow[];
-  platform: Platform;
+  count:         number;
+  newCount:      number;
+  newTotal:      number;
+  existingCount: number;
+  cancelled:     number;
+  returned:      number;
+  skipped:       number;
+  total:         number;
+  rows:          PreviewRow[];
+  platform:      Platform;
 };
 
 const PLATFORMS: { id: Platform; label: string; emoji: string; color: string; accept: string }[] = [
@@ -28,6 +34,7 @@ const PLATFORMS: { id: Platform; label: string; emoji: string; color: string; ac
 
 export default function ImportPage() {
   const [lineUserId, setLineUserId] = useState("");
+  const [authReady, setAuthReady]   = useState(false); // true once auth check done
   const [step, setStep]     = useState<"platform" | "upload" | "preview" | "done">("platform");
   const [platform, setPlatform] = useState<Platform | null>(null);
   const [preview, setPreview]   = useState<PreviewData | null>(null);
@@ -36,19 +43,56 @@ export default function ImportPage() {
   const [error, setError]       = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Init LIFF to get LINE user ID
+  const { data: session, status: sessionStatus } = useSession();
+
+  // ── Resolve LINE user ID (LIFF first, Google session fallback) ──────────────
   useEffect(() => {
+    if (sessionStatus === "loading") return; // wait for next-auth
+
     const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
-    if (!liffId) return;
-    import("@line/liff").then(({ default: liff }) => {
-      liff.init({ liffId }).then(async () => {
-        if (liff.isLoggedIn()) {
-          const p = await liff.getProfile();
-          setLineUserId(p.userId);
+
+    async function resolveUser() {
+      // 1️⃣ Try LIFF (works when opened inside LINE app)
+      if (liffId) {
+        try {
+          const { default: liff } = await import("@line/liff");
+          await liff.init({ liffId });
+          if (liff.isLoggedIn()) {
+            const p = await liff.getProfile();
+            setLineUserId(p.userId);
+            setAuthReady(true);
+            return;
+          }
+          // Inside LINE app but not logged in → force LIFF login
+          if (liff.isInClient()) {
+            liff.login();
+            return;
+          }
+        } catch {
+          // Not in LINE context — fall through to Google session
         }
-      }).catch(() => {});
-    });
-  }, []);
+      }
+
+      // 2️⃣ Fall back to Google session (regular browser)
+      if (session?.user?.email) {
+        try {
+          const res = await fetch("/api/user/by-email");
+          if (res.ok) {
+            const data = await res.json();
+            if (data.lineUserId) {
+              setLineUserId(data.lineUserId);
+            }
+          }
+        } catch {
+          // ignore — lineUserId stays empty
+        }
+      }
+
+      setAuthReady(true);
+    }
+
+    resolveUser();
+  }, [sessionStatus, session]);
 
   function selectPlatform(p: Platform) {
     setPlatform(p);
@@ -113,6 +157,15 @@ export default function ImportPage() {
 
   const pl = PLATFORMS.find((p) => p.id === platform);
 
+  // ── Loading: waiting for auth ──────────────────────────────────────────────
+  if (!authReady) {
+    return (
+      <main className="min-h-screen bg-emerald-50 flex items-center justify-center">
+        <p className="text-gray-400">กำลังโหลด...</p>
+      </main>
+    );
+  }
+
   // ── Step: select platform ──────────────────────────────────────────────────
   if (step === "platform") {
     return (
@@ -128,6 +181,27 @@ export default function ImportPage() {
               <p className="text-gray-400 text-sm">เลือกแพลตฟอร์มของคุณ</p>
             </div>
           </div>
+
+          {/* Auth banner — shown when not logged in via LINE or Google */}
+          {!lineUserId && (
+            <div className="mb-4 bg-amber-50 border border-amber-200 rounded-2xl p-4">
+              <p className="text-amber-700 text-sm font-medium mb-3">
+                ⚠️ ยังไม่ได้เข้าสู่ระบบ — ดูตัวอย่างได้ แต่บันทึกไม่ได้
+              </p>
+              <button
+                onClick={() => signIn("google")}
+                className="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 text-gray-700 font-semibold py-2.5 rounded-xl text-sm active:scale-95 transition-all shadow-sm"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+                เข้าสู่ระบบด้วย Google
+              </button>
+            </div>
+          )}
 
           <div className="flex flex-col gap-3">
             {PLATFORMS.map((p) => (
@@ -228,18 +302,35 @@ export default function ImportPage() {
 
           {/* Summary card */}
           <div className="bg-emerald-500 text-white rounded-2xl p-5 mb-4">
-            <div className="grid grid-cols-3 gap-2 text-center">
+            {/* Total */}
+            <p className="text-xs opacity-75 mb-0.5">ยอดรวมสำเร็จ</p>
+            <p className="text-3xl font-bold mb-4">
+              ฿{preview.total.toLocaleString("th-TH", { minimumFractionDigits: 2 })}
+            </p>
+            {/* Order stats */}
+            <div className="grid grid-cols-3 gap-2 text-center border-t border-white/20 pt-3 mb-3">
               <div>
-                <p className="text-2xl font-bold">{preview.count}</p>
-                <p className="text-xs opacity-80">คำสั่งซื้อ</p>
+                <p className="text-xl font-bold">{preview.count}</p>
+                <p className="text-xs opacity-75">สั่งซื้อสำเร็จ</p>
               </div>
               <div>
-                <p className="text-2xl font-bold">{preview.skipped}</p>
-                <p className="text-xs opacity-80">ข้ามแล้ว</p>
+                <p className="text-xl font-bold">{preview.returned}</p>
+                <p className="text-xs opacity-75">คืนสินค้า</p>
               </div>
               <div>
-                <p className="text-xl font-bold">฿{preview.total.toLocaleString("th-TH", { maximumFractionDigits: 0 })}</p>
-                <p className="text-xs opacity-80">รวม</p>
+                <p className="text-xl font-bold">{preview.cancelled}</p>
+                <p className="text-xs opacity-75">ยกเลิก</p>
+              </div>
+            </div>
+            {/* Import dedup status */}
+            <div className="grid grid-cols-2 gap-2 text-center border-t border-white/20 pt-3">
+              <div className="bg-white/15 rounded-xl py-2">
+                <p className="text-lg font-bold">{preview.newCount}</p>
+                <p className="text-xs opacity-80">✨ ใหม่</p>
+              </div>
+              <div className="bg-white/10 rounded-xl py-2">
+                <p className="text-lg font-bold">{preview.existingCount}</p>
+                <p className="text-xs opacity-70">มีในระบบแล้ว</p>
               </div>
             </div>
           </div>
@@ -273,15 +364,37 @@ export default function ImportPage() {
             </div>
           )}
 
-          <button
-            onClick={handleConfirm}
-            disabled={loading || !lineUserId}
-            className="w-full bg-emerald-500 text-white font-bold py-4 rounded-2xl active:scale-95 transition-all disabled:opacity-50 shadow-md shadow-emerald-200"
-          >
-            {loading ? "⏳ กำลังบันทึก..." : `✅ บันทึก ${preview.count} รายการ`}
-          </button>
-          {!lineUserId && (
-            <p className="text-xs text-gray-400 text-center mt-2">กรุณาเปิดผ่านแอป LINE เพื่อบันทึก</p>
+          {!lineUserId ? (
+            /* Not authenticated — offer Google sign-in */
+            <div className="text-center">
+              <p className="text-sm text-gray-500 mb-3">กรุณาเข้าสู่ระบบเพื่อบันทึกข้อมูล</p>
+              <button
+                onClick={() => signIn("google")}
+                className="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 text-gray-700 font-semibold py-3 rounded-2xl shadow-sm active:scale-95 transition-all"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+                เข้าสู่ระบบด้วย Google
+              </button>
+              <p className="text-xs text-gray-400 text-center mt-2">หรือเปิดหน้านี้ผ่านแอป LINE</p>
+            </div>
+          ) : (
+            <button
+              onClick={handleConfirm}
+              disabled={loading}
+              className="w-full bg-emerald-500 text-white font-bold py-4 rounded-2xl active:scale-95 transition-all disabled:opacity-50 shadow-md shadow-emerald-200"
+            >
+              {loading
+                ? "⏳ กำลังบันทึก..."
+                : preview.newCount === 0
+                  ? "✅ ข้อมูลทั้งหมดมีในระบบแล้ว"
+                  : `✅ บันทึก ${preview.newCount} รายการใหม่ · ฿${(preview.newTotal ?? preview.total).toLocaleString("th-TH", { maximumFractionDigits: 0 })}`
+              }
+            </button>
           )}
         </div>
       </main>
