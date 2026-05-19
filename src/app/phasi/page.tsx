@@ -207,31 +207,32 @@ export default function PhasiPage() {
   }, [authReady, lineUserId, year]);
 
   return (
-    <main className="min-h-screen bg-blue-50 flex flex-col px-4 py-8">
-      <div className="w-full max-w-sm mx-auto">
+    <main className="min-h-screen bg-blue-50 px-4 py-8">
+      <div className="max-w-5xl mx-auto">
 
         {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center gap-3 mb-4">
           <Link href="/" className="text-blue-600 text-sm">← กลับ</Link>
         </div>
-        <div className="flex items-center gap-3 mb-5">
-          <div className="text-4xl">📊</div>
-          <div>
-            <h1 className="text-xl font-bold text-blue-700">สรุปภาษี</h1>
-            <p className="text-blue-400 text-sm">Tax Summary</p>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="text-4xl">📊</div>
+            <div>
+              <h1 className="text-xl font-bold text-blue-700">สรุปภาษี</h1>
+              <p className="text-blue-400 text-sm">Tax Summary</p>
+            </div>
           </div>
-        </div>
-
-        {/* Year selector */}
-        <div className="flex gap-2 mb-5">
-          {YEARS.map((y) => (
-            <button key={y} onClick={() => setYear(y)}
-              className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${
-                year === y ? "bg-blue-600 text-white shadow-sm" : "bg-white text-gray-500 border border-blue-100"
-              }`}>
-              {y}
-            </button>
-          ))}
+          {/* Year selector inline on desktop */}
+          <div className="flex gap-2">
+            {YEARS.map((y) => (
+              <button key={y} onClick={() => setYear(y)}
+                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                  year === y ? "bg-blue-600 text-white shadow-sm" : "bg-white text-gray-500 border border-blue-100"
+                }`}>
+                {y}
+              </button>
+            ))}
+          </div>
         </div>
 
         {loading ? (
@@ -239,66 +240,87 @@ export default function PhasiPage() {
         ) : !summary ? (
           <p className="text-center text-gray-400 py-16">ไม่พบข้อมูล</p>
         ) : (
-          <>
-            {/* VAT Warning */}
-            {summary.vatWarning && (
-              <div className="mb-4 bg-red-50 border border-red-200 rounded-2xl p-4">
-                <p className="text-red-700 font-semibold text-sm">⚠️ รายได้เกิน 1,800,000 บาท</p>
-                <p className="text-red-500 text-xs mt-1">คุณอาจต้องจดทะเบียนภาษีมูลค่าเพิ่ม (VAT)</p>
-              </div>
-            )}
+          <div className="lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start">
 
-            {/* Income summary card */}
-            <div className="bg-white rounded-2xl border border-blue-100 p-4 mb-4">
-              <p className="text-xs font-semibold text-gray-500 mb-3">💰 รายได้รวม ปี {year}</p>
-              <div className="flex justify-between items-center mb-3">
-                <span className="text-gray-700 font-medium text-sm">รวมทั้งหมด</span>
-                <span className="font-bold text-gray-900 text-lg">฿{fmt(summary.totalIncome)}</span>
-              </div>
-              <div className="space-y-1.5 border-t border-gray-50 pt-3">
-                {Object.entries(summary.byPlatform).map(([p, amt]) => (
-                  <div key={p} className="flex justify-between items-center">
-                    <span className="text-gray-400 text-xs">
-                      {p === "tiktok" ? "🎵 TikTok Shop" : p === "shopee" ? "🛒 Shopee" : "📦 Lazada"}
-                    </span>
-                    <span className="text-gray-600 text-xs font-medium">฿{fmtInt(amt)}</span>
-                  </div>
-                ))}
-                {summary.manualIncome > 0 && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400 text-xs">📝 บันทึกเอง</span>
-                    <span className="text-gray-600 text-xs font-medium">฿{fmtInt(summary.manualIncome)}</span>
-                  </div>
-                )}
-                {summary.totalExpense > 0 && (
-                  <div className="flex justify-between items-center border-t border-gray-50 pt-2 mt-1">
-                    <span className="text-gray-400 text-xs">🧾 ค่าใช้จ่ายที่บันทึก</span>
-                    <span className="text-red-400 text-xs font-medium">฿{fmtInt(summary.totalExpense)}</span>
-                  </div>
-                )}
-              </div>
-            </div>
+            {/* LEFT — Income overview + banners */}
+            <div className="space-y-4 mb-6 lg:mb-0">
 
-            {/* Savings banner */}
-            {summary.savings > 0 && (
-              <div className="mb-4 bg-amber-50 border border-amber-200 rounded-2xl p-3 flex items-center gap-3">
-                <span className="text-2xl">💡</span>
-                <div>
-                  <p className="text-amber-800 font-semibold text-sm">
-                    วิธีที่ {summary.recommended} ประหยัดกว่า ฿{fmtInt(summary.savings)}
-                  </p>
-                  <p className="text-amber-600 text-xs mt-0.5">
-                    {summary.recommended === 1
-                      ? "หักเหมา 60% ให้ผลดีกว่าค่าใช้จ่ายจริงที่บันทึกไว้"
-                      : "ค่าใช้จ่ายจริงช่วยลดภาษีได้มากกว่าการหักเหมา"}
-                  </p>
+              {/* VAT Warning */}
+              {summary.vatWarning && (
+                <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
+                  <p className="text-red-700 font-semibold text-sm">⚠️ รายได้เกิน 1,800,000 บาท</p>
+                  <p className="text-red-500 text-xs mt-1">คุณอาจต้องจดทะเบียนภาษีมูลค่าเพิ่ม (VAT)</p>
+                </div>
+              )}
+
+              {/* Income summary card */}
+              <div className="bg-white rounded-2xl border border-blue-100 p-5">
+                <p className="text-xs font-semibold text-gray-500 mb-3">💰 รายได้รวม ปี {year}</p>
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-gray-700 font-medium text-sm">รวมทั้งหมด</span>
+                  <span className="font-bold text-gray-900 text-xl">฿{fmt(summary.totalIncome)}</span>
+                </div>
+                <div className="space-y-2 border-t border-gray-100 pt-3">
+                  {Object.entries(summary.byPlatform).map(([p, amt]) => (
+                    <div key={p} className="flex justify-between items-center">
+                      <span className="text-gray-400 text-sm">
+                        {p === "tiktok" ? "🎵 TikTok Shop" : p === "shopee" ? "🛒 Shopee" : "📦 Lazada"}
+                      </span>
+                      <span className="text-gray-600 text-sm font-medium">฿{fmtInt(amt)}</span>
+                    </div>
+                  ))}
+                  {summary.manualIncome > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400 text-sm">📝 บันทึกเอง</span>
+                      <span className="text-gray-600 text-sm font-medium">฿{fmtInt(summary.manualIncome)}</span>
+                    </div>
+                  )}
+                  {summary.totalExpense > 0 && (
+                    <div className="flex justify-between items-center border-t border-gray-100 pt-2 mt-1">
+                      <span className="text-gray-400 text-sm">🧾 ค่าใช้จ่ายที่บันทึก</span>
+                      <span className="text-red-400 text-sm font-medium">-฿{fmtInt(summary.totalExpense)}</span>
+                    </div>
+                  )}
                 </div>
               </div>
-            )}
 
-            {/* Method comparison */}
-            <p className="text-xs font-semibold text-gray-500 mb-2 px-1">เปรียบเทียบวิธีคำนวณภาษี</p>
-            <div className="space-y-3 mb-4">
+              {/* Savings banner */}
+              {summary.savings > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3">
+                  <span className="text-2xl flex-shrink-0">💡</span>
+                  <div>
+                    <p className="text-amber-800 font-semibold text-sm">
+                      วิธีที่ {summary.recommended} ประหยัดกว่า ฿{fmtInt(summary.savings)}
+                    </p>
+                    <p className="text-amber-600 text-xs mt-0.5">
+                      {summary.recommended === 1
+                        ? "หักเหมา 60% ให้ผลดีกว่าค่าใช้จ่ายจริงที่บันทึกไว้"
+                        : "ค่าใช้จ่ายจริงช่วยลดภาษีได้มากกว่าการหักเหมา"}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Nudge when no expenses recorded */}
+              {summary.totalExpense === 0 && (
+                <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4">
+                  <p className="text-gray-500 text-sm leading-relaxed">
+                    📝 <strong>วิธีที่ 2</strong> ยังไม่มีค่าใช้จ่ายที่บันทึกไว้
+                    — บันทึกรายจ่ายใน
+                    <Link href="/raijhai" className="text-blue-500 underline mx-1">หน้ารายจ่าย</Link>
+                    เพื่อเปรียบเทียบผล
+                  </p>
+                </div>
+              )}
+
+              <p className="text-xs text-gray-400 text-center pb-2">
+                * ประมาณการเบื้องต้น ไม่รวมลดหย่อนอื่นๆ ควรปรึกษานักบัญชีเพื่อยื่นภาษีจริง
+              </p>
+            </div>
+
+            {/* RIGHT — Method comparison cards */}
+            <div className="space-y-4">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">เปรียบเทียบวิธีคำนวณภาษี</p>
               <MethodCard
                 method={summary.method1}
                 index={1}
@@ -315,21 +337,7 @@ export default function PhasiPage() {
               />
             </div>
 
-            {/* Nudge when no expenses recorded */}
-            {summary.totalExpense === 0 && (
-              <div className="mb-4 bg-gray-50 border border-gray-100 rounded-2xl p-3">
-                <p className="text-gray-500 text-xs leading-relaxed">
-                  📝 <strong>วิธีที่ 2</strong> ยังไม่มีค่าใช้จ่ายที่บันทึกไว้
-                  — บันทึกรายจ่ายใน<Link href="/rairab" className="text-blue-500 underline mx-1">หน้ารายรับ-รายจ่าย</Link>
-                  เพื่อเปรียบเทียบผล
-                </p>
-              </div>
-            )}
-
-            <p className="text-xs text-gray-400 text-center mt-2 px-4 pb-4">
-              * ประมาณการเบื้องต้น ไม่รวมลดหย่อนอื่นๆ ควรปรึกษานักบัญชีเพื่อยื่นภาษีจริง
-            </p>
-          </>
+          </div>
         )}
       </div>
     </main>

@@ -196,14 +196,14 @@ export default function RaiJhai() {
   }
 
   return (
-    <main className="min-h-screen bg-rose-50 flex flex-col px-4 py-8">
-      <div className="w-full max-w-sm mx-auto">
+    <main className="min-h-screen bg-rose-50 px-4 py-8">
+      <div className="max-w-5xl mx-auto">
 
         {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center gap-3 mb-4">
           <Link href="/" className="text-rose-600 text-sm">← กลับ</Link>
         </div>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="text-4xl">🧾</div>
             <div>
@@ -219,156 +219,160 @@ export default function RaiJhai() {
           </button>
         </div>
 
-        {/* Year selector */}
-        <div className="flex gap-2 mb-3">
-          {YEARS.map((y) => (
-            <button key={y} onClick={() => setYear(y)}
-              className={`flex-1 py-1.5 rounded-xl text-sm font-semibold transition-all ${
-                year === y ? "bg-rose-500 text-white shadow-sm" : "bg-white text-gray-500 border border-rose-100"
-              }`}>
-              {y}
-            </button>
-          ))}
-        </div>
+        {/* ── Desktop 2-panel grid ─────────────────────────────────────────── */}
+        <div className="lg:grid lg:grid-cols-5 lg:gap-8 lg:items-start">
 
-        {/* Month selector */}
-        <div className="flex flex-wrap gap-1.5 mb-4">
-          <button onClick={() => setMonth(0)}
-            className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-              month === 0 ? "bg-rose-500 text-white" : "bg-white text-gray-500 border border-gray-200"
-            }`}>
-            ทั้งปี
-          </button>
-          {MONTHS.map((label, i) => (
-            <button key={i} onClick={() => setMonth(i + 1)}
-              className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                month === i + 1 ? "bg-rose-500 text-white" : "bg-white text-gray-500 border border-gray-200"
-              }`}>
-              {label}
-            </button>
-          ))}
-        </div>
+          {/* LEFT — Filters + Summary + Form */}
+          <div className="lg:col-span-2 space-y-4 mb-6 lg:mb-0">
 
-        {/* Total card */}
-        <div className="bg-rose-500 text-white rounded-2xl p-5 mb-4">
-          <p className="text-sm opacity-80">
-            {month === 0 ? `รายจ่ายทั้งปี ${year}` : `${MONTHS[month - 1]} ${year}`}
-          </p>
-          <p className="text-3xl font-bold mt-1">฿{fmt(total)}</p>
-          {!loading && <p className="text-sm opacity-70 mt-1">{transactions.length} รายการ</p>}
-        </div>
-
-        {/* Save feedback */}
-        {saveMsg && (
-          <div className={`mb-4 p-3 rounded-xl text-sm font-medium ${saveMsg.ok ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
-            {saveMsg.text}
-          </div>
-        )}
-
-        {/* ── Add / Edit form ─────────────────────────────────────────────── */}
-        {showForm && (
-          <form onSubmit={handleSave} className="bg-white rounded-2xl border border-rose-100 p-4 mb-4 space-y-3">
-            <p className="text-sm font-semibold text-gray-700 mb-1">
-              {editId ? "✏️ แก้ไขรายจ่าย" : "บันทึกรายจ่ายใหม่"}
-            </p>
-
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">ร้านค้า / ผู้รับเงิน *</label>
-              <input value={vendor} onChange={(e) => setVendor(e.target.value)}
-                placeholder="เช่น Kerry, Lazada, ไฟฟ้า"
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-200" />
+            {/* Year selector */}
+            <div className="flex gap-2">
+              {YEARS.map((y) => (
+                <button key={y} onClick={() => setYear(y)}
+                  className={`flex-1 py-1.5 rounded-xl text-sm font-semibold transition-all ${
+                    year === y ? "bg-rose-500 text-white shadow-sm" : "bg-white text-gray-500 border border-rose-100"
+                  }`}>
+                  {y}
+                </button>
+              ))}
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">จำนวนเงิน (บาท) *</label>
-                <input value={amount} onChange={(e) => setAmount(e.target.value)}
-                  type="number" min="0" step="0.01" placeholder="0.00"
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-200" />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">วันที่</label>
-                <input value={date} onChange={(e) => setDate(e.target.value)}
-                  type="date"
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-200" />
-              </div>
+            {/* Month selector */}
+            <div className="flex flex-wrap gap-1.5">
+              <button onClick={() => setMonth(0)}
+                className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                  month === 0 ? "bg-rose-500 text-white" : "bg-white text-gray-500 border border-gray-200"
+                }`}>
+                ทั้งปี
+              </button>
+              {MONTHS.map((label, i) => (
+                <button key={i} onClick={() => setMonth(i + 1)}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                    month === i + 1 ? "bg-rose-500 text-white" : "bg-white text-gray-500 border border-gray-200"
+                  }`}>
+                  {label}
+                </button>
+              ))}
             </div>
 
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">รายละเอียด</label>
-              <input value={desc} onChange={(e) => setDesc(e.target.value)}
-                placeholder="รายละเอียดเพิ่มเติม (ไม่บังคับ)"
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-200" />
+            {/* Total card */}
+            <div className="bg-rose-500 text-white rounded-2xl p-5">
+              <p className="text-sm opacity-80">
+                {month === 0 ? `รายจ่ายทั้งปี ${year}` : `${MONTHS[month - 1]} ${year}`}
+              </p>
+              <p className="text-3xl font-bold mt-1">฿{fmt(total)}</p>
+              {!loading && <p className="text-sm opacity-70 mt-1">{transactions.length} รายการ</p>}
             </div>
 
-            {!editId && (
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">หมวดหมู่</label>
-                <div className="flex flex-wrap gap-2">
-                  {EXPENSE_CATEGORIES.map((c) => (
-                    <button key={c} type="button" onClick={() => setCategory(c)}
-                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                        category === c ? "bg-rose-500 text-white" : "bg-rose-50 text-rose-600 border border-rose-200"
-                      }`}>
-                      {c}
-                    </button>
-                  ))}
-                </div>
+            {/* Save feedback */}
+            {saveMsg && (
+              <div className={`p-3 rounded-xl text-sm font-medium ${saveMsg.ok ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
+                {saveMsg.text}
               </div>
             )}
 
-            <button type="submit" disabled={saving || !vendor.trim() || !amount}
-              className="w-full bg-rose-500 hover:bg-rose-600 disabled:opacity-40 text-white font-semibold py-3 rounded-xl text-sm transition-colors">
-              {saving ? "กำลังบันทึก..." : editId ? "💾 บันทึกการแก้ไข" : "💾 บันทึกรายจ่าย"}
-            </button>
-          </form>
-        )}
-
-        {/* ── Transaction list ─────────────────────────────────────────────── */}
-        {loading ? (
-          <p className="text-center text-gray-400 py-10">กำลังโหลด...</p>
-        ) : transactions.length === 0 ? (
-          <div className="bg-white rounded-2xl p-6 text-center text-gray-400 border border-rose-100">
-            <p className="text-3xl mb-2">📭</p>
-            <p>ไม่มีรายจ่ายในช่วงนี้</p>
-            <p className="text-sm mt-1">กด + เพิ่มรายจ่าย หรือส่งสลิปใน LINE</p>
-          </div>
-        ) : (
-          <ul className="flex flex-col gap-3">
-            {transactions.map((t) => (
-              <li key={t.id} className="bg-white rounded-2xl p-4 border border-rose-100 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center text-lg flex-shrink-0">
-                  🧾
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-700 truncate">{t.vendor}</p>
-                  <p className="text-xs text-gray-400 truncate">{t.description}</p>
-                  <p className="text-xs text-gray-300">{t.transaction_date}</p>
-                </div>
-                <p className="text-rose-600 font-semibold flex-shrink-0 text-sm">
-                  -฿{Number(t.amount).toLocaleString("th-TH")}
+            {/* Add / Edit form */}
+            {showForm && (
+              <form onSubmit={handleSave} className="bg-white rounded-2xl border border-rose-100 p-4 space-y-3">
+                <p className="text-sm font-semibold text-gray-700 mb-1">
+                  {editId ? "✏️ แก้ไขรายจ่าย" : "บันทึกรายจ่ายใหม่"}
                 </p>
-                {/* Edit */}
-                <button
-                  onClick={() => openEditForm(t)}
-                  className="text-gray-300 hover:text-blue-400 text-base transition-colors flex-shrink-0"
-                  title="แก้ไข"
-                >
-                  ✏️
+
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">ร้านค้า / ผู้รับเงิน *</label>
+                  <input value={vendor} onChange={(e) => setVendor(e.target.value)}
+                    placeholder="เช่น Kerry, Lazada, ไฟฟ้า"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-200" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">จำนวนเงิน (บาท) *</label>
+                    <input value={amount} onChange={(e) => setAmount(e.target.value)}
+                      type="number" min="0" step="0.01" placeholder="0.00"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-200" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">วันที่</label>
+                    <input value={date} onChange={(e) => setDate(e.target.value)}
+                      type="date"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-200" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">รายละเอียด</label>
+                  <input value={desc} onChange={(e) => setDesc(e.target.value)}
+                    placeholder="รายละเอียดเพิ่มเติม (ไม่บังคับ)"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-200" />
+                </div>
+
+                {!editId && (
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">หมวดหมู่</label>
+                    <div className="flex flex-wrap gap-2">
+                      {EXPENSE_CATEGORIES.map((c) => (
+                        <button key={c} type="button" onClick={() => setCategory(c)}
+                          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                            category === c ? "bg-rose-500 text-white" : "bg-rose-50 text-rose-600 border border-rose-200"
+                          }`}>
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <button type="submit" disabled={saving || !vendor.trim() || !amount}
+                  className="w-full bg-rose-500 hover:bg-rose-600 disabled:opacity-40 text-white font-semibold py-3 rounded-xl text-sm transition-colors">
+                  {saving ? "กำลังบันทึก..." : editId ? "💾 บันทึกการแก้ไข" : "💾 บันทึกรายจ่าย"}
                 </button>
-                {/* Delete */}
-                <button
-                  onClick={() => handleDelete(t.id)}
-                  disabled={deletingId === t.id}
-                  className="text-gray-300 hover:text-rose-400 text-xl leading-none transition-colors flex-shrink-0 disabled:opacity-40"
-                  title="ลบ"
-                >
-                  {deletingId === t.id ? "⏳" : "×"}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
+              </form>
+            )}
+          </div>
+
+          {/* RIGHT — Transaction list */}
+          <div className="lg:col-span-3">
+            {loading ? (
+              <p className="text-center text-gray-400 py-10">กำลังโหลด...</p>
+            ) : transactions.length === 0 ? (
+              <div className="bg-white rounded-2xl p-8 text-center text-gray-400 border border-rose-100">
+                <p className="text-3xl mb-2">📭</p>
+                <p>ไม่มีรายจ่ายในช่วงนี้</p>
+                <p className="text-sm mt-1">กด + เพิ่มรายจ่าย หรือส่งสลิปใน LINE</p>
+              </div>
+            ) : (
+              <ul className="flex flex-col gap-3">
+                {transactions.map((t) => (
+                  <li key={t.id} className="bg-white rounded-2xl p-4 border border-rose-100 flex items-center gap-3 hover:shadow-sm transition-shadow">
+                    <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center text-lg flex-shrink-0">
+                      🧾
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-700 truncate">{t.vendor}</p>
+                      <p className="text-xs text-gray-400 truncate">{t.description}</p>
+                      <p className="text-xs text-gray-300">{t.transaction_date}</p>
+                    </div>
+                    <p className="text-rose-600 font-semibold flex-shrink-0 text-sm">
+                      -฿{Number(t.amount).toLocaleString("th-TH")}
+                    </p>
+                    <button onClick={() => openEditForm(t)}
+                      className="text-gray-300 hover:text-blue-400 text-base transition-colors flex-shrink-0"
+                      title="แก้ไข">
+                      ✏️
+                    </button>
+                    <button onClick={() => handleDelete(t.id)} disabled={deletingId === t.id}
+                      className="text-gray-300 hover:text-rose-400 text-xl leading-none transition-colors flex-shrink-0 disabled:opacity-40"
+                      title="ลบ">
+                      {deletingId === t.id ? "⏳" : "×"}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+        </div>
       </div>
     </main>
   );
