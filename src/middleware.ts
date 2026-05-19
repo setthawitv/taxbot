@@ -5,10 +5,12 @@ const PUBLIC_PATHS = [
   "/onboarding",        // 3-step onboarding wizard
   "/connect-google",    // Google OAuth flow opened in external browser
   "/staff",             // Staff expense entry (invite-code based, no auth)
+  "/admin/join",        // Admin invite acceptance (requires Google sign-in, not LINE)
   "/api/auth",
   "/api/webhook",
   "/api/user",
   "/api/staff",
+  "/api/admin/join",    // Admin join endpoint (called before full auth)
   "/api/setup-richmenu",
 ];
 

@@ -11,7 +11,7 @@ type VendorRule = {
 };
 
 type SyncResult = { synced: number; failed: number; skipped: number; message: string; lastError?: string } | null;
-type StaffInvite = { id: string; code: string; label: string; is_active: boolean; created_at: string } | null;
+type AdminRow = { id: string; admin_email: string; admin_name: string | null; invite_code: string; status: string; created_at: string };
 
 function SettingsPageInner() {
   const [vendors, setVendors] = useState<VendorRule[]>([]);
@@ -21,16 +21,16 @@ function SettingsPageInner() {
   const [saving, setSaving] = useState(false);
   const [lineUserId, setLineUserId] = useState<string>("");
   const [googleEmail, setGoogleEmail] = useState<string>("");
-  const [connecting,   setConnecting]   = useState(false);
   const [showLiffLink, setShowLiffLink] = useState(false);
   const [syncing,      setSyncing]      = useState(false);
   const [syncResult,   setSyncResult]   = useState<SyncResult>(null);
 
-  // Staff invite
-  const [staffInvite,    setStaffInvite]    = useState<StaffInvite>(null);
-  const [staffLoading,   setStaffLoading]   = useState(false);
-  const [staffCopied,    setStaffCopied]    = useState(false);
-  const [staffResetting, setStaffResetting] = useState(false);
+  // Admin management
+  const [admins,        setAdmins]        = useState<AdminRow[]>([]);
+  const [adminLoading,  setAdminLoading]  = useState(false);
+  const [adminEmail,    setAdminEmail]    = useState("");
+  const [adminAdding,   setAdminAdding]   = useState(false);
+  const [adminCopied,   setAdminCopied]   = useState<string>("");   // invite_code that was copied
 
   const { data: session, status: sessionStatus } = useSession();
 
@@ -112,52 +112,57 @@ function SettingsPageInner() {
     }
   }
 
-  // Load staff invite when lineUserId is available
+  // Load admin list when lineUserId is available
   useEffect(() => {
     if (!lineUserId) return;
-    setStaffLoading(true);
-    fetch(`/api/staff/invite?lineUserId=${lineUserId}`)
+    setAdminLoading(true);
+    fetch(`/api/admin/invite?lineUserId=${lineUserId}`)
       .then((r) => r.json())
-      .then((d) => { if (d.invite) setStaffInvite(d.invite); })
-      .finally(() => setStaffLoading(false));
+      .then((d) => { if (Array.isArray(d.admins)) setAdmins(d.admins); })
+      .finally(() => setAdminLoading(false));
   }, [lineUserId]);
 
-  function staffLink(code: string) {
+  function adminJoinLink(code: string) {
     const base = typeof window !== "undefined" ? window.location.origin : "";
-    return `${base}/staff/${code}`;
+    return `${base}/admin/join?code=${code}`;
   }
 
-  async function copyStaffLink() {
-    if (!staffInvite) return;
-    await navigator.clipboard.writeText(staffLink(staffInvite.code));
-    setStaffCopied(true);
-    setTimeout(() => setStaffCopied(false), 2000);
+  async function copyAdminLink(code: string) {
+    await navigator.clipboard.writeText(adminJoinLink(code));
+    setAdminCopied(code);
+    setTimeout(() => setAdminCopied(""), 2000);
   }
 
-  async function resetStaffLink() {
-    if (!lineUserId) return;
-    setStaffResetting(true);
+  async function addAdmin(e: React.FormEvent) {
+    e.preventDefault();
+    const email = adminEmail.trim().toLowerCase();
+    if (!email || !lineUserId) return;
+    setAdminAdding(true);
     try {
-      const res = await fetch("/api/staff/invite", {
-        method: "POST",
+      const res = await fetch("/api/admin/invite", {
+        method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lineUserId }),
+        body:    JSON.stringify({ lineUserId, adminEmail: email }),
       });
       const d = await res.json();
-      if (d.invite) setStaffInvite(d.invite);
+      if (d.error) { alert(d.error); return; }
+      // Reload list
+      const list = await fetch(`/api/admin/invite?lineUserId=${lineUserId}`).then((r) => r.json());
+      if (Array.isArray(list.admins)) setAdmins(list.admins);
+      setAdminEmail("");
     } finally {
-      setStaffResetting(false);
+      setAdminAdding(false);
     }
   }
 
-  async function disableStaffLink() {
+  async function removeAdmin(adminId: string) {
     if (!lineUserId) return;
-    await fetch("/api/staff/invite", {
-      method: "DELETE",
+    await fetch("/api/admin/invite", {
+      method:  "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lineUserId }),
+      body:    JSON.stringify({ lineUserId, adminId }),
     });
-    setStaffInvite(null);
+    setAdmins((prev) => prev.filter((a) => a.id !== adminId));
   }
 
   async function load() {
@@ -281,66 +286,79 @@ function SettingsPageInner() {
               )}
             </div>
 
-            {/* Staff invite */}
+            {/* Admin management */}
             <div className="bg-white rounded-2xl border border-gray-200 p-5">
-              <h2 className="font-semibold text-gray-700 mb-1">👥 Staff — บันทึกรายจ่ายแทน</h2>
+              <h2 className="font-semibold text-gray-700 mb-1">🛡️ Admin — แชร์การเข้าถึง</h2>
               <p className="text-xs text-gray-400 mb-4">
-                แชร์ลิงก์ให้พนักงานบันทึกรายจ่ายแทนได้ โดยไม่ต้องล็อกอิน
+                เพิ่มอีเมล Google ของบุคคลอื่น เพื่อให้เข้าถึง Dashboard และจัดการรายการได้ทั้งหมด
               </p>
 
-              {staffLoading ? (
-                <p className="text-sm text-gray-400 text-center py-2">กำลังโหลด...</p>
-              ) : staffInvite ? (
-                <div className="space-y-3">
-                  {/* Link display */}
-                  <div className="bg-gray-50 rounded-xl px-3 py-2.5 flex items-center gap-2">
-                    <p className="flex-1 text-xs text-gray-500 truncate font-mono">
-                      /staff/{staffInvite.code}
-                    </p>
-                    <button onClick={copyStaffLink}
-                      className={`flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
-                        staffCopied ? "bg-emerald-100 text-emerald-700" : "bg-gray-200 text-gray-600 hover:bg-gray-300"
-                      }`}>
-                      {staffCopied ? "✅ คัดลอกแล้ว" : "คัดลอก"}
-                    </button>
-                  </div>
-
-                  {/* Share button (LINE) */}
-                  <button
-                    onClick={() => {
-                      const url = staffLink(staffInvite.code);
-                      const msg = `บันทึกรายจ่ายให้ร้านได้เลยที่ลิงก์นี้ 👇\n${url}`;
-                      if (typeof window !== "undefined" && (window as Window & { liff?: { shareTargetPicker?: (msgs: unknown[]) => void } }).liff?.shareTargetPicker) {
-                        (window as Window & { liff?: { shareTargetPicker?: (msgs: unknown[]) => void } }).liff!.shareTargetPicker!([{
-                          type: "text", text: msg,
-                        }]);
-                      } else {
-                        window.open(`https://line.me/share/ui?url=${encodeURIComponent(staffLink(staffInvite.code))}&text=${encodeURIComponent("ลิงก์บันทึกรายจ่าย")}`, "_blank");
-                      }
-                    }}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-[#06C755] text-white hover:opacity-90 transition-opacity"
-                  >
-                    📤 แชร์ผ่าน LINE
-                  </button>
-
-                  {/* Management */}
-                  <div className="flex gap-2 pt-1">
-                    <button onClick={resetStaffLink} disabled={staffResetting}
-                      className="flex-1 py-2 rounded-xl text-xs font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-40">
-                      {staffResetting ? "กำลังรีเซ็ต..." : "🔄 รีเซ็ตลิงก์"}
-                    </button>
-                    <button onClick={disableStaffLink}
-                      className="flex-1 py-2 rounded-xl text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 transition-colors">
-                      🔒 ปิดลิงก์
-                    </button>
-                  </div>
-                  <p className="text-xs text-gray-300 text-center">รีเซ็ตจะทำให้ลิงก์เก่าใช้ไม่ได้</p>
-                </div>
-              ) : (
-                <button onClick={resetStaffLink} disabled={!lineUserId || staffResetting}
-                  className="w-full py-3 rounded-xl text-sm font-semibold bg-rose-500 text-white hover:bg-rose-600 transition-colors disabled:opacity-40">
-                  {staffResetting ? "กำลังสร้าง..." : "➕ สร้างลิงก์ Staff"}
+              {/* Add admin form */}
+              <form onSubmit={addAdmin} className="flex gap-2 mb-4">
+                <input
+                  type="email"
+                  value={adminEmail}
+                  onChange={(e) => setAdminEmail(e.target.value)}
+                  placeholder="อีเมล Google เช่น admin@gmail.com"
+                  disabled={!lineUserId}
+                  className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 disabled:opacity-40"
+                />
+                <button
+                  type="submit"
+                  disabled={adminAdding || !adminEmail.trim() || !lineUserId}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold bg-gray-800 text-white hover:bg-gray-700 disabled:opacity-40 transition-colors flex-shrink-0"
+                >
+                  {adminAdding ? "..." : "+ เพิ่ม"}
                 </button>
+              </form>
+
+              {/* Admin list */}
+              {adminLoading ? (
+                <p className="text-sm text-gray-400 text-center py-2">กำลังโหลด...</p>
+              ) : admins.length === 0 ? (
+                <p className="text-xs text-gray-300 text-center py-3">ยังไม่มี Admin</p>
+              ) : (
+                <ul className="space-y-2">
+                  {admins.map((a) => (
+                    <li key={a.id} className="bg-gray-50 rounded-xl px-3 py-2.5">
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-700 font-medium truncate">{a.admin_email}</p>
+                          {a.admin_name && (
+                            <p className="text-xs text-gray-400">{a.admin_name}</p>
+                          )}
+                          <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full mt-1 ${
+                            a.status === "accepted"
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-amber-100 text-amber-700"
+                          }`}>
+                            {a.status === "accepted" ? "✅ ยืนยันแล้ว" : "⏳ รอยืนยัน"}
+                          </span>
+                        </div>
+                        <div className="flex flex-col gap-1 flex-shrink-0">
+                          {a.status !== "accepted" && (
+                            <button
+                              onClick={() => copyAdminLink(a.invite_code)}
+                              className={`text-xs font-semibold px-2.5 py-1 rounded-lg transition-colors ${
+                                adminCopied === a.invite_code
+                                  ? "bg-emerald-100 text-emerald-700"
+                                  : "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                              }`}
+                            >
+                              {adminCopied === a.invite_code ? "✅ คัดลอก" : "🔗 ลิงก์"}
+                            </button>
+                          )}
+                          <button
+                            onClick={() => removeAdmin(a.id)}
+                            className="text-xs font-medium px-2.5 py-1 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
+                          >
+                            ลบ
+                          </button>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
           </div>
