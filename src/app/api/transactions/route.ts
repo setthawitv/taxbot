@@ -156,7 +156,7 @@ export async function POST(req: NextRequest) {
     const category    = String(body.expenseCategory ?? body.incomeCategory ?? "อื่นๆ").trim();
 
     if (!lineUserId)  return NextResponse.json({ error: "Missing lineUserId" }, { status: 400 });
-    if (!amount || amount <= 0) return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
+    if (!amount || amount === 0) return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
     if (!vendor)      return NextResponse.json({ error: "Missing vendor" }, { status: 400 });
 
     // Resolve user
