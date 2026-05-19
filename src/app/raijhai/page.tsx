@@ -20,6 +20,7 @@ type Transaction = {
   vendor: string;
   description: string;
   transaction_date: string;
+  staff_name?: string;
 };
 
 const fmt = (n: number) => n.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -351,7 +352,10 @@ export default function RaiJhai() {
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-gray-700 truncate">{t.vendor}</p>
                       <p className="text-xs text-gray-400 truncate">{t.description}</p>
-                      <p className="text-xs text-gray-300">{t.transaction_date}</p>
+                      <p className="text-xs text-gray-300">
+                        {t.transaction_date}
+                        {t.staff_name && <span className="ml-1.5 text-purple-400">· 👤 {t.staff_name}</span>}
+                      </p>
                     </div>
                     <p className="text-rose-600 font-semibold flex-shrink-0 text-sm">
                       -฿{Number(t.amount).toLocaleString("th-TH")}

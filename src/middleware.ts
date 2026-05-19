@@ -4,9 +4,11 @@ const PUBLIC_PATHS = [
   "/intro",             // Feature intro slides (first-time users land here)
   "/onboarding",        // 3-step onboarding wizard
   "/connect-google",    // Google OAuth flow opened in external browser
+  "/staff",             // Staff expense entry (invite-code based, no auth)
   "/api/auth",
   "/api/webhook",
   "/api/user",
+  "/api/staff",
   "/api/setup-richmenu",
 ];
 

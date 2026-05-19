@@ -1,7 +1,21 @@
 {
   "permissions": {
     "allow": [
-      "PowerShell(New-Item -ItemType Directory -Path \"C:\\\\Users\\\\mos_b\\\\Desktop\\\\TaxBot\\\\src\\\\app\\\\api\\\\webhook\" -Force)"
+      "PowerShell(New-Item -ItemType Directory -Path \"C:\\\\Users\\\\mos_b\\\\Desktop\\\\TaxBot\\\\src\\\\app\\\\api\\\\webhook\" -Force)",
+      "Bash(npx tsc *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(npm install *)",
+      "Bash(node -e \"require\\('pdf-lib'\\); require\\('@pdf-lib/fontkit'\\); console.log\\('OK'\\)\")",
+      "Bash(git commit *)",
+      "Bash(node -e \"require\\('sharp'\\); console.log\\('sharp OK'\\)\")",
+      "Bash(node -e \"require\\('@anthropic-ai/sdk'\\); console.log\\('Anthropic SDK OK'\\)\")",
+      "Bash(node -e \"const sdk = require\\('@line/bot-sdk'\\); const c = new sdk.messagingApi.MessagingApiClient\\({channelAccessToken:'x'}\\); console.log\\(typeof c.showLoadingAnimation\\)\")",
+      "Bash(npx vercel *)",
+      "Bash(curl -s -X POST https://taxbot-sage.vercel.app/api/setup-richmenu -H \"Content-Type: application/json\")",
+      "Bash(cd /mnt/c/Users/mos_b/Desktop/TaxBot && npx vercel --prod 2>&1 | tail -20)",
+      "Bash(extract-text \"C:\\\\Users\\\\mos_b\\\\Downloads\\\\Order.all.20260203_20260303.xlsx\")"
     ]
   }
 }

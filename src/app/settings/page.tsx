@@ -10,6 +10,7 @@ type VendorRule = {
 };
 
 type SyncResult = { synced: number; failed: number; skipped: number; message: string; lastError?: string } | null;
+type StaffInvite = { id: string; code: string; label: string; is_active: boolean; created_at: string } | null;
 
 function SettingsPageInner() {
   const [vendors, setVendors] = useState<VendorRule[]>([]);
@@ -23,6 +24,12 @@ function SettingsPageInner() {
   const [showLiffLink, setShowLiffLink] = useState(false);
   const [syncing,      setSyncing]      = useState(false);
   const [syncResult,   setSyncResult]   = useState<SyncResult>(null);
+
+  // Staff invite
+  const [staffInvite,    setStaffInvite]    = useState<StaffInvite>(null);
+  const [staffLoading,   setStaffLoading]   = useState(false);
+  const [staffCopied,    setStaffCopied]    = useState(false);
+  const [staffResetting, setStaffResetting] = useState(false);
 
   // Init LIFF to get LINE user ID + current Google status
   useEffect(() => {
@@ -82,6 +89,54 @@ function SettingsPageInner() {
     } finally {
       setSyncing(false);
     }
+  }
+
+  // Load staff invite when lineUserId is available
+  useEffect(() => {
+    if (!lineUserId) return;
+    setStaffLoading(true);
+    fetch(`/api/staff/invite?lineUserId=${lineUserId}`)
+      .then((r) => r.json())
+      .then((d) => { if (d.invite) setStaffInvite(d.invite); })
+      .finally(() => setStaffLoading(false));
+  }, [lineUserId]);
+
+  function staffLink(code: string) {
+    const base = typeof window !== "undefined" ? window.location.origin : "";
+    return `${base}/staff/${code}`;
+  }
+
+  async function copyStaffLink() {
+    if (!staffInvite) return;
+    await navigator.clipboard.writeText(staffLink(staffInvite.code));
+    setStaffCopied(true);
+    setTimeout(() => setStaffCopied(false), 2000);
+  }
+
+  async function resetStaffLink() {
+    if (!lineUserId) return;
+    setStaffResetting(true);
+    try {
+      const res = await fetch("/api/staff/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lineUserId }),
+      });
+      const d = await res.json();
+      if (d.invite) setStaffInvite(d.invite);
+    } finally {
+      setStaffResetting(false);
+    }
+  }
+
+  async function disableStaffLink() {
+    if (!lineUserId) return;
+    await fetch("/api/staff/invite", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lineUserId }),
+    });
+    setStaffInvite(null);
   }
 
   async function load() {
@@ -202,6 +257,70 @@ function SettingsPageInner() {
               </button>
               {!googleEmail && (
                 <p className="text-xs text-gray-400 text-center mt-2">เชื่อมต่อ Google ก่อนจึงจะซิงค์ได้</p>
+              )}
+            </div>
+          </div>
+
+            {/* Staff invite */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-5">
+              <h2 className="font-semibold text-gray-700 mb-1">👥 Staff — บันทึกรายจ่ายแทน</h2>
+              <p className="text-xs text-gray-400 mb-4">
+                แชร์ลิงก์ให้พนักงานบันทึกรายจ่ายแทนได้ โดยไม่ต้องล็อกอิน
+              </p>
+
+              {staffLoading ? (
+                <p className="text-sm text-gray-400 text-center py-2">กำลังโหลด...</p>
+              ) : staffInvite ? (
+                <div className="space-y-3">
+                  {/* Link display */}
+                  <div className="bg-gray-50 rounded-xl px-3 py-2.5 flex items-center gap-2">
+                    <p className="flex-1 text-xs text-gray-500 truncate font-mono">
+                      /staff/{staffInvite.code}
+                    </p>
+                    <button onClick={copyStaffLink}
+                      className={`flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
+                        staffCopied ? "bg-emerald-100 text-emerald-700" : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+                      }`}>
+                      {staffCopied ? "✅ คัดลอกแล้ว" : "คัดลอก"}
+                    </button>
+                  </div>
+
+                  {/* Share button (LINE) */}
+                  <button
+                    onClick={() => {
+                      const url = staffLink(staffInvite.code);
+                      const msg = `บันทึกรายจ่ายให้ร้านได้เลยที่ลิงก์นี้ 👇\n${url}`;
+                      if (typeof window !== "undefined" && (window as Window & { liff?: { shareTargetPicker?: (msgs: unknown[]) => void } }).liff?.shareTargetPicker) {
+                        (window as Window & { liff?: { shareTargetPicker?: (msgs: unknown[]) => void } }).liff!.shareTargetPicker!([{
+                          type: "text", text: msg,
+                        }]);
+                      } else {
+                        window.open(`https://line.me/share/ui?url=${encodeURIComponent(staffLink(staffInvite.code))}&text=${encodeURIComponent("ลิงก์บันทึกรายจ่าย")}`, "_blank");
+                      }
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-[#06C755] text-white hover:opacity-90 transition-opacity"
+                  >
+                    📤 แชร์ผ่าน LINE
+                  </button>
+
+                  {/* Management */}
+                  <div className="flex gap-2 pt-1">
+                    <button onClick={resetStaffLink} disabled={staffResetting}
+                      className="flex-1 py-2 rounded-xl text-xs font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-40">
+                      {staffResetting ? "กำลังรีเซ็ต..." : "🔄 รีเซ็ตลิงก์"}
+                    </button>
+                    <button onClick={disableStaffLink}
+                      className="flex-1 py-2 rounded-xl text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 transition-colors">
+                      🔒 ปิดลิงก์
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-300 text-center">รีเซ็ตจะทำให้ลิงก์เก่าใช้ไม่ได้</p>
+                </div>
+              ) : (
+                <button onClick={resetStaffLink} disabled={!lineUserId || staffResetting}
+                  className="w-full py-3 rounded-xl text-sm font-semibold bg-rose-500 text-white hover:bg-rose-600 transition-colors disabled:opacity-40">
+                  {staffResetting ? "กำลังสร้าง..." : "➕ สร้างลิงก์ Staff"}
+                </button>
               )}
             </div>
           </div>

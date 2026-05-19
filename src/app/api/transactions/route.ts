@@ -89,7 +89,7 @@ export async function GET(req: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let query: any = supabaseAdmin
       .from("transactions")
-      .select("id, type, amount, vendor, description, transaction_date, created_at")
+      .select("id, type, amount, vendor, description, transaction_date, created_at, staff_name")
       .eq("user_id", userId)
       .order("transaction_date", { ascending: false });
 
@@ -105,7 +105,7 @@ export async function GET(req: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let txQuery: any = supabaseAdmin
     .from("transactions")
-    .select("id, type, amount, vendor, description, transaction_date, created_at")
+    .select("id, type, amount, vendor, description, transaction_date, created_at, staff_name")
     .eq("user_id", userId).eq("type", "income")
     .order("transaction_date", { ascending: false });
   if (dateFrom) txQuery = txQuery.gte("transaction_date", dateFrom).lte("transaction_date", dateTo);
@@ -147,7 +147,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body        = await req.json();
-    const lineUserId  = body.lineUserId as string | undefined;
+    const lineUserId  = body.lineUserId  as string | undefined;
+    const staffCode   = body.staffCode   as string | undefined; // staff entry via invite code
+    const staffName   = body.staffName   as string | undefined;
     const txType      = (body.type ?? "expense") === "income" ? "income" : "expense";
     const amount      = Number(body.amount);
     const vendor      = String(body.vendor ?? "").trim();
@@ -155,16 +157,38 @@ export async function POST(req: NextRequest) {
     const date        = String(body.date ?? new Date().toISOString().slice(0, 10));
     const category    = String(body.expenseCategory ?? body.incomeCategory ?? "อื่นๆ").trim();
 
-    if (!lineUserId)  return NextResponse.json({ error: "Missing lineUserId" }, { status: 400 });
+    if (!lineUserId && !staffCode)
+      return NextResponse.json({ error: "Missing lineUserId or staffCode" }, { status: 400 });
     if (!amount || amount === 0) return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
     if (!vendor)      return NextResponse.json({ error: "Missing vendor" }, { status: 400 });
 
-    // Resolve user
-    const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("id, google_access_token, google_refresh_token, sheet_id")
-      .eq("line_user_id", lineUserId)
-      .single();
+    // Resolve user — either by lineUserId or via staffCode (staff entry)
+    let user: { id: string; google_access_token: string | null; google_refresh_token: string | null; sheet_id: string | null } | null = null;
+
+    if (staffCode) {
+      // Verify invite code and find owner
+      const { data: invite } = await supabaseAdmin
+        .from("staff_invites")
+        .select("owner_user_id, is_active")
+        .eq("code", staffCode)
+        .single();
+      if (!invite || !invite.is_active)
+        return NextResponse.json({ error: "Invalid or disabled invite code" }, { status: 403 });
+
+      const { data: owner } = await supabaseAdmin
+        .from("users")
+        .select("id, google_access_token, google_refresh_token, sheet_id")
+        .eq("id", invite.owner_user_id)
+        .single();
+      user = owner;
+    } else {
+      const { data: owner } = await supabaseAdmin
+        .from("users")
+        .select("id, google_access_token, google_refresh_token, sheet_id")
+        .eq("line_user_id", lineUserId!)
+        .single();
+      user = owner;
+    }
 
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
@@ -178,6 +202,7 @@ export async function POST(req: NextRequest) {
         vendor,
         description:      description || vendor,
         transaction_date: date,
+        ...(staffCode ? { staff_code: staffCode, staff_name: staffName ?? "Staff" } : {}),
       })
       .select("id")
       .single();
