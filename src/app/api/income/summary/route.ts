@@ -25,8 +25,10 @@ export async function GET(req: NextRequest) {
   const dateFrom = month
     ? `${year}-${String(month).padStart(2, "0")}-01`
     : `${year}-01-01`;
+  // Use actual last day of month (new Date(year, month, 0) gives last day of prev month)
+  const lastDay = month ? new Date(year, month, 0).getDate() : 31;
   const dateTo = month
-    ? `${year}-${String(month).padStart(2, "0")}-31`
+    ? `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`
     : `${year}-12-31`;
 
   // ── Query platform_orders ───────────────────────────────────────────────────

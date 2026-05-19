@@ -97,33 +97,51 @@ export default function RaiRab() {
   }, [sessionStatus, session]);
 
   // ── Load summary + adjustments ────────────────────────────────────────────
+  useEffect(() => {
+    if (!authReady || !lineUserId) {
+      if (authReady) setLoading(false);
+      return;
+    }
+
+    const ctrl = new AbortController();
+    setLoading(true);
+
+    // Summary
+    const params = new URLSearchParams({ lineUserId, year: String(year), month: String(month), platform });
+    fetch(`/api/income/summary?${params}`, { signal: ctrl.signal })
+      .then((r) => r.json())
+      .then((d) => { if (!d.error) setSummary(d); })
+      .catch((e) => { if (e.name !== "AbortError") console.error(e); })
+      .finally(() => setLoading(false));
+
+    // Manual adjustments (year-wide, no platform filter)
+    fetch(`/api/transactions?type=income&lineUserId=${lineUserId}&year=${year}`, { signal: ctrl.signal })
+      .then((r) => r.json())
+      .then((d) => {
+        const manual = (d.transactions ?? []).filter((t: AdjustEntry & { source?: string }) => !t.source);
+        setAdjusts(manual);
+      })
+      .catch((e) => { if (e.name !== "AbortError") console.error(e); });
+
+    return () => ctrl.abort();
+  }, [authReady, lineUserId, year, month, platform]);
+
+  // Helpers to refresh after save/delete
   function refreshSummary(uid: string) {
     const params = new URLSearchParams({ lineUserId: uid, year: String(year), month: String(month), platform });
     fetch(`/api/income/summary?${params}`)
       .then((r) => r.json())
-      .then((d) => { if (!d.error) setSummary(d); })
-      .finally(() => setLoading(false));
+      .then((d) => { if (!d.error) setSummary(d); });
   }
 
   function loadAdjusts(uid: string) {
     fetch(`/api/transactions?type=income&lineUserId=${uid}&year=${year}`)
       .then((r) => r.json())
       .then((d) => {
-        // Only manual (no source = not from platform import)
         const manual = (d.transactions ?? []).filter((t: AdjustEntry & { source?: string }) => !t.source);
         setAdjusts(manual);
       });
   }
-
-  useEffect(() => {
-    if (!authReady || !lineUserId) {
-      if (authReady) setLoading(false);
-      return;
-    }
-    setLoading(true);
-    refreshSummary(lineUserId);
-    loadAdjusts(lineUserId);
-  }, [lineUserId, year, month, platform]);
 
   // ── Save manual income ────────────────────────────────────────────────────
   async function handleAddIncome(e: React.FormEvent) {
