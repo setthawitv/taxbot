@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 
-type Platform = "all" | "tiktok" | "shopee" | "lazada";
+type Platform = "all" | "tiktok" | "shopee" | "lazada" | "manual";
 
 type Summary = {
   total:      number;
@@ -20,6 +20,7 @@ const PLATFORM_OPTIONS: { id: Platform; label: string; emoji: string; color: str
   { id: "tiktok", label: "TikTok",  emoji: "🎵", color: "bg-gray-800"   },
   { id: "shopee", label: "Shopee",  emoji: "🛒", color: "bg-orange-500" },
   { id: "lazada", label: "Lazada",  emoji: "📦", color: "bg-blue-600"   },
+  { id: "manual", label: "Manual",  emoji: "📝", color: "bg-purple-500" },
 ];
 
 const MONTHS = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
