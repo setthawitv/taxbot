@@ -30,6 +30,10 @@ function SettingsPageInner() {
     if (!liffId) return;
     import("@line/liff").then(({ default: liff }) => {
       liff.init({ liffId }).then(async () => {
+        if (!liff.isLoggedIn() && !liff.isInClient() && /Line\//i.test(navigator.userAgent)) {
+          window.location.replace(`https://liff.line.me/${liffId}`);
+          return;
+        }
         if (liff.isLoggedIn()) {
           const profile = await liff.getProfile();
           setLineUserId(profile.userId);

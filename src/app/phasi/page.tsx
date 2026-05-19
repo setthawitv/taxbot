@@ -162,6 +162,10 @@ export default function PhasiPage() {
         try {
           const { default: liff } = await import("@line/liff");
           await liff.init({ liffId });
+          if (!liff.isLoggedIn() && !liff.isInClient() && /Line\//i.test(navigator.userAgent)) {
+            window.location.replace(`https://liff.line.me/${liffId}`);
+            return;
+          }
           if (liff.isLoggedIn()) {
             const p = await liff.getProfile();
             setLineUserId(p.userId);
