@@ -259,7 +259,6 @@ function SettingsPageInner() {
                 <p className="text-xs text-gray-400 text-center mt-2">เชื่อมต่อ Google ก่อนจึงจะซิงค์ได้</p>
               )}
             </div>
-          </div>
 
             {/* Staff invite */}
             <div className="bg-white rounded-2xl border border-gray-200 p-5">
