@@ -6,6 +6,10 @@ import { useSession } from "next-auth/react";
 
 type Platform = "all" | "tiktok" | "shopee" | "lazada";
 
+const INCOME_CATEGORIES = ["รายได้จากการขาย", "ค่าบริการ", "ค่าคอมมิชชั่น", "เงินโบนัส", "อื่นๆ"];
+
+type ManualTxn = { id: string; amount: number; vendor: string; description: string; transaction_date: string };
+
 type Summary = {
   total:      number;
   count:      number;
@@ -35,6 +39,21 @@ export default function RaiRab() {
   const [platform,   setPlatform]   = useState<Platform>("all");
   const [summary,    setSummary]    = useState<Summary | null>(null);
   const [loading,    setLoading]    = useState(true);
+
+  // Manual income form
+  const [showForm,   setShowForm]   = useState(false);
+  const [editId,     setEditId]     = useState<string | null>(null);
+  const [vendor,     setVendor]     = useState("");
+  const [amount,     setAmount]     = useState("");
+  const [formDate,   setFormDate]   = useState(new Date().toISOString().slice(0, 10));
+  const [desc,       setDesc]       = useState("");
+  const [category,   setCategory]   = useState("รายได้จากการขาย");
+  const [saving,     setSaving]     = useState(false);
+  const [saveMsg,    setSaveMsg]    = useState<{ ok: boolean; text: string } | null>(null);
+
+  // Manual income list
+  const [manualTxns,  setManualTxns]  = useState<ManualTxn[]>([]);
+  const [deletingId,  setDeletingId]  = useState<string | null>(null);
 
   const { data: session, status: sessionStatus } = useSession();
 
@@ -81,6 +100,66 @@ export default function RaiRab() {
     resolveUser();
   }, [sessionStatus, session]);
 
+  // Load manual income transactions
+  function loadManualTxns(uid: string) {
+    fetch(`/api/transactions?type=income&lineUserId=${uid}&year=${year}&month=${month}`)
+      .then((r) => r.json())
+      .then((d) => {
+        const all = d.transactions ?? [];
+        // Keep only manual (no source = not from platform import)
+        setManualTxns(all.filter((t: ManualTxn & { source?: string }) => !t.source));
+      });
+  }
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!lineUserId || !vendor.trim() || !amount) return;
+    setSaving(true); setSaveMsg(null);
+    try {
+      let res: Response;
+      if (editId) {
+        res = await fetch("/api/transactions", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: editId, lineUserId, amount: parseFloat(amount), vendor: vendor.trim(), description: desc.trim(), date: formDate }),
+        });
+      } else {
+        res = await fetch("/api/transactions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ lineUserId, type: "income", amount: parseFloat(amount), vendor: vendor.trim(), description: desc.trim(), date: formDate, incomeCategory: category }),
+        });
+      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "เกิดข้อผิดพลาด");
+      setSaveMsg({ ok: true, text: editId ? "✅ แก้ไขแล้ว" : "✅ บันทึกแล้ว" });
+      setShowForm(false); setEditId(null);
+      setVendor(""); setAmount(""); setDesc(""); setCategory("รายได้จากการขาย");
+      loadManualTxns(lineUserId);
+      // Refresh summary too
+      const params = new URLSearchParams({ lineUserId, year: String(year), month: String(month), platform });
+      fetch(`/api/income/summary?${params}`).then((r) => r.json()).then((d) => { if (!d.error) setSummary(d); });
+    } catch (err: unknown) {
+      setSaveMsg({ ok: false, text: `❌ ${err instanceof Error ? err.message : "เกิดข้อผิดพลาด"}` });
+    } finally { setSaving(false); }
+  }
+
+  async function handleDelete(id: string) {
+    if (!lineUserId) return;
+    setDeletingId(id);
+    try {
+      const res = await fetch("/api/transactions", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, lineUserId, table: "transactions" }),
+      });
+      if (!res.ok) throw new Error();
+      setManualTxns((prev) => prev.filter((t) => t.id !== id));
+    } catch {
+      setSaveMsg({ ok: false, text: "❌ ลบไม่สำเร็จ" });
+    } finally { setDeletingId(null); }
+  }
+
   // Fetch summary whenever filters change
   useEffect(() => {
     if (!authReady || !lineUserId) {
@@ -98,6 +177,8 @@ export default function RaiRab() {
       .then((r) => r.json())
       .then((d) => { if (!d.error) setSummary(d); })
       .finally(() => setLoading(false));
+
+    loadManualTxns(lineUserId);
   }, [lineUserId, year, month, platform]);
 
   const maxMonthTotal = Math.max(...(summary?.byMonth.map((m) => m.total) ?? [1]), 1);
@@ -120,12 +201,20 @@ export default function RaiRab() {
               <p className="text-emerald-500 text-sm">Income Dashboard</p>
             </div>
           </div>
-          <Link
-            href="/rairab/import"
-            className="flex items-center gap-1.5 bg-emerald-500 text-white text-xs font-semibold px-3 py-2 rounded-xl active:scale-95 transition-all"
-          >
-            📤 นำเข้าไฟล์
-          </Link>
+          <div className="flex gap-2">
+            <button
+              onClick={() => { setShowForm((v) => !v); setEditId(null); setSaveMsg(null); setVendor(""); setAmount(""); setDesc(""); setCategory("รายได้จากการขาย"); setFormDate(new Date().toISOString().slice(0, 10)); }}
+              className="flex items-center gap-1 bg-white border border-emerald-300 text-emerald-600 text-xs font-semibold px-3 py-2 rounded-xl active:scale-95 transition-all"
+            >
+              {showForm ? "ยกเลิก" : "+ เพิ่ม"}
+            </button>
+            <Link
+              href="/rairab/import"
+              className="flex items-center gap-1.5 bg-emerald-500 text-white text-xs font-semibold px-3 py-2 rounded-xl active:scale-95 transition-all"
+            >
+              📤 นำเข้า
+            </Link>
+          </div>
         </div>
 
         {/* Year selector */}
@@ -272,8 +361,99 @@ export default function RaiRab() {
           </div>
         )}
 
+        {/* Save feedback */}
+        {saveMsg && (
+          <div className={`mb-4 p-3 rounded-xl text-sm font-medium ${saveMsg.ok ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
+            {saveMsg.text}
+          </div>
+        )}
+
+        {/* ── Manual income form ─────────────────────────────────────────── */}
+        {showForm && (
+          <form onSubmit={handleSave} className="bg-white rounded-2xl border border-emerald-100 p-4 mb-4 space-y-3">
+            <p className="text-sm font-semibold text-gray-700 mb-1">
+              {editId ? "✏️ แก้ไขรายรับ" : "บันทึกรายรับใหม่"}
+            </p>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">ผู้จ่าย / แหล่งที่มา *</label>
+              <input value={vendor} onChange={(e) => setVendor(e.target.value)}
+                placeholder="เช่น ลูกค้า, ค่าบริการ, โอนเงิน"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">จำนวนเงิน (บาท) *</label>
+                <input value={amount} onChange={(e) => setAmount(e.target.value)}
+                  type="number" min="0" step="0.01" placeholder="0.00"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200" />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">วันที่</label>
+                <input value={formDate} onChange={(e) => setFormDate(e.target.value)}
+                  type="date"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200" />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">รายละเอียด</label>
+              <input value={desc} onChange={(e) => setDesc(e.target.value)}
+                placeholder="รายละเอียดเพิ่มเติม (ไม่บังคับ)"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200" />
+            </div>
+            {!editId && (
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">ประเภท</label>
+                <div className="flex flex-wrap gap-2">
+                  {INCOME_CATEGORIES.map((c) => (
+                    <button key={c} type="button" onClick={() => setCategory(c)}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                        category === c ? "bg-emerald-500 text-white" : "bg-emerald-50 text-emerald-600 border border-emerald-200"
+                      }`}>
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <button type="submit" disabled={saving || !vendor.trim() || !amount}
+              className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-40 text-white font-semibold py-3 rounded-xl text-sm transition-colors">
+              {saving ? "กำลังบันทึก..." : editId ? "💾 บันทึกการแก้ไข" : "💾 บันทึกรายรับ"}
+            </button>
+          </form>
+        )}
+
+        {/* ── Manual income list ─────────────────────────────────────────── */}
+        {manualTxns.length > 0 && (
+          <div className="mb-4">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">รายรับที่บันทึกเอง</p>
+            <ul className="flex flex-col gap-2">
+              {manualTxns.map((t) => (
+                <li key={t.id} className="bg-white rounded-2xl p-3.5 border border-emerald-100 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center text-base flex-shrink-0">💰</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-700 text-sm truncate">{t.vendor}</p>
+                    <p className="text-xs text-gray-400 truncate">{t.description || t.transaction_date}</p>
+                  </div>
+                  <p className="text-emerald-600 font-semibold flex-shrink-0 text-sm">
+                    +฿{Number(t.amount).toLocaleString("th-TH")}
+                  </p>
+                  <button
+                    onClick={() => { setEditId(t.id); setVendor(t.vendor); setAmount(String(t.amount)); setDesc(t.description); setFormDate(t.transaction_date); setCategory("รายได้จากการขาย"); setSaveMsg(null); setShowForm(true); }}
+                    className="text-gray-300 hover:text-blue-400 text-base transition-colors flex-shrink-0"
+                  >✏️</button>
+                  <button
+                    onClick={() => handleDelete(t.id)}
+                    disabled={deletingId === t.id}
+                    className="text-gray-300 hover:text-rose-400 text-xl leading-none transition-colors flex-shrink-0 disabled:opacity-40"
+                  >{deletingId === t.id ? "⏳" : "×"}</button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {/* Empty state */}
-        {!loading && (summary?.count ?? 0) === 0 && (
+        {!loading && (summary?.count ?? 0) === 0 && manualTxns.length === 0 && (
           <div className="bg-white rounded-2xl p-6 text-center text-gray-400 border border-emerald-100">
             <p className="text-3xl mb-2">📭</p>
             <p>ยังไม่มีรายรับในช่วงนี้</p>
