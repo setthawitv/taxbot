@@ -284,6 +284,7 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1);
   const [liffProfile, setLiffProfile] = useState<LiffProfile | null>(null);
   const [notInLine, setNotInLine] = useState(false);
+  const [checking, setChecking] = useState(true); // true while verifying onboarding status
 
   // Step 1
   const [firstName, setFirstName] = useState("");
@@ -324,6 +325,8 @@ export default function OnboardingPage() {
           return;
         }
 
+        setChecking(false); // new user — show the form
+
         // Pre-fill any data they saved in a previous partial session
         if (status.profile) {
           const p = status.profile;
@@ -340,7 +343,7 @@ export default function OnboardingPage() {
           setGoogleEmail(status.email);
         }
       })
-      .catch(() => setNotInLine(true));
+      .catch(() => { setNotInLine(true); setChecking(false); });
 
     if (session?.user?.email) {
       setGoogleConnected(true);
@@ -412,6 +415,18 @@ export default function OnboardingPage() {
     }
     document.cookie = "taxbot_onboarded=1; path=/; max-age=31536000";
     router.push("/");
+  }
+
+  // ── Checking onboarding status ──────────────────────────────────────────────
+  if (checking && !notInLine) {
+    return (
+      <main className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-5xl mb-4 animate-pulse">🤖</div>
+          <p className="text-gray-400 text-sm">กำลังโหลด...</p>
+        </div>
+      </main>
+    );
   }
 
   // ── Not opened inside LINE ──────────────────────────────────────────────────

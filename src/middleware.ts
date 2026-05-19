@@ -18,8 +18,8 @@ export function middleware(request: NextRequest) {
 
   const onboarded = request.cookies.get("taxbot_onboarded")?.value;
   if (!onboarded) {
-    // First-time users see feature intro slides before onboarding
-    return NextResponse.redirect(new URL("/intro", request.url));
+    // Send to onboarding — it auto-skips to dashboard if user is already registered
+    return NextResponse.redirect(new URL("/onboarding", request.url));
   }
 
   return NextResponse.next();
