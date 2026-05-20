@@ -133,6 +133,15 @@ function SettingsPageInner() {
     setTimeout(() => setAdminCopied(""), 2000);
   }
 
+  function sendAdminEmail(adminEmailAddr: string, code: string) {
+    const link = adminJoinLink(code);
+    const subject = encodeURIComponent("เชิญเป็น Admin TaxBot");
+    const body = encodeURIComponent(
+      `สวัสดี!\n\nคุณได้รับเชิญให้เป็น Admin บัญชี TaxBot\nกรุณาคลิกลิงก์ด้านล่างเพื่อยืนยันการเข้าร่วม:\n\n${link}\n\nหมายเหตุ: กรุณาลงชื่อด้วยบัญชี Google ของอีเมลนี้`
+    );
+    window.location.href = `mailto:${adminEmailAddr}?subject=${subject}&body=${body}`;
+  }
+
   async function addAdmin(e: React.FormEvent) {
     e.preventDefault();
     const email = adminEmail.trim().toLowerCase();
@@ -337,16 +346,24 @@ function SettingsPageInner() {
                         </div>
                         <div className="flex flex-col gap-1 flex-shrink-0">
                           {a.status !== "accepted" && (
-                            <button
-                              onClick={() => copyAdminLink(a.invite_code)}
-                              className={`text-xs font-semibold px-2.5 py-1 rounded-lg transition-colors ${
-                                adminCopied === a.invite_code
-                                  ? "bg-emerald-100 text-emerald-700"
-                                  : "bg-blue-50 text-blue-600 hover:bg-blue-100"
-                              }`}
-                            >
-                              {adminCopied === a.invite_code ? "✅ คัดลอก" : "🔗 ลิงก์"}
-                            </button>
+                            <>
+                              <button
+                                onClick={() => sendAdminEmail(a.admin_email, a.invite_code)}
+                                className="text-xs font-semibold px-2.5 py-1 rounded-lg transition-colors bg-blue-500 text-white hover:bg-blue-600"
+                              >
+                                📧 ส่งเมล
+                              </button>
+                              <button
+                                onClick={() => copyAdminLink(a.invite_code)}
+                                className={`text-xs font-semibold px-2.5 py-1 rounded-lg transition-colors ${
+                                  adminCopied === a.invite_code
+                                    ? "bg-emerald-100 text-emerald-700"
+                                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                }`}
+                              >
+                                {adminCopied === a.invite_code ? "✅ คัดลอก" : "🔗 คัดลอก"}
+                              </button>
+                            </>
                           )}
                           <button
                             onClick={() => removeAdmin(a.id)}
