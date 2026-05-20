@@ -153,13 +153,23 @@ export default function Home() {
         yearExpense:  yrExpense.total ?? 0,
         estimatedTax: taxAmt,
       });
-      // Prefer LINE display_name + picture from DB over Google session info
-      setUserInfo((prev) => prev ? {
-        ...prev,
-        displayName:  status?.displayName  || prev.displayName,
-        pictureUrl:   status?.pictureUrl   || prev.pictureUrl,
-        businessName: status?.profile?.businessName || prev.businessName,
-      } : null);
+      // For admins: keep their own Google name/picture, only update businessName
+      // For owners: prefer LINE display_name + picture from DB
+      setUserInfo((prev) => {
+        if (!prev) return null;
+        if (prev.role === "admin") {
+          return {
+            ...prev,
+            businessName: status?.profile?.businessName || prev.businessName,
+          };
+        }
+        return {
+          ...prev,
+          displayName:  status?.displayName  || prev.displayName,
+          pictureUrl:   status?.pictureUrl   || prev.pictureUrl,
+          businessName: status?.profile?.businessName || prev.businessName,
+        };
+      });
       setLinks({ sheetUrl: lnks.sheet_url ?? null, driveUrl: lnks.drive_url ?? null });
     }).finally(() => setLoadingStats(false));
   }, [authReady, lineUserId]);
