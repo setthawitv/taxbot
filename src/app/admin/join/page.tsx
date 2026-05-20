@@ -116,6 +116,14 @@ function AdminJoinInner() {
                 เมื่อยืนยันแล้ว คุณจะสามารถดู Dashboard และจัดการรายการทั้งหมดของบัญชีนี้ได้
               </p>
 
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">
+                <p className="text-amber-400 text-xs leading-relaxed">
+                  ⚠️ <span className="font-semibold">หมายเหตุ:</span> การซิงค์ข้อมูลไปยัง Google Sheets และ Drive
+                  จะใช้บัญชี Google ของเจ้าของรหัส — เจ้าของต้องเชื่อมต่อ Google Drive ในหน้าตั้งค่าก่อน
+                  จึงจะใช้งานฟีเจอร์นี้ได้
+                </p>
+              </div>
+
               {sessionStatus === "loading" || joining ? (
                 <div className="text-center py-3">
                   <p className="text-gray-400 text-sm">
