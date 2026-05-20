@@ -21,7 +21,7 @@ async function getFreshToken(userId: string, access: string, refresh: string | n
 // POST /api/scan  { lineUserId, imageBase64 }
 export async function POST(req: NextRequest) {
   try {
-    const { lineUserId, imageBase64 } = await req.json();
+    const { lineUserId, imageBase64, forceType } = await req.json();
     if (!lineUserId || !imageBase64)
       return NextResponse.json({ error: "Missing lineUserId or imageBase64" }, { status: 400 });
 
@@ -37,7 +37,11 @@ export async function POST(req: NextRequest) {
     const base64 = imageBase64.replace(/^data:image\/[a-z]+;base64,/, "");
 
     // Call AI
-    const receipt = await readReceipt(base64);
+    let receipt = await readReceipt(base64);
+    // Override type if caller specifies
+    if (forceType === "income" || forceType === "expense") {
+      receipt = { ...receipt, type: forceType };
+    }
 
     // Save to DB
     const { data: tx, error: txErr } = await supabaseAdmin

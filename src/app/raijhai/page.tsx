@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 
 const EXPENSE_CATEGORIES = [
@@ -49,6 +49,14 @@ export default function RaiJhai() {
 
   // Delete confirmation
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Scan receipt
+  const [showScan,    setShowScan]    = useState(false);
+  const [scanPreview, setScanPreview] = useState<string | null>(null);
+  const [scanning,    setScanning]    = useState(false);
+  const [scanError,   setScanError]   = useState("");
+  const scanFileRef   = useRef<HTMLInputElement>(null);
+  const scanCamRef    = useRef<HTMLInputElement>(null);
 
   const { data: session, status: sessionStatus } = useSession();
 
@@ -196,6 +204,43 @@ export default function RaiJhai() {
     }
   }
 
+  function handleScanFile(file: File | null) {
+    if (!file) return;
+    setScanError("");
+    const reader = new FileReader();
+    reader.onload = (e) => setScanPreview(e.target?.result as string);
+    reader.readAsDataURL(file);
+  }
+
+  async function runScan() {
+    if (!scanPreview || !lineUserId) return;
+    setScanning(true);
+    setScanError("");
+    try {
+      const res = await fetch("/api/scan", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ lineUserId, imageBase64: scanPreview, forceType: "expense" }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error ?? "เกิดข้อผิดพลาด");
+      // Pre-fill form with scan result
+      setVendor(data.receipt.vendor ?? "");
+      setAmount(String(data.receipt.amount ?? ""));
+      setDate(data.receipt.date ?? new Date().toISOString().slice(0, 10));
+      setDesc(data.receipt.description ?? "");
+      setCategory(data.receipt.expenseCategory ?? "อื่นๆ");
+      setEditId(null);
+      setShowScan(false);
+      setScanPreview(null);
+      setShowForm(true);
+    } catch (err: unknown) {
+      setScanError(err instanceof Error ? err.message : "เกิดข้อผิดพลาด");
+    } finally {
+      setScanning(false);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-rose-50 px-4 py-8">
       <div className="max-w-5xl mx-auto">
@@ -212,12 +257,20 @@ export default function RaiJhai() {
               <p className="text-rose-500 text-sm">Expense</p>
             </div>
           </div>
-          <button
-            onClick={showForm ? () => { setShowForm(false); setEditId(null); setSaveMsg(null); } : openAddForm}
-            className="bg-rose-500 hover:bg-rose-600 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
-          >
-            {showForm ? "ยกเลิก" : "+ เพิ่มรายจ่าย"}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => { setShowScan(true); setScanPreview(null); setScanError(""); }}
+              className="bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold px-3 py-2 rounded-xl transition-colors"
+            >
+              📸 สแกน
+            </button>
+            <button
+              onClick={showForm ? () => { setShowForm(false); setEditId(null); setSaveMsg(null); } : openAddForm}
+              className="bg-rose-500 hover:bg-rose-600 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
+            >
+              {showForm ? "ยกเลิก" : "+ เพิ่ม"}
+            </button>
+          </div>
         </div>
 
         {/* ── Desktop 2-panel grid ─────────────────────────────────────────── */}
@@ -378,6 +431,59 @@ export default function RaiJhai() {
 
         </div>
       </div>
+
+      {/* ── Scan modal ──────────────────────────────────────────────────────── */}
+      {showScan && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-bold text-gray-800">📸 สแกนใบเสร็จรายจ่าย</h2>
+              <button onClick={() => { setShowScan(false); setScanPreview(null); setScanError(""); }}
+                className="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
+            </div>
+
+            {!scanPreview ? (
+              <div className="space-y-3">
+                <button onClick={() => scanCamRef.current?.click()}
+                  className="w-full flex items-center gap-3 py-4 rounded-xl border-2 border-dashed border-gray-200 hover:border-rose-300 hover:bg-rose-50 transition-colors">
+                  <span className="text-2xl ml-3">📷</span>
+                  <div className="text-left">
+                    <p className="text-sm font-semibold text-gray-700">ถ่ายรูป</p>
+                    <p className="text-xs text-gray-400">เปิดกล้อง</p>
+                  </div>
+                </button>
+                <input ref={scanCamRef} type="file" accept="image/*" capture="environment" className="hidden"
+                  onChange={(e) => handleScanFile(e.target.files?.[0] ?? null)} />
+
+                <button onClick={() => scanFileRef.current?.click()}
+                  className="w-full flex items-center gap-3 py-4 rounded-xl border-2 border-dashed border-gray-200 hover:border-rose-300 hover:bg-rose-50 transition-colors">
+                  <span className="text-2xl ml-3">🖼️</span>
+                  <div className="text-left">
+                    <p className="text-sm font-semibold text-gray-700">เลือกจากคลัง</p>
+                    <p className="text-xs text-gray-400">JPG, PNG</p>
+                  </div>
+                </button>
+                <input ref={scanFileRef} type="file" accept="image/*" className="hidden"
+                  onChange={(e) => handleScanFile(e.target.files?.[0] ?? null)} />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="relative rounded-xl overflow-hidden bg-gray-100">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={scanPreview} alt="receipt" className="w-full max-h-52 object-contain" />
+                  <button onClick={() => setScanPreview(null)}
+                    className="absolute top-2 right-2 bg-black/50 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm">×</button>
+                </div>
+                {scanError && <p className="text-red-500 text-xs">❌ {scanError}</p>}
+                <button onClick={runScan} disabled={scanning}
+                  className="w-full py-3 rounded-xl text-sm font-bold bg-rose-500 hover:bg-rose-600 text-white disabled:opacity-40 transition-colors">
+                  {scanning ? "⏳ AI กำลังอ่าน..." : "🤖 สแกนด้วย AI"}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }

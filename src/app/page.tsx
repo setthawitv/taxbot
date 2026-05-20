@@ -261,16 +261,6 @@ export default function Home() {
               <span className="text-gray-300 text-xl">›</span>
             </Link>
 
-            <Link href="/scan"
-              className="flex items-center gap-4 p-4 rounded-2xl border border-purple-200 bg-purple-50 hover:bg-purple-100 transition-colors">
-              <div className="text-2xl w-11 h-11 flex items-center justify-center rounded-xl bg-purple-100">📸</div>
-              <div className="flex-1">
-                <div className="font-semibold text-purple-700">สแกนใบเสร็จ</div>
-                <div className="text-gray-400 text-xs">AI อ่านสลิป · บันทึกอัตโนมัติ</div>
-              </div>
-              <span className="text-gray-300 text-xl">›</span>
-            </Link>
-
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide pt-2">Google Tools</p>
 
             <button onClick={() => openExternal(links.sheetUrl, "/sheets")}
