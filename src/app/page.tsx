@@ -17,6 +17,7 @@ type UserInfo = {
   pictureUrl:     string;
   businessName:   string;
   googleConnected: boolean;
+  role?:          "owner" | "admin";
 };
 
 type Stats = {
@@ -110,7 +111,13 @@ export default function Home() {
             const d = await res.json();
             if (d.lineUserId) {
               setLineUserId(d.lineUserId);
-              setUserInfo({ displayName: session.user.name ?? session.user.email ?? "", pictureUrl: session.user.image ?? "", businessName: "", googleConnected: true });
+              setUserInfo({
+                displayName:    session.user.name ?? session.user.email ?? "",
+                pictureUrl:     session.user.image ?? "",
+                businessName:   "",
+                googleConnected: true,
+                role:           d.role ?? "owner",
+              });
             }
           }
         } catch { /* ignore */ }
@@ -179,12 +186,27 @@ export default function Home() {
             <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center text-3xl shadow">🤖</div>
           )}
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-bold text-gray-800 truncate">
-              {userInfo?.businessName || userInfo?.displayName || "TaxBot"}
-            </h1>
-            <p className="text-gray-400 text-sm truncate">
-              {userInfo?.businessName ? userInfo.displayName || "Dashboard" : "Dashboard · ปี " + CURRENT_YEAR}
-            </p>
+            {userInfo?.role === "admin" ? (
+              <>
+                <h1 className="text-xl font-bold text-gray-800 truncate">
+                  {userInfo.displayName}
+                </h1>
+                <p className="text-gray-400 text-sm truncate">
+                  {userInfo.businessName
+                    ? <>🏢 {userInfo.businessName}</>
+                    : "Admin · Dashboard"}
+                </p>
+              </>
+            ) : (
+              <>
+                <h1 className="text-xl font-bold text-gray-800 truncate">
+                  {userInfo?.businessName || userInfo?.displayName || "TaxBot"}
+                </h1>
+                <p className="text-gray-400 text-sm truncate">
+                  {userInfo?.businessName ? userInfo.displayName || "Dashboard" : "Dashboard · ปี " + CURRENT_YEAR}
+                </p>
+              </>
+            )}
           </div>
           <Link href="/settings"
             className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 bg-white border border-gray-200 px-4 py-2 rounded-xl transition-colors">
