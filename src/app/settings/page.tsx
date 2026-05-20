@@ -346,24 +346,16 @@ function SettingsPageInner() {
                         </div>
                         <div className="flex flex-col gap-1 flex-shrink-0">
                           {a.status !== "accepted" && (
-                            <>
-                              <button
-                                onClick={() => sendAdminEmail(a.admin_email, a.invite_code)}
-                                className="text-xs font-semibold px-2.5 py-1 rounded-lg transition-colors bg-blue-500 text-white hover:bg-blue-600"
-                              >
-                                📧 ส่งเมล
-                              </button>
-                              <button
-                                onClick={() => copyAdminLink(a.invite_code)}
-                                className={`text-xs font-semibold px-2.5 py-1 rounded-lg transition-colors ${
-                                  adminCopied === a.invite_code
-                                    ? "bg-emerald-100 text-emerald-700"
-                                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                                }`}
-                              >
-                                {adminCopied === a.invite_code ? "✅ คัดลอก" : "🔗 คัดลอก"}
-                              </button>
-                            </>
+                            <button
+                              onClick={() => copyAdminLink(a.invite_code)}
+                              className={`text-xs font-semibold px-2.5 py-1 rounded-lg transition-colors ${
+                                adminCopied === a.invite_code
+                                  ? "bg-emerald-100 text-emerald-700"
+                                  : "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                              }`}
+                            >
+                              {adminCopied === a.invite_code ? "✅ คัดลอก" : "🔗 คัดลอก"}
+                            </button>
                           )}
                           <button
                             onClick={() => removeAdmin(a.id)}
