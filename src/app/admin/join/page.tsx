@@ -140,7 +140,7 @@ function AdminJoinInner() {
                         ⚠️ กรุณาลงชื่อด้วย <strong>{inviteInfo.adminEmail}</strong>
                       </p>
                       <button
-                        onClick={() => signIn("google", { callbackUrl: `/admin/join?code=${code}` })}
+                        onClick={() => signIn("google", { callbackUrl: `/admin/join?code=${code}` }, { scope: "openid email profile" })}
                         className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold bg-white text-gray-800 hover:bg-gray-100 transition-colors"
                       >
                         <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -156,7 +156,7 @@ function AdminJoinInner() {
                 </div>
               ) : (
                 <button
-                  onClick={() => signIn("google", { callbackUrl: `/admin/join?code=${code}` })}
+                  onClick={() => signIn("google", { callbackUrl: `/admin/join?code=${code}` }, { scope: "openid email profile" })}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold bg-white text-gray-800 hover:bg-gray-100 transition-colors"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24">
