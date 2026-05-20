@@ -25,6 +25,12 @@ function SettingsPageInner() {
   const [syncing,      setSyncing]      = useState(false);
   const [syncResult,   setSyncResult]   = useState<SyncResult>(null);
 
+  // Business name
+  const [businessName,        setBusinessName]        = useState("");
+  const [businessNameDraft,   setBusinessNameDraft]   = useState("");
+  const [savingBusinessName,  setSavingBusinessName]  = useState(false);
+  const [businessNameSaved,   setBusinessNameSaved]   = useState(false);
+
   // Admin management
   const [admins,        setAdmins]        = useState<AdminRow[]>([]);
   const [adminLoading,  setAdminLoading]  = useState(false);
@@ -55,6 +61,9 @@ function SettingsPageInner() {
             if (res.ok) {
               const data = await res.json();
               setGoogleEmail(data.email ?? "");
+              const biz = data.profile?.businessName ?? "";
+              setBusinessName(biz);
+              setBusinessNameDraft(biz);
             }
             return;
           }
@@ -71,6 +80,14 @@ function SettingsPageInner() {
             if (d.lineUserId) {
               setLineUserId(d.lineUserId);
               setGoogleEmail(session.user.email ?? "");
+              // Load business name
+              const statusRes = await fetch(`/api/user/status?lineUserId=${d.lineUserId}`);
+              if (statusRes.ok) {
+                const statusData = await statusRes.json();
+                const biz = statusData.profile?.businessName ?? "";
+                setBusinessName(biz);
+                setBusinessNameDraft(biz);
+              }
             }
           }
         } catch { /* ignore */ }
@@ -79,6 +96,24 @@ function SettingsPageInner() {
 
     resolve();
   }, [sessionStatus, session]);
+
+  async function saveBusinessName(e: React.FormEvent) {
+    e.preventDefault();
+    if (!lineUserId || !businessNameDraft.trim()) return;
+    setSavingBusinessName(true);
+    try {
+      await fetch("/api/user/profile", {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ lineUserId, businessName: businessNameDraft.trim() }),
+      });
+      setBusinessName(businessNameDraft.trim());
+      setBusinessNameSaved(true);
+      setTimeout(() => setBusinessNameSaved(false), 2000);
+    } finally {
+      setSavingBusinessName(false);
+    }
+  }
 
   // Open Google connect in external browser.
   // liff.openWindow({ external: true }) requires a user gesture AND proper LIFF context
@@ -226,6 +261,30 @@ function SettingsPageInner() {
 
           {/* LEFT — Google + Sync */}
           <div className="space-y-4 mb-4 lg:mb-0">
+
+            {/* Business name */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-5">
+              <h2 className="font-semibold text-gray-700 mb-1">ชื่อธุรกิจ</h2>
+              <p className="text-xs text-gray-400 mb-4">
+                ชื่อที่แสดงในหน้าหลักแทนชื่อ LINE
+              </p>
+              <form onSubmit={saveBusinessName} className="flex gap-2">
+                <input
+                  value={businessNameDraft}
+                  onChange={(e) => setBusinessNameDraft(e.target.value)}
+                  placeholder="เช่น ร้านดอกไม้มีนา, บริษัท ABC"
+                  disabled={!lineUserId}
+                  className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 disabled:opacity-40"
+                />
+                <button
+                  type="submit"
+                  disabled={savingBusinessName || !businessNameDraft.trim() || !lineUserId || businessNameDraft.trim() === businessName}
+                  className="px-4 py-2.5 rounded-xl text-sm font-semibold bg-gray-800 text-white hover:bg-gray-700 disabled:opacity-40 transition-colors flex-shrink-0"
+                >
+                  {businessNameSaved ? "✅" : savingBusinessName ? "..." : "บันทึก"}
+                </button>
+              </form>
+            </div>
 
             {/* Google connection */}
             <div className="bg-white rounded-2xl border border-gray-200 p-5">

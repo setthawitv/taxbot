@@ -180,10 +180,10 @@ export default function Home() {
           )}
           <div className="flex-1 min-w-0">
             <h1 className="text-xl font-bold text-gray-800 truncate">
-              {userInfo?.displayName ?? "TaxBot"}
+              {userInfo?.businessName || userInfo?.displayName || "TaxBot"}
             </h1>
             <p className="text-gray-400 text-sm truncate">
-              {userInfo?.businessName || "Dashboard · ปี " + CURRENT_YEAR}
+              {userInfo?.businessName ? userInfo.displayName || "Dashboard" : "Dashboard · ปี " + CURRENT_YEAR}
             </p>
           </div>
           <Link href="/settings"
