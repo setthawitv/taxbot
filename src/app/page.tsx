@@ -4,6 +4,145 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 
+// ── Tour steps ────────────────────────────────────────────────────────────────
+const TOUR_STEPS = [
+  {
+    emoji: "👋",
+    title: "ยินดีต้อนรับสู่ TaxBot!",
+    desc: "TaxBot ช่วยให้คุณจัดการรายรับ-รายจ่าย และคำนวณภาษีได้ง่ายๆ โดยไม่ต้องมีความรู้บัญชี มาดูแต่ละฟีเจอร์กันเลย 🚀",
+    highlight: null,
+    cta: "เริ่มเลย →",
+    tip: null,
+  },
+  {
+    emoji: "💰",
+    title: "รายรับ — บันทึกรายได้",
+    desc: "นำเข้ายอดขายจาก TikTok Shop, Shopee, Lazada ได้โดยอัปโหลดไฟล์ Excel จากแพลตฟอร์ม หรือบันทึกรายรับ Manual ได้เลย",
+    highlight: "income",
+    cta: "ถัดไป →",
+    tip: "💡 ไปที่ รายรับ → 📤 นำเข้า → เลือกไฟล์ Excel จาก TikTok/Shopee/Lazada",
+  },
+  {
+    emoji: "🧾",
+    title: "รายจ่าย — บันทึกค่าใช้จ่าย",
+    desc: "บันทึกค่าใช้จ่ายทุกรายการ — ค่าสินค้า ค่าขนส่ง ค่าโฆษณา หรือ สแกนใบเสร็จด้วย AI ให้อ่านและบันทึกให้อัตโนมัติ",
+    highlight: "expense",
+    cta: "ถัดไป →",
+    tip: "💡 กดปุ่ม 📸 สแกน แล้วถ่ายรูปใบเสร็จ — AI จะอ่านยอดและบันทึกให้เลย",
+  },
+  {
+    emoji: "📸",
+    title: "สแกนใบเสร็จด้วย AI",
+    desc: "ถ่ายรูปสลิปโอนเงิน หรืออัปโหลดใบเสร็จ — AI จะอ่าน ยอดเงิน, ชื่อร้านค้า, วันที่ และบันทึกลงรายจ่ายหรือรายรับให้อัตโนมัติ",
+    highlight: "expense",
+    cta: "ถัดไป →",
+    tip: "💡 ใช้ได้ทั้งกล้องถ่ายสด และเลือกจากคลังรูปภาพ",
+  },
+  {
+    emoji: "📊",
+    title: "ภาษี — คำนวณให้อัตโนมัติ",
+    desc: "ระบบคำนวณภาษีเงินได้บุคคลธรรมดาให้อัตโนมัติจากรายรับ-รายจ่ายที่บันทึกไว้ พร้อมแนะนำวิธีหักค่าใช้จ่ายแบบประหยัดภาษีสูงสุด",
+    highlight: "tax",
+    cta: "ถัดไป →",
+    tip: "💡 ดูหน้าภาษีเพื่อเปรียบเทียบ 2 วิธีคำนวณ — เลือกแบบที่ประหยัดกว่า",
+  },
+  {
+    emoji: "📋",
+    title: "Google Sheets — ซิงค์อัตโนมัติ",
+    desc: "ทุกรายการที่บันทึกจะซิงค์ไป Google Sheets ของคุณอัตโนมัติ สามารถแชร์ให้นักบัญชีหรือดาวน์โหลดรายงานได้ทุกเมื่อ",
+    highlight: "sheets",
+    cta: "ถัดไป →",
+    tip: "💡 ไปที่ ตั้งค่า → เชื่อมต่อ Google เพื่อเปิดใช้ฟีเจอร์นี้",
+  },
+  {
+    emoji: "🛡️",
+    title: "แชร์ให้ทีมงาน",
+    desc: "เพิ่ม Admin ด้วย Google Email เพื่อให้เข้าถึง Dashboard ได้เต็มที่ หรือสร้างลิงก์ Staff ให้พนักงานบันทึกรายจ่ายแทนโดยไม่ต้อง login",
+    highlight: "settings",
+    cta: "ถัดไป →",
+    tip: "💡 ไปที่ ตั้งค่า → ส่วน Admin เพื่อเพิ่มผู้ดูแลร่วม",
+  },
+  {
+    emoji: "🎉",
+    title: "พร้อมแล้ว! เริ่มใช้งานได้เลย",
+    desc: "คุณรู้จักทุกฟีเจอร์แล้ว เริ่มต้นด้วยการบันทึกรายจ่ายแรก หรือนำเข้าไฟล์ยอดขายจากแพลตฟอร์มได้เลย",
+    highlight: null,
+    cta: "เริ่มใช้งาน 🚀",
+    tip: null,
+  },
+];
+
+function TourModal({ onClose }: { onClose: () => void }) {
+  const [step, setStep] = useState(0);
+  const current = TOUR_STEPS[step];
+  const isLast  = step === TOUR_STEPS.length - 1;
+
+  function next() {
+    if (isLast) { onClose(); return; }
+    setStep((s) => s + 1);
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
+      <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
+
+        {/* Progress bar */}
+        <div className="h-1 bg-gray-100">
+          <div
+            className="h-full bg-emerald-500 transition-all duration-300"
+            style={{ width: `${((step + 1) / TOUR_STEPS.length) * 100}%` }}
+          />
+        </div>
+
+        <div className="p-6 space-y-4">
+          {/* Step counter */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-400 font-medium">{step + 1} / {TOUR_STEPS.length}</span>
+            <button onClick={onClose} className="text-gray-300 hover:text-gray-500 text-sm transition-colors">
+              ข้าม
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="text-center py-2 space-y-3">
+            <div className="text-6xl">{current.emoji}</div>
+            <h2 className="text-xl font-bold text-gray-800">{current.title}</h2>
+            <p className="text-gray-500 text-sm leading-relaxed">{current.desc}</p>
+          </div>
+
+          {/* Tip box */}
+          {current.tip && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
+              <p className="text-amber-700 text-xs leading-relaxed">{current.tip}</p>
+            </div>
+          )}
+
+          {/* Dots */}
+          <div className="flex justify-center gap-1.5">
+            {TOUR_STEPS.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setStep(i)}
+                className={`rounded-full transition-all ${
+                  i === step ? "w-5 h-2 bg-emerald-500" : "w-2 h-2 bg-gray-200 hover:bg-gray-300"
+                }`}
+              />
+            ))}
+          </div>
+
+          {/* Button */}
+          <button
+            onClick={next}
+            className="w-full py-3.5 rounded-2xl text-sm font-bold bg-emerald-500 hover:bg-emerald-600 text-white transition-colors"
+          >
+            {current.cta}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const CURRENT_YEAR  = new Date().getFullYear();
 const CURRENT_MONTH = new Date().getMonth() + 1;
 
@@ -67,8 +206,20 @@ export default function Home() {
   const [stats,        setStats]        = useState<Stats | null>(null);
   const [links,        setLinks]        = useState<Links>({ sheetUrl: null, driveUrl: null });
   const [loadingStats, setLoadingStats] = useState(true);
+  const [showTour,     setShowTour]     = useState(false);
 
   const { data: session, status: sessionStatus } = useSession();
+
+  // Auto-show tour once for new users
+  useEffect(() => {
+    const seen = localStorage.getItem("taxbot_tour_done");
+    if (!seen) setShowTour(true);
+  }, []);
+
+  function closeTour() {
+    setShowTour(false);
+    localStorage.setItem("taxbot_tour_done", "1");
+  }
 
   // ── Resolve user ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -223,6 +374,13 @@ export default function Home() {
               className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-600 bg-white border border-gray-200 px-3 py-2 rounded-xl transition-colors">
               🏠
             </Link>
+            <button
+              onClick={() => setShowTour(true)}
+              className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 bg-white border border-gray-200 px-3 py-2 rounded-xl transition-colors"
+              title="วิธีใช้งาน"
+            >
+              ❓
+            </button>
             <Link href="/settings"
               className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 bg-white border border-gray-200 px-4 py-2 rounded-xl transition-colors">
               ⚙️ ตั้งค่า
@@ -356,6 +514,8 @@ export default function Home() {
 
         </div>
       </div>
+
+      {showTour && <TourModal onClose={closeTour} />}
     </main>
   );
 }
