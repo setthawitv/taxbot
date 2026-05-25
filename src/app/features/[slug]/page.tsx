@@ -161,8 +161,9 @@ export function generateStaticParams() {
   return FEATURES.map((f) => ({ slug: f.slug }));
 }
 
-export default function FeaturePage({ params }: { params: { slug: string } }) {
-  const feature = FEATURES.find((f) => f.slug === params.slug);
+export default async function FeaturePage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const feature = FEATURES.find((f) => f.slug === slug);
   if (!feature) notFound();
 
   return (
