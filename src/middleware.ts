@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const PUBLIC_PATHS = [
   "/landing",           // Public marketing landing page
+  "/features",          // Feature detail pages
   "/intro",             // Feature intro slides (first-time users land here)
   "/onboarding",        // 3-step onboarding wizard
   "/connect-google",    // Google OAuth flow opened in external browser

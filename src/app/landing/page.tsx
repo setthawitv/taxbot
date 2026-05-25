@@ -4,6 +4,7 @@ import Link from "next/link";
 
 const FEATURES = [
   {
+    slug: "scan",
     emoji: "📸",
     title: "สแกนใบเสร็จด้วย AI",
     desc: "ถ่ายรูปสลิปหรืออัปโหลดใบเสร็จ AI อ่านยอด วันที่ ร้านค้า และบันทึกให้อัตโนมัติ",
@@ -11,6 +12,7 @@ const FEATURES = [
     badge: "bg-purple-500/20 text-purple-300",
   },
   {
+    slug: "income-expense",
     emoji: "💰",
     title: "ติดตามรายรับ-รายจ่าย",
     desc: "ดูยอดเดือนนี้ ทั้งปี กำไร-ขาดทุน พร้อมแยกแพลตฟอร์ม TikTok / Shopee / Lazada",
@@ -18,6 +20,7 @@ const FEATURES = [
     badge: "bg-emerald-500/20 text-emerald-300",
   },
   {
+    slug: "tax",
     emoji: "📊",
     title: "คำนวณภาษีอัตโนมัติ",
     desc: "ประมาณภาษีเงินได้บุคคลธรรมดา ตามอัตราของไทย พร้อมแนะนำวิธีหักค่าใช้จ่าย",
@@ -25,6 +28,7 @@ const FEATURES = [
     badge: "bg-blue-500/20 text-blue-300",
   },
   {
+    slug: "sheets",
     emoji: "📋",
     title: "ซิงค์ Google Sheets",
     desc: "ทุกรายการบันทึกลง Google Sheets ของคุณอัตโนมัติ ดาวน์โหลดหรือแชร์กับนักบัญชีได้ทันที",
@@ -32,6 +36,7 @@ const FEATURES = [
     badge: "bg-green-500/20 text-green-300",
   },
   {
+    slug: "import",
     emoji: "📤",
     title: "นำเข้ายอดแพลตฟอร์ม",
     desc: "อัปโหลดไฟล์ Excel จาก TikTok Shop, Shopee, Lazada — ระบบแยกยอดให้อัตโนมัติ",
@@ -39,6 +44,7 @@ const FEATURES = [
     badge: "bg-orange-500/20 text-orange-300",
   },
   {
+    slug: "team",
     emoji: "🛡️",
     title: "แชร์ให้ทีมงาน",
     desc: "เพิ่ม Admin ด้วย Google Email หรือสร้างลิงก์ Staff ให้พนักงานบันทึกรายจ่ายแทนได้",
@@ -195,15 +201,17 @@ export default function LandingPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {FEATURES.map((f) => (
-            <div
-              key={f.title}
-              className={`bg-gradient-to-br ${f.color} border rounded-2xl p-6`}
+            <Link
+              key={f.slug}
+              href={`/features/${f.slug}`}
+              className={`bg-gradient-to-br ${f.color} border rounded-2xl p-6 group hover:scale-[1.02] transition-transform duration-200 block`}
             >
               <div className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full ${f.badge} mb-4`}>
                 {f.emoji} {f.title}
               </div>
               <p className="text-gray-300 text-sm leading-relaxed">{f.desc}</p>
-            </div>
+              <p className="text-xs text-gray-500 mt-3 group-hover:text-gray-400 transition-colors">อ่านเพิ่มเติม →</p>
+            </Link>
           ))}
         </div>
       </section>
