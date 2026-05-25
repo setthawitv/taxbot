@@ -176,7 +176,7 @@ export default function LandingPage() {
           {[
             { value: "ฟรี 100%", label: "ไม่มีค่าใช้จ่าย" },
             { value: "< 30 วิ", label: "บันทึกต่อรายการ" },
-            { value: "6 แพลตฟอร์ม", label: "รองรับ TikTok, Shopee, Lazada" },
+            { value: "3 แพลตฟอร์ม", label: "รองรับ TikTok, Shopee, Lazada" },
           ].map((s) => (
             <div key={s.label} className="text-center">
               <p className="text-2xl font-bold text-white">{s.value}</p>
