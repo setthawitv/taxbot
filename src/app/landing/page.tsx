@@ -47,6 +47,73 @@ const FEATURES = [
   },
 ];
 
+const PLANS = [
+  {
+    name: "Free",
+    price: "ฟรี",
+    period: "",
+    badge: null,
+    color: "border-white/10 bg-white/5",
+    btnClass: "bg-white/10 hover:bg-white/20 text-white",
+    features: [
+      "ทดลองใช้ฟรี 7 วัน (ทุกฟีเจอร์)",
+      "รายจ่าย 10 รายการ/เดือน",
+      "รายรับ Manual เท่านั้น",
+      "ไม่รองรับ Excel import",
+      "Google Sheets sync",
+    ],
+    disabled: [2, 3] as number[],
+  },
+  {
+    name: "Eco",
+    price: "฿100",
+    period: "/เดือน",
+    badge: null,
+    color: "border-blue-500/40 bg-blue-500/5",
+    btnClass: "bg-blue-500 hover:bg-blue-400 text-white",
+    features: [
+      "รายจ่าย 30 รายการ/เดือน",
+      "รายรับ Manual ไม่จำกัด",
+      "นำเข้า Excel 1 ไฟล์/เดือน",
+      "Google Sheets sync",
+      "สแกนใบเสร็จด้วย AI",
+    ],
+    disabled: [] as number[],
+  },
+  {
+    name: "Pro",
+    price: "฿200",
+    period: "/เดือน",
+    badge: "🔥 แนะนำ",
+    color: "border-emerald-500/60 bg-emerald-500/10 ring-2 ring-emerald-500/30",
+    btnClass: "bg-emerald-500 hover:bg-emerald-400 text-white shadow-lg shadow-emerald-500/25",
+    features: [
+      "รายจ่าย 100 รายการ/เดือน",
+      "รายรับ Manual ไม่จำกัด",
+      "นำเข้า Excel 5 ไฟล์/เดือน",
+      "Google Sheets sync",
+      "สแกนใบเสร็จด้วย AI",
+    ],
+    disabled: [] as number[],
+  },
+  {
+    name: "Platinum",
+    price: "฿700",
+    period: "/เดือน",
+    badge: "👑 ครบทุกอย่าง",
+    color: "border-amber-500/40 bg-amber-500/5",
+    btnClass: "bg-amber-500 hover:bg-amber-400 text-white",
+    features: [
+      "รายจ่าย 1,200 รายการ/เดือน",
+      "รายรับ Manual ไม่จำกัด",
+      "นำเข้า Excel 12 ไฟล์/เดือน",
+      "Google Sheets sync",
+      "สแกนใบเสร็จด้วย AI",
+    ],
+    disabled: [] as number[],
+  },
+];
+
 const STEPS = [
   { no: "01", title: "เชื่อมต่อ LINE", desc: "ล็อกอินผ่าน LINE — ไม่ต้องสมัครสมาชิก ไม่ต้องจำรหัสผ่านใหม่" },
   { no: "02", title: "เชื่อม Google Drive", desc: "เชื่อมต่อ Google เพื่อเก็บข้อมูลและซิงค์ Sheets อัตโนมัติ" },
@@ -97,10 +164,10 @@ export default function LandingPage() {
             🚀 เริ่มต้นใช้งานฟรี
           </Link>
           <a
-            href="#features"
+            href="#pricing"
             className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-base font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 transition-colors"
           >
-            ดูฟีเจอร์ทั้งหมด ↓
+            ดูราคา ↓
           </a>
         </div>
 
@@ -139,6 +206,56 @@ export default function LandingPage() {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* ── Pricing ────────────────────────────────────────────────────────── */}
+      <section id="pricing" className="px-6 py-20 max-w-6xl mx-auto">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl sm:text-4xl font-bold mb-3">ราคาที่เหมาะกับทุกขนาดธุรกิจ</h2>
+          <p className="text-gray-400 text-base">ทดลองใช้ฟรี 7 วัน · ไม่ต้องผูกบัตรเครดิต</p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+          {PLANS.map((plan) => (
+            <div key={plan.name} className={`relative border rounded-2xl p-6 flex flex-col gap-4 ${plan.color}`}>
+              {plan.badge && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs font-bold px-3 py-1 rounded-full bg-emerald-500 text-white shadow">
+                  {plan.badge}
+                </div>
+              )}
+
+              <div>
+                <p className="text-gray-400 text-sm font-semibold uppercase tracking-wide mb-1">{plan.name}</p>
+                <div className="flex items-end gap-1">
+                  <span className="text-4xl font-extrabold text-white">{plan.price}</span>
+                  <span className="text-gray-400 text-sm pb-1">{plan.period}</span>
+                </div>
+              </div>
+
+              <ul className="space-y-2.5 flex-1">
+                {plan.features.map((f, i) => (
+                  <li key={i} className={`flex items-start gap-2 text-sm ${plan.disabled.includes(i) ? "text-gray-600 line-through" : "text-gray-300"}`}>
+                    <span className={`mt-0.5 flex-shrink-0 ${plan.disabled.includes(i) ? "text-gray-600" : "text-emerald-400"}`}>
+                      {plan.disabled.includes(i) ? "✕" : "✓"}
+                    </span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+
+              <Link
+                href="/onboarding"
+                className={`w-full text-center py-3 rounded-xl text-sm font-bold transition-colors ${plan.btnClass}`}
+              >
+                {plan.name === "Free" ? "เริ่มทดลองใช้ฟรี" : "เลือกแพ็กเกจนี้"}
+              </Link>
+            </div>
+          ))}
+        </div>
+
+        <p className="text-center text-gray-600 text-xs mt-6">
+          * ทุกแพ็กเกจเริ่มต้นด้วยช่วงทดลอง 7 วันเต็ม (ทุกฟีเจอร์)
+        </p>
       </section>
 
       {/* ── How it works ───────────────────────────────────────────────────── */}
