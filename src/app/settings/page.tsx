@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, Suspense } from "react";
 import { useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 
 type VendorRule = {
   id: string;
@@ -12,6 +13,14 @@ type VendorRule = {
 
 type SyncResult = { synced: number; failed: number; skipped: number; message: string; lastError?: string } | null;
 type AdminRow = { id: string; admin_email: string; admin_name: string | null; invite_code: string; status: string; created_at: string };
+
+const PLAN_OPTIONS = [
+  { key: "eco",      name: "Eco",      thb: 100,  desc: "สำหรับร้านค้าเล็ก",        color: "from-teal-400 to-cyan-500",    rank: 1 },
+  { key: "pro",      name: "Pro",      thb: 200,  desc: "สำหรับธุรกิจที่กำลังโต",   color: "from-violet-500 to-purple-600", rank: 2 },
+  { key: "platinum", name: "Platinum", thb: 700,  desc: "ครบทุกฟีเจอร์ ไม่จำกัด",   color: "from-amber-400 to-orange-500",  rank: 3 },
+] as const;
+
+const PLAN_RANK: Record<string, number> = { trial: 0, free: 0, eco: 1, pro: 2, platinum: 3 };
 
 function SettingsPageInner() {
   const [vendors, setVendors] = useState<VendorRule[]>([]);
@@ -31,6 +40,17 @@ function SettingsPageInner() {
   const [savingBusinessName,  setSavingBusinessName]  = useState(false);
   const [businessNameSaved,   setBusinessNameSaved]   = useState(false);
 
+  // Payment / upgrade
+  const [currentPlan,   setCurrentPlan]   = useState<string>("trial");
+  const [showUpgrade,   setShowUpgrade]   = useState(false);
+  const [selectedPlan,  setSelectedPlan]  = useState<string>("pro");
+  const [paying,        setPaying]        = useState(false);
+  const [chargeId,      setChargeId]      = useState<string>("");
+  const [qrImage,       setQrImage]       = useState<string>("");
+  const [qrExpiry,      setQrExpiry]      = useState<string>("");
+  const [countdown,     setCountdown]     = useState<number>(0);
+  const [qrStatus,      setQrStatus]      = useState<"idle"|"pending"|"completed"|"failed">("idle");
+
   // Admin management
   const [admins,        setAdmins]        = useState<AdminRow[]>([]);
   const [adminLoading,  setAdminLoading]  = useState(false);
@@ -39,6 +59,16 @@ function SettingsPageInner() {
   const [adminCopied,   setAdminCopied]   = useState<string>("");   // invite_code that was copied
 
   const { data: session, status: sessionStatus } = useSession();
+  const searchParams = useSearchParams();
+
+  // Auto-open upgrade modal if ?upgrade=plan is in URL
+  useEffect(() => {
+    const upgradePlan = searchParams.get("upgrade");
+    if (upgradePlan && ["eco", "pro", "platinum"].includes(upgradePlan)) {
+      setSelectedPlan(upgradePlan);
+      setShowUpgrade(true);
+    }
+  }, [searchParams]);
 
   // Init LIFF → fallback to Google session for browser users
   useEffect(() => {
@@ -64,6 +94,7 @@ function SettingsPageInner() {
               const biz = data.profile?.businessName ?? "";
               setBusinessName(biz);
               setBusinessNameDraft(biz);
+              setCurrentPlan(data.profile?.plan ?? "trial");
             }
             return;
           }
@@ -209,6 +240,68 @@ function SettingsPageInner() {
     setAdmins((prev) => prev.filter((a) => a.id !== adminId));
   }
 
+  // Countdown ticker
+  useEffect(() => {
+    if (qrStatus !== "pending" || countdown <= 0) return;
+    const t = setInterval(() => {
+      setCountdown((c) => {
+        if (c <= 1) { clearInterval(t); setQrStatus("failed"); return 0; }
+        return c - 1;
+      });
+    }, 1000);
+    return () => clearInterval(t);
+  }, [qrStatus, countdown <= 0]);
+
+  async function startPayment() {
+    if (!lineUserId || !selectedPlan) return;
+    setPaying(true);
+    setQrImage("");
+    setChargeId("");
+    setQrStatus("pending");
+    try {
+      const res = await fetch("/api/payment/create", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ lineUserId, plan: selectedPlan, currentPlan }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setChargeId(data.chargeId);
+      setQrImage(data.qrImage ?? "");
+      setQrExpiry(data.expiry ?? "");
+      // Always show 5-minute countdown regardless of Beam's actual expiry
+      setCountdown(5 * 60);
+      // Start polling
+      pollPayment(data.chargeId);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "เกิดข้อผิดพลาด");
+      setQrStatus("idle");
+    } finally {
+      setPaying(false);
+    }
+  }
+
+  function pollPayment(cid: string) {
+    const iv = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/payment/status?chargeId=${cid}`);
+        const d   = await res.json();
+        console.log("[poll] status response:", JSON.stringify(d));
+        if (d.status === "COMPLETED") {
+          clearInterval(iv);
+          setQrStatus("completed");
+          setCurrentPlan(selectedPlan);
+          setTimeout(() => { setShowUpgrade(false); setQrStatus("idle"); }, 3000);
+        } else if (d.status === "FAILED" || d.status === "EXPIRED") {
+          clearInterval(iv);
+          setQrStatus("failed");
+        }
+      } catch { /* ignore */ }
+    }, 3000);
+    // Stop polling after 15 min
+    setTimeout(() => clearInterval(iv), 15 * 60 * 1000);
+  }
+
   async function load() {
     const res = await fetch("/api/vendors");
     const data = await res.json();
@@ -284,6 +377,38 @@ function SettingsPageInner() {
                   {businessNameSaved ? "✅" : savingBusinessName ? "..." : "บันทึก"}
                 </button>
               </form>
+            </div>
+
+            {/* Subscription plan */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-5">
+              <h2 className="font-semibold text-gray-700 mb-1">แพ็กเกจปัจจุบัน</h2>
+              <div className="flex items-center justify-between mt-3">
+                <span className={`text-sm font-bold px-3 py-1 rounded-full ${
+                  currentPlan === "platinum" ? "bg-amber-100 text-amber-700" :
+                  currentPlan === "pro"      ? "bg-violet-100 text-violet-700" :
+                  currentPlan === "eco"      ? "bg-teal-100 text-teal-700" :
+                  "bg-gray-100 text-gray-500"
+                }`}>
+                  {currentPlan === "trial"    ? "🎁 ทดลองใช้" :
+                   currentPlan === "eco"      ? "🌿 Eco"       :
+                   currentPlan === "pro"      ? "⚡ Pro"       :
+                   currentPlan === "platinum" ? "👑 Platinum"  : currentPlan}
+                </span>
+                {currentPlan !== "platinum" && (
+                  <button
+                    onClick={() => {
+                      // Pre-select next tier above current plan
+                      const currentRank = PLAN_RANK[currentPlan] ?? 0;
+                      const next = PLAN_OPTIONS.find((p) => p.rank > currentRank);
+                      if (next) setSelectedPlan(next.key);
+                      setShowUpgrade(true);
+                    }}
+                    className="text-sm font-semibold px-4 py-1.5 rounded-full bg-gradient-to-r from-violet-500 to-purple-600 text-white hover:opacity-90 transition-opacity"
+                  >
+                    ⬆️ อัปเกรด
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Google connection */}
@@ -491,6 +616,134 @@ function SettingsPageInner() {
 
         </div>
       </div>
+
+      {/* ── Upgrade / Payment Modal ───────────────────────────────────── */}
+      {showUpgrade && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl">
+
+            {qrStatus === "completed" ? (
+              <div className="text-center py-6">
+                <div className="text-5xl mb-3">🎉</div>
+                <h3 className="text-xl font-bold text-gray-800 mb-1">ชำระเงินสำเร็จ!</h3>
+                <p className="text-gray-500 text-sm">แพ็กเกจของคุณได้รับการอัปเกรดแล้ว</p>
+              </div>
+            ) : qrStatus === "pending" && qrImage ? (
+              <>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-bold text-gray-800">สแกน QR PromptPay</h3>
+                  <button onClick={() => { setShowUpgrade(false); setQrStatus("idle"); setQrImage(""); setCountdown(0); }}
+                    className="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
+                </div>
+                <div className="flex flex-col items-center gap-3">
+                  <img src={qrImage} alt="PromptPay QR" className="w-56 h-56 rounded-xl border border-gray-200" />
+
+                  {/* Countdown */}
+                  <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold ${
+                    countdown <= 60 ? "bg-red-50 text-red-500" : "bg-amber-50 text-amber-600"
+                  }`}>
+                    <span>⏱</span>
+                    จ่ายภายใน {Math.floor(countdown / 60)}:{String(countdown % 60).padStart(2, "0")} นาที
+                  </div>
+
+                  <p className="text-sm text-gray-500 text-center">
+                    เปิดแอปธนาคาร → สแกน QR → ยืนยันการชำระเงิน
+                  </p>
+                  <div className="flex items-center gap-2 text-xs text-gray-400">
+                    <span className="animate-pulse">⏳</span> รอการยืนยัน...
+                  </div>
+                </div>
+              </>
+            ) : qrStatus === "failed" ? (
+              <div className="text-center py-4">
+                <div className="text-4xl mb-3">❌</div>
+                <p className="text-gray-700 font-semibold mb-1">การชำระเงินล้มเหลว</p>
+                <p className="text-xs text-gray-400 mb-4">QR หมดอายุหรือเกิดข้อผิดพลาด</p>
+                <button onClick={() => { setQrStatus("idle"); setQrImage(""); setCountdown(0); }}
+                  className="px-5 py-2 rounded-xl bg-gray-800 text-white text-sm font-semibold">
+                  ลองใหม่
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="font-bold text-gray-800 text-lg">เลือกแพ็กเกจ</h3>
+                  <button onClick={() => setShowUpgrade(false)}
+                    className="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
+                </div>
+
+                <div className="space-y-3 mb-5">
+                  {PLAN_OPTIONS.map((p) => {
+                    const PLAN_THB: Record<string, number> = { trial: 0, free: 0, eco: 100, pro: 200, platinum: 700 };
+                    const currentRank    = PLAN_RANK[currentPlan] ?? 0;
+                    const currentPlanThb = PLAN_THB[currentPlan] ?? 0;
+                    const isCurrent      = p.rank === currentRank;
+                    const isLower        = p.rank < currentRank;
+                    const disabled       = isCurrent || isLower;
+                    const diff           = p.thb - currentPlanThb;
+                    const showDiff       = !disabled && currentPlanThb > 0;
+                    return (
+                      <button
+                        key={p.key}
+                        onClick={() => !disabled && setSelectedPlan(p.key)}
+                        disabled={disabled}
+                        className={`w-full flex items-center gap-3 p-3.5 rounded-2xl border-2 transition-all ${
+                          disabled
+                            ? "border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed"
+                            : selectedPlan === p.key
+                            ? "border-violet-500 bg-violet-50"
+                            : "border-gray-100 hover:border-gray-200"
+                        }`}
+                      >
+                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${p.color} flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>
+                          {p.name[0]}
+                        </div>
+                        <div className="flex-1 text-left">
+                          <p className="font-semibold text-gray-800 text-sm">{p.name}</p>
+                          <p className="text-xs text-gray-400">
+                            {isCurrent ? "✅ แพ็กเกจปัจจุบัน" : p.desc}
+                          </p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          {showDiff ? (
+                            <>
+                              <p className="font-bold text-violet-600 text-sm">จ่ายเพิ่ม ฿{diff}</p>
+                              <p className="text-xs text-gray-400 line-through">฿{p.thb}/เดือน</p>
+                            </>
+                          ) : (
+                            <span className="font-bold text-gray-700 text-sm">
+                              ฿{p.thb}<span className="text-xs font-normal text-gray-400">/เดือน</span>
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {(() => {
+                  const PLAN_THB: Record<string, number> = { trial: 0, free: 0, eco: 100, pro: 200, platinum: 700 };
+                  const selectedInfo    = PLAN_OPTIONS.find((p) => p.key === selectedPlan);
+                  const currentPlanThb  = PLAN_THB[currentPlan] ?? 0;
+                  const chargeThb       = currentPlanThb > 0 && selectedInfo
+                    ? selectedInfo.thb - currentPlanThb
+                    : selectedInfo?.thb ?? 0;
+                  return (
+                    <button
+                      onClick={startPayment}
+                      disabled={paying || !lineUserId}
+                      className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-violet-500 to-purple-600 text-white font-bold text-sm hover:opacity-90 disabled:opacity-40 transition-opacity"
+                    >
+                      {paying ? "⏳ กำลังสร้าง QR..." : `💳 จ่าย ฿${chargeThb} ผ่าน PromptPay`}
+                    </button>
+                  );
+                })()}
+                <p className="text-center text-xs text-gray-400 mt-2">ชำระผ่าน QR PromptPay — ฟรีค่าธรรมเนียม</p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }
