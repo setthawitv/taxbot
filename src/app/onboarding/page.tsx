@@ -58,22 +58,22 @@ function Step1({
   const canProceed = firstName.trim() && lastName.trim();
   return (
     <div className="flex flex-col gap-5">
-      {/* LINE profile card */}
-      <div>
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">LINE</p>
-        <div className="flex items-center gap-3 bg-gray-50 rounded-2xl px-4 py-3 border border-gray-100">
-          {profile?.pictureUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={profile.pictureUrl} alt="avatar" className="w-10 h-10 rounded-full object-cover" />
-          ) : (
-            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-lg">👤</div>
-          )}
-          <span className="flex-1 font-medium text-gray-800">
-            {profile?.displayName ?? "กำลังโหลด..."}
-          </span>
-          <div className="w-7 h-7 rounded-full bg-green-500 flex items-center justify-center text-white text-sm">✓</div>
+      {/* LINE profile card — only shown when logged in via LINE */}
+      {profile && (
+        <div>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">LINE</p>
+          <div className="flex items-center gap-3 bg-gray-50 rounded-2xl px-4 py-3 border border-gray-100">
+            {profile.pictureUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={profile.pictureUrl} alt="avatar" className="w-10 h-10 rounded-full object-cover" />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-lg">👤</div>
+            )}
+            <span className="flex-1 font-medium text-gray-800">{profile.displayName}</span>
+            <div className="w-7 h-7 rounded-full bg-green-500 flex items-center justify-center text-white text-sm">✓</div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* First name */}
       <div>
@@ -203,10 +203,10 @@ function Step2({
 
 // ─── Step 3 – Google connect ───────────────────────────────────────────────────
 function Step3({
-  googleEmail, connected, polling,
+  googleEmail, connected, polling, googleOnly,
   onConnect, onFinish, onBack,
 }: {
-  googleEmail: string | null; connected: boolean; polling: boolean;
+  googleEmail: string | null; connected: boolean; polling: boolean; googleOnly?: boolean;
   onConnect: () => void; onFinish: () => void; onBack: () => void;
 }) {
   return (
@@ -235,8 +235,8 @@ function Step3({
             <p className="text-xs text-green-600">{googleEmail}</p>
           </div>
         </div>
-      ) : (
-        // Connect button
+      ) : !googleOnly ? (
+        // Connect button — only shown for LINE users who haven't connected Google yet
         <button
           onClick={onConnect}
           disabled={polling}
@@ -252,7 +252,7 @@ function Step3({
             {polling ? "รอการเชื่อมต่อ..." : "เชื่อมต่อ Google Account"}
           </span>
         </button>
-      )}
+      ) : null}
 
       {polling && (
         <p className="text-center text-xs text-gray-400 animate-pulse">
@@ -420,13 +420,17 @@ export default function OnboardingPage() {
   }
 
   async function finish() {
+    // For Google-only users (no LINE), generate a synthetic user ID from email
+    const lineUserId = liffProfile?.userId
+      ?? (googleEmail ? `google_${googleEmail.toLowerCase().replace(/[@.+]/g, "_")}` : null);
+
     try {
       const token = (session as typeof session & { accessToken?: string })?.accessToken;
       await fetch("/api/user/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          lineUserId: liffProfile?.userId,
+          lineUserId,
           firstName,
           lastName,
           businessType,
@@ -456,8 +460,8 @@ export default function OnboardingPage() {
     );
   }
 
-  // ── Not opened inside LINE — show login options ────────────────────────────
-  if (notInLine) {
+  // ── Not opened inside LINE — show login options (only if not yet authenticated) ──
+  if (notInLine && !googleConnected) {
     return (
       <main className="min-h-screen bg-white flex flex-col items-center justify-center px-8 text-center">
         <div className="text-6xl mb-4">🤖</div>
@@ -537,6 +541,7 @@ export default function OnboardingPage() {
         <Step3
           googleEmail={googleEmail} connected={googleConnected} polling={pollingGoogle}
           onConnect={connectGoogle} onFinish={finish} onBack={() => setStep(2)}
+          googleOnly={notInLine}
         />
       )}
     </main>

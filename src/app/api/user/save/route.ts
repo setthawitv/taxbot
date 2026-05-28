@@ -18,15 +18,20 @@ export async function POST(req: NextRequest) {
       googleEmail,
     } = await req.json();
 
-    if (!lineUserId) {
-      return NextResponse.json({ error: "Missing lineUserId" }, { status: 400 });
+    // For Google-only users (no LINE), generate a synthetic LINE user ID from email
+    let resolvedLineUserId: string = lineUserId;
+    if (!resolvedLineUserId) {
+      if (!googleEmail) {
+        return NextResponse.json({ error: "Missing lineUserId or googleEmail" }, { status: 400 });
+      }
+      resolvedLineUserId = `google_${googleEmail.toLowerCase().replace(/[@.+]/g, "_")}`;
     }
 
     // Check if user already exists (preserve sheet_id and drive_folder_id)
     const { data: existing } = await supabaseAdmin
       .from("users")
       .select("id, sheet_id, drive_folder_id")
-      .eq("line_user_id", lineUserId)
+      .eq("line_user_id", resolvedLineUserId)
       .single();
 
     let sheetId       = existing?.sheet_id;
@@ -48,7 +53,7 @@ export async function POST(req: NextRequest) {
 
     // Upsert user — try with refresh token first, fall back without if column missing
     const basePayload = {
-      line_user_id:          lineUserId,
+      line_user_id:          resolvedLineUserId,
       first_name:            firstName      ?? null,
       last_name:             lastName       ?? null,
       business_type:         businessType   ?? null,
