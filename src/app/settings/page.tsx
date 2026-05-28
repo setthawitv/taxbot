@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, Suspense } from "react";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 
 type VendorRule = {
@@ -238,6 +238,22 @@ function SettingsPageInner() {
       body:    JSON.stringify({ lineUserId, adminId }),
     });
     setAdmins((prev) => prev.filter((a) => a.id !== adminId));
+  }
+
+  async function handleLogout() {
+    // Clear onboarding cookie
+    document.cookie = "taxbot_onboarded=; path=/; max-age=0";
+    // Sign out from LIFF if available
+    try {
+      const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
+      if (liffId) {
+        const { default: liff } = await import("@line/liff");
+        await liff.init({ liffId });
+        if (liff.isLoggedIn()) liff.logout();
+      }
+    } catch { /* ignore */ }
+    // Sign out from NextAuth (Google session)
+    await signOut({ callbackUrl: "/landing" });
   }
 
   // Countdown ticker
@@ -553,6 +569,18 @@ function SettingsPageInner() {
                   ))}
                 </ul>
               )}
+            </div>
+
+            {/* Logout */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-5">
+              <h2 className="font-semibold text-gray-700 mb-1">ออกจากระบบ</h2>
+              <p className="text-xs text-gray-400 mb-4">ล้างข้อมูลการเข้าสู่ระบบออกจากอุปกรณ์นี้</p>
+              <button
+                onClick={handleLogout}
+                className="w-full py-3 rounded-xl text-sm font-semibold text-rose-600 border border-rose-200 bg-rose-50 hover:bg-rose-100 transition-colors"
+              >
+                🚪 ออกจากระบบ
+              </button>
             </div>
           </div>
 
