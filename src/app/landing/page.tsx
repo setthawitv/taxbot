@@ -56,6 +56,7 @@ const FEATURES = [
 const PLANS = [
   {
     name: "Free",
+    planKey: null,
     price: "ฟรี",
     period: "",
     badge: null,
@@ -72,6 +73,7 @@ const PLANS = [
   },
   {
     name: "Eco",
+    planKey: "eco",
     price: "฿100",
     period: "/เดือน",
     badge: null,
@@ -88,6 +90,7 @@ const PLANS = [
   },
   {
     name: "Pro",
+    planKey: "pro",
     price: "฿200",
     period: "/เดือน",
     badge: "🔥 แนะนำ",
@@ -104,6 +107,7 @@ const PLANS = [
   },
   {
     name: "Platinum",
+    planKey: "platinum",
     price: "฿700",
     period: "/เดือน",
     badge: "👑 ครบทุกอย่าง",
@@ -121,7 +125,7 @@ const PLANS = [
 ];
 
 const STEPS = [
-  { no: "01", title: "เชื่อมต่อ LINE", desc: "ล็อกอินผ่าน LINE — ไม่ต้องสมัครสมาชิก ไม่ต้องจำรหัสผ่านใหม่" },
+  { no: "01", title: "เข้าสู่ระบบ", desc: "สมัครฟรี ไม่ต้องดาวน์โหลดแอป ไม่ต้องจำรหัสผ่านใหม่" },
   { no: "02", title: "เชื่อม Google Drive", desc: "เชื่อมต่อ Google เพื่อเก็บข้อมูลและซิงค์ Sheets อัตโนมัติ" },
   { no: "03", title: "เริ่มบันทึกได้เลย", desc: "สแกนใบเสร็จ บันทึกรายรับ-รายจ่าย ดูรายงาน — ทำได้ทันที" },
 ];
@@ -252,7 +256,7 @@ export default function LandingPage() {
               </ul>
 
               <Link
-                href="/onboarding"
+                href={plan.planKey ? `/settings?upgrade=${plan.planKey}` : "/onboarding"}
                 className={`w-full text-center py-3 rounded-xl text-sm font-bold transition-colors ${plan.btnClass}`}
               >
                 {plan.name === "Free" ? "เริ่มทดลองใช้ฟรี" : "เลือกแพ็กเกจนี้"}
@@ -297,7 +301,7 @@ export default function LandingPage() {
           <div className="text-5xl mb-4">🤖</div>
           <h2 className="text-3xl font-bold mb-3">พร้อมเริ่มต้นแล้วหรือยัง?</h2>
           <p className="text-gray-400 mb-8 leading-relaxed">
-            ใช้งานฟรีผ่าน LINE — ไม่ต้องดาวน์โหลดแอป ไม่ต้องสมัครใหม่
+            ไม่ต้องดาวน์โหลดแอป ไม่ต้องสมัครใหม่ — เปิดเว็บแล้วเริ่มได้เลย
           </p>
           <Link
             href="/onboarding"
