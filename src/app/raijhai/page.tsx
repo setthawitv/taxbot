@@ -444,26 +444,26 @@ export default function RaiJhai() {
 
             {!scanPreview ? (
               <div className="space-y-3">
-                <button onClick={() => scanCamRef.current?.click()}
-                  className="w-full flex items-center gap-3 py-4 rounded-xl border-2 border-dashed border-gray-200 hover:border-rose-300 hover:bg-rose-50 transition-colors">
+                <label htmlFor="raijhai-scan-cam"
+                  className="w-full flex items-center gap-3 py-4 rounded-xl border-2 border-dashed border-gray-200 hover:border-rose-300 hover:bg-rose-50 transition-colors cursor-pointer">
                   <span className="text-2xl ml-3">📷</span>
                   <div className="text-left">
                     <p className="text-sm font-semibold text-gray-700">ถ่ายรูป</p>
                     <p className="text-xs text-gray-400">เปิดกล้อง</p>
                   </div>
-                </button>
-                <input ref={scanCamRef} type="file" accept="image/*" capture="environment" className="hidden"
+                </label>
+                <input id="raijhai-scan-cam" ref={scanCamRef} type="file" accept="image/*" capture="environment" className="hidden"
                   onChange={(e) => handleScanFile(e.target.files?.[0] ?? null)} />
 
-                <button onClick={() => scanFileRef.current?.click()}
-                  className="w-full flex items-center gap-3 py-4 rounded-xl border-2 border-dashed border-gray-200 hover:border-rose-300 hover:bg-rose-50 transition-colors">
+                <label htmlFor="raijhai-scan-file"
+                  className="w-full flex items-center gap-3 py-4 rounded-xl border-2 border-dashed border-gray-200 hover:border-rose-300 hover:bg-rose-50 transition-colors cursor-pointer">
                   <span className="text-2xl ml-3">🖼️</span>
                   <div className="text-left">
                     <p className="text-sm font-semibold text-gray-700">เลือกจากคลัง</p>
                     <p className="text-xs text-gray-400">JPG, PNG</p>
                   </div>
-                </button>
-                <input ref={scanFileRef} type="file" accept="image/*" className="hidden"
+                </label>
+                <input id="raijhai-scan-file" ref={scanFileRef} type="file" accept="image/*" className="hidden"
                   onChange={(e) => handleScanFile(e.target.files?.[0] ?? null)} />
               </div>
             ) : (

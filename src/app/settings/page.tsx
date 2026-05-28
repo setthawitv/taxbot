@@ -495,97 +495,10 @@ function SettingsPageInner() {
               )}
             </div>
 
-            {/* Admin management */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-5">
-              <h2 className="font-semibold text-gray-700 mb-1">🛡️ Admin — แชร์การเข้าถึง</h2>
-              <p className="text-xs text-gray-400 mb-4">
-                เพิ่มอีเมล Google ของบุคคลอื่น เพื่อให้เข้าถึง Dashboard และจัดการรายการได้ทั้งหมด
-              </p>
-
-              {/* Add admin form */}
-              <form onSubmit={addAdmin} className="flex gap-2 mb-4">
-                <input
-                  type="email"
-                  value={adminEmail}
-                  onChange={(e) => setAdminEmail(e.target.value)}
-                  placeholder="อีเมล Google เช่น admin@gmail.com"
-                  disabled={!lineUserId}
-                  className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 disabled:opacity-40"
-                />
-                <button
-                  type="submit"
-                  disabled={adminAdding || !adminEmail.trim() || !lineUserId}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold bg-gray-800 text-white hover:bg-gray-700 disabled:opacity-40 transition-colors flex-shrink-0"
-                >
-                  {adminAdding ? "..." : "+ เพิ่ม"}
-                </button>
-              </form>
-
-              {/* Admin list */}
-              {adminLoading ? (
-                <p className="text-sm text-gray-400 text-center py-2">กำลังโหลด...</p>
-              ) : admins.length === 0 ? (
-                <p className="text-xs text-gray-300 text-center py-3">ยังไม่มี Admin</p>
-              ) : (
-                <ul className="space-y-2">
-                  {admins.map((a) => (
-                    <li key={a.id} className="bg-gray-50 rounded-xl px-3 py-2.5">
-                      <div className="flex items-start gap-2">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-gray-700 font-medium truncate">{a.admin_email}</p>
-                          {a.admin_name && (
-                            <p className="text-xs text-gray-400">{a.admin_name}</p>
-                          )}
-                          <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full mt-1 ${
-                            a.status === "accepted"
-                              ? "bg-emerald-100 text-emerald-700"
-                              : "bg-amber-100 text-amber-700"
-                          }`}>
-                            {a.status === "accepted" ? "✅ ยืนยันแล้ว" : "⏳ รอยืนยัน"}
-                          </span>
-                        </div>
-                        <div className="flex flex-col gap-1 flex-shrink-0">
-                          {a.status !== "accepted" && (
-                            <button
-                              onClick={() => copyAdminLink(a.invite_code)}
-                              className={`text-xs font-semibold px-2.5 py-1 rounded-lg transition-colors ${
-                                adminCopied === a.invite_code
-                                  ? "bg-emerald-100 text-emerald-700"
-                                  : "bg-blue-50 text-blue-600 hover:bg-blue-100"
-                              }`}
-                            >
-                              {adminCopied === a.invite_code ? "✅ คัดลอก" : "🔗 คัดลอก"}
-                            </button>
-                          )}
-                          <button
-                            onClick={() => removeAdmin(a.id)}
-                            className="text-xs font-medium px-2.5 py-1 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
-                          >
-                            ลบ
-                          </button>
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            {/* Logout */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-5">
-              <h2 className="font-semibold text-gray-700 mb-1">ออกจากระบบ</h2>
-              <p className="text-xs text-gray-400 mb-4">ล้างข้อมูลการเข้าสู่ระบบออกจากอุปกรณ์นี้</p>
-              <button
-                onClick={handleLogout}
-                className="w-full py-3 rounded-xl text-sm font-semibold text-rose-600 border border-rose-200 bg-rose-50 hover:bg-rose-100 transition-colors"
-              >
-                🚪 ออกจากระบบ
-              </button>
-            </div>
           </div>
 
-          {/* RIGHT — Vendor rules */}
-          <div>
+          {/* RIGHT — Vendor rules + Admin + Logout */}
+          <div className="space-y-4">
             <div className="bg-white rounded-2xl border border-gray-200 p-5">
               <h2 className="font-semibold text-gray-700 mb-1">รายชื่อผู้จ่าย/ผู้รับเงิน</h2>
               <p className="text-xs text-gray-400 mb-4">
@@ -639,6 +552,86 @@ function SettingsPageInner() {
                   ))}
                 </ul>
               )}
+            </div>
+
+            {/* Admin management */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-5">
+              <h2 className="font-semibold text-gray-700 mb-1">🛡️ Admin — แชร์การเข้าถึง</h2>
+              <p className="text-xs text-gray-400 mb-4">
+                เพิ่มอีเมล Google ของบุคคลอื่น เพื่อให้เข้าถึง Dashboard และจัดการรายการได้ทั้งหมด
+              </p>
+              <form onSubmit={addAdmin} className="flex gap-2 mb-4">
+                <input
+                  type="email"
+                  value={adminEmail}
+                  onChange={(e) => setAdminEmail(e.target.value)}
+                  placeholder="อีเมล Google เช่น admin@gmail.com"
+                  disabled={!lineUserId}
+                  className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 disabled:opacity-40"
+                />
+                <button
+                  type="submit"
+                  disabled={adminAdding || !adminEmail.trim() || !lineUserId}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold bg-gray-800 text-white hover:bg-gray-700 disabled:opacity-40 transition-colors flex-shrink-0"
+                >
+                  {adminAdding ? "..." : "+ เพิ่ม"}
+                </button>
+              </form>
+              {adminLoading ? (
+                <p className="text-sm text-gray-400 text-center py-2">กำลังโหลด...</p>
+              ) : admins.length === 0 ? (
+                <p className="text-xs text-gray-300 text-center py-3">ยังไม่มี Admin</p>
+              ) : (
+                <ul className="space-y-2">
+                  {admins.map((a) => (
+                    <li key={a.id} className="bg-gray-50 rounded-xl px-3 py-2.5">
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-700 font-medium truncate">{a.admin_email}</p>
+                          {a.admin_name && <p className="text-xs text-gray-400">{a.admin_name}</p>}
+                          <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full mt-1 ${
+                            a.status === "accepted" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                          }`}>
+                            {a.status === "accepted" ? "✅ ยืนยันแล้ว" : "⏳ รอยืนยัน"}
+                          </span>
+                        </div>
+                        <div className="flex flex-col gap-1 flex-shrink-0">
+                          {a.status !== "accepted" && (
+                            <button
+                              onClick={() => copyAdminLink(a.invite_code)}
+                              className={`text-xs font-semibold px-2.5 py-1 rounded-lg transition-colors ${
+                                adminCopied === a.invite_code
+                                  ? "bg-emerald-100 text-emerald-700"
+                                  : "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                              }`}
+                            >
+                              {adminCopied === a.invite_code ? "✅ คัดลอก" : "🔗 คัดลอก"}
+                            </button>
+                          )}
+                          <button
+                            onClick={() => removeAdmin(a.id)}
+                            className="text-xs font-medium px-2.5 py-1 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
+                          >
+                            ลบ
+                          </button>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Logout */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-5">
+              <h2 className="font-semibold text-gray-700 mb-1">ออกจากระบบ</h2>
+              <p className="text-xs text-gray-400 mb-4">ล้างข้อมูลการเข้าสู่ระบบออกจากอุปกรณ์นี้</p>
+              <button
+                onClick={handleLogout}
+                className="w-full py-3 rounded-xl text-sm font-semibold text-rose-600 border border-rose-200 bg-rose-50 hover:bg-rose-100 transition-colors"
+              >
+                🚪 ออกจากระบบ
+              </button>
             </div>
           </div>
 
