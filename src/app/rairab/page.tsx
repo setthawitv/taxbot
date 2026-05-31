@@ -381,8 +381,8 @@ export default function RaiRab() {
 
   return (
     <AppLayout title="รายรับ">
-    <main className="min-h-screen bg-[#F8FAFC] px-4 py-8">
-      <div className="max-w-5xl mx-auto">
+    <main className="min-h-screen bg-[#F8FAFC]">
+      <div className="max-w-5xl mx-auto px-4 lg:px-6 py-6">
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-4">
@@ -685,9 +685,8 @@ export default function RaiRab() {
 
           </div>
         </div>
-      </div>
 
-      {/* ── Recent transactions + Platform donut ─────────────────────────── */}
+        {/* ── Recent transactions + Platform donut ─────────────────────────── */}
         {(recentTxns.length > 0 || (summary && Object.keys(summary.byPlatform).length > 0)) && (
           <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
 
@@ -762,6 +761,7 @@ export default function RaiRab() {
             )}
           </div>
         )}
+      </div>
 
       {/* ── Scan modal ──────────────────────────────────────────────────────── */}
       {showScan && (

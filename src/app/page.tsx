@@ -402,7 +402,7 @@ export default function Home() {
 
   return (
     <AppLayout userInfo={layoutUserInfo} title="หน้าหลัก">
-      <div className="px-4 py-5 lg:px-6 lg:py-6 max-w-5xl mx-auto space-y-6">
+      <div className="px-4 lg:px-6 py-6 max-w-5xl mx-auto space-y-6">
 
 
         {/* ── Big stat cards (year) ─────────────────────────────────────────── */}
