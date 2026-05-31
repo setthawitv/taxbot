@@ -11,6 +11,12 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-ibm-plex-sans-thai), "Prompt", sans-serif;
   --font-mono: ui-monospace, monospace;
+
+  /* Executive Precision brand tokens */
+  --color-brand-primary:   #0A192F;
+  --color-brand-secondary: #4A5568;
+  --color-brand-accent:    #10B981;
+  --color-brand-neutral:   #F8FAFC;
 }
 
 body {

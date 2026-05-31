@@ -2,8 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useState, Suspense } from "react";
-import { useSession, signOut } from "next-auth/react";
+import { useSession, signIn, signOut } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
+import {
+  IconSettings, IconCheck, IconCheckCircle, IconRefresh,
+  IconShield, IconLogout, IconGoogleSheets, IconSparkle,
+  IconIncome, IconExpense,
+} from "@/components/icons";
 
 type VendorRule = {
   id: string;
@@ -33,6 +38,8 @@ function SettingsPageInner() {
   const [showLiffLink, setShowLiffLink] = useState(false);
   const [syncing,      setSyncing]      = useState(false);
   const [syncResult,   setSyncResult]   = useState<SyncResult>(null);
+  const [isWebUser,    setIsWebUser]    = useState(false); // true = Google-only, no LINE
+  const [reconnecting, setReconnecting] = useState(false);
 
   // Business name
   const [businessName,        setBusinessName]        = useState("");
@@ -104,6 +111,7 @@ function SettingsPageInner() {
 
       // Fallback: Google session (browser)
       if (session?.user?.email) {
+        setIsWebUser(true);
         try {
           const res = await fetch("/api/user/by-email");
           if (res.ok) {
@@ -111,13 +119,14 @@ function SettingsPageInner() {
             if (d.lineUserId) {
               setLineUserId(d.lineUserId);
               setGoogleEmail(session.user.email ?? "");
-              // Load business name
+              // Load business name + plan
               const statusRes = await fetch(`/api/user/status?lineUserId=${d.lineUserId}`);
               if (statusRes.ok) {
                 const statusData = await statusRes.json();
                 const biz = statusData.profile?.businessName ?? "";
                 setBusinessName(biz);
                 setBusinessNameDraft(biz);
+                setCurrentPlan(statusData.profile?.plan ?? "trial");
               }
             }
           }
@@ -125,8 +134,19 @@ function SettingsPageInner() {
       }
     }
 
-    resolve();
-  }, [sessionStatus, session]);
+    resolve().then(() => {
+      // After resolving user, check if we just came back from a Google reconnect
+      const isReconnect = searchParams.get("reconnect") === "1";
+      if (isReconnect) {
+        // Remove the param from URL without reload
+        const url = new URL(window.location.href);
+        url.searchParams.delete("reconnect");
+        window.history.replaceState({}, "", url.toString());
+        // Re-save tokens from the fresh session
+        setReconnecting(true);
+      }
+    });
+  }, [sessionStatus, session, searchParams]);
 
   async function saveBusinessName(e: React.FormEvent) {
     e.preventDefault();
@@ -146,6 +166,31 @@ function SettingsPageInner() {
     }
   }
 
+  // Re-save Google tokens after reconnect redirect (web users only)
+  useEffect(() => {
+    if (!reconnecting || !lineUserId || !session) return;
+    const s = session as typeof session & { accessToken?: string; refreshToken?: string };
+    if (!s.accessToken) return;
+
+    fetch("/api/user/save", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        lineUserId,
+        googleEmail:        session.user?.email ?? "",
+        googleAccessToken:  s.accessToken  ?? null,
+        googleRefreshToken: s.refreshToken ?? null,
+      }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.ok) setSyncResult({ synced: 0, failed: 0, skipped: 0, message: "✅ เชื่อมต่อ Google ใหม่สำเร็จ" });
+        else       setSyncResult({ synced: 0, failed: 0, skipped: 0, message: "❌ บันทึก token ไม่สำเร็จ" });
+      })
+      .catch(() => setSyncResult({ synced: 0, failed: 0, skipped: 0, message: "❌ เชื่อมต่อใหม่ไม่สำเร็จ" }))
+      .finally(() => setReconnecting(false));
+  }, [reconnecting, lineUserId, session]);
+
   // Open Google connect in external browser.
   // liff.openWindow({ external: true }) requires a user gesture AND proper LIFF context
   // (page opened via liff.line.me). Settings opens via direct Rich Menu URL, so we:
@@ -154,6 +199,11 @@ function SettingsPageInner() {
   // 3. Intro page detects the key and shows a "tap to open Safari" button
   function handleGoogleConnect() {
     if (!lineUserId) return;
+    // Web user (Google-only, no LINE): re-run Google OAuth to get fresh tokens
+    if (isWebUser) {
+      signIn("google", { callbackUrl: "/settings?reconnect=1" });
+      return;
+    }
     setShowLiffLink(true);
   }
 
@@ -351,14 +401,16 @@ function SettingsPageInner() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-8">
+    <main className="min-h-screen bg-brand-neutral px-4 py-8">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center gap-3 mb-4">
           <Link href="/" className="text-gray-500 text-sm">← กลับ</Link>
         </div>
 
         <div className="flex items-center gap-3 mb-6">
-          <div className="text-4xl">⚙️</div>
+          <div className="w-11 h-11 flex items-center justify-center rounded-xl bg-gray-100 text-gray-700">
+            <IconSettings />
+          </div>
           <div>
             <h1 className="text-xl font-bold text-gray-800">ตั้งค่าบัญชี</h1>
             <p className="text-gray-400 text-sm">Account Settings</p>
@@ -388,9 +440,9 @@ function SettingsPageInner() {
                 <button
                   type="submit"
                   disabled={savingBusinessName || !businessNameDraft.trim() || !lineUserId || businessNameDraft.trim() === businessName}
-                  className="px-4 py-2.5 rounded-xl text-sm font-semibold bg-gray-800 text-white hover:bg-gray-700 disabled:opacity-40 transition-colors flex-shrink-0"
+                  className="px-4 py-2.5 rounded-xl text-sm font-semibold bg-brand-primary text-white hover:bg-brand-primary/90 disabled:opacity-40 transition-colors flex-shrink-0"
                 >
-                  {businessNameSaved ? "✅" : savingBusinessName ? "..." : "บันทึก"}
+                  {businessNameSaved ? <IconCheck className="w-4 h-4" /> : savingBusinessName ? "..." : "บันทึก"}
                 </button>
               </form>
             </div>
@@ -419,9 +471,9 @@ function SettingsPageInner() {
                       if (next) setSelectedPlan(next.key);
                       setShowUpgrade(true);
                     }}
-                    className="text-sm font-semibold px-4 py-1.5 rounded-full bg-gradient-to-r from-violet-500 to-purple-600 text-white hover:opacity-90 transition-opacity"
+                    className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-1.5 rounded-full bg-gradient-to-r from-violet-500 to-purple-600 text-white hover:opacity-90 transition-opacity"
                   >
-                    ⬆️ อัปเกรด
+                    <IconSparkle className="w-4 h-4" /> อัปเกรด
                   </button>
                 )}
               </div>
@@ -443,15 +495,15 @@ function SettingsPageInner() {
               ) : googleEmail ? (
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center gap-2 bg-emerald-50 rounded-xl px-4 py-3">
-                    <span className="text-emerald-500 text-lg">✅</span>
+                    <span className="text-emerald-500"><IconCheckCircle className="w-5 h-5" /></span>
                     <div>
                       <p className="text-xs text-gray-500">เชื่อมต่อแล้ว</p>
                       <p className="text-sm font-medium text-gray-700">{googleEmail}</p>
                     </div>
                   </div>
                   <button onClick={handleGoogleConnect} disabled={!lineUserId}
-                    className="w-full bg-gray-100 text-gray-600 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-200 transition-colors disabled:opacity-40">
-                    🔄 เชื่อมต่อใหม่อีกครั้ง
+                    className="w-full inline-flex items-center justify-center gap-1.5 bg-gray-100 text-gray-600 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-200 transition-colors disabled:opacity-40">
+                    <IconRefresh className="w-4 h-4" /> เชื่อมต่อใหม่อีกครั้ง
                   </button>
                 </div>
               ) : (
@@ -488,7 +540,7 @@ function SettingsPageInner() {
               )}
               <button onClick={handleSyncSheets} disabled={syncing || !lineUserId || !googleEmail}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold bg-green-500 hover:bg-green-600 text-white disabled:opacity-40 transition-colors">
-                {syncing ? <>⏳ กำลังซิงค์...</> : <>📋 Sync รายจ่ายทั้งหมดไป Sheets</>}
+                {syncing ? <>กำลังซิงค์...</> : <><IconGoogleSheets className="w-5 h-5" /> Sync รายจ่ายทั้งหมดไป Sheets</>}
               </button>
               {!googleEmail && (
                 <p className="text-xs text-gray-400 text-center mt-2">เชื่อมต่อ Google ก่อนจึงจะซิงค์ได้</p>
@@ -515,17 +567,17 @@ function SettingsPageInner() {
                     className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${
                       type === "income" ? "bg-emerald-500 text-white" : "bg-gray-100 text-gray-500"
                     }`}>
-                    💰 รายรับ
+                    <span className="inline-flex items-center gap-1.5 justify-center"><IconIncome className="w-4 h-4" /> รายรับ</span>
                   </button>
                   <button type="button" onClick={() => setType("expense")}
                     className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${
                       type === "expense" ? "bg-rose-500 text-white" : "bg-gray-100 text-gray-500"
                     }`}>
-                    🧾 รายจ่าย
+                    <span className="inline-flex items-center gap-1.5 justify-center"><IconExpense className="w-4 h-4" /> รายจ่าย</span>
                   </button>
                 </div>
                 <button type="submit" disabled={saving || !name.trim()}
-                  className="bg-gray-800 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-gray-700 disabled:opacity-40 transition-colors">
+                  className="bg-brand-primary text-white py-2.5 rounded-xl text-sm font-medium hover:bg-brand-primary/90 disabled:opacity-40 transition-colors">
                   {saving ? "กำลังบันทึก..." : "+ เพิ่มรายการ"}
                 </button>
               </form>
@@ -556,7 +608,7 @@ function SettingsPageInner() {
 
             {/* Admin management */}
             <div className="bg-white rounded-2xl border border-gray-200 p-5">
-              <h2 className="font-semibold text-gray-700 mb-1">🛡️ Admin — แชร์การเข้าถึง</h2>
+              <h2 className="font-semibold text-gray-700 mb-1 inline-flex items-center gap-2"><IconShield className="w-4 h-4 text-blue-500" /> Admin — แชร์การเข้าถึง</h2>
               <p className="text-xs text-gray-400 mb-4">
                 เพิ่มอีเมล Google ของบุคคลอื่น เพื่อให้เข้าถึง Dashboard และจัดการรายการได้ทั้งหมด
               </p>
@@ -572,7 +624,7 @@ function SettingsPageInner() {
                 <button
                   type="submit"
                   disabled={adminAdding || !adminEmail.trim() || !lineUserId}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold bg-gray-800 text-white hover:bg-gray-700 disabled:opacity-40 transition-colors flex-shrink-0"
+                  className="px-4 py-2 rounded-xl text-sm font-semibold bg-brand-primary text-white hover:bg-brand-primary/90 disabled:opacity-40 transition-colors flex-shrink-0"
                 >
                   {adminAdding ? "..." : "+ เพิ่ม"}
                 </button>
@@ -592,7 +644,7 @@ function SettingsPageInner() {
                           <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full mt-1 ${
                             a.status === "accepted" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
                           }`}>
-                            {a.status === "accepted" ? "✅ ยืนยันแล้ว" : "⏳ รอยืนยัน"}
+                            {a.status === "accepted" ? <span className="inline-flex items-center gap-1"><IconCheck className="w-3 h-3" /> ยืนยันแล้ว</span> : "⏳ รอยืนยัน"}
                           </span>
                         </div>
                         <div className="flex flex-col gap-1 flex-shrink-0">
@@ -628,9 +680,9 @@ function SettingsPageInner() {
               <p className="text-xs text-gray-400 mb-4">ล้างข้อมูลการเข้าสู่ระบบออกจากอุปกรณ์นี้</p>
               <button
                 onClick={handleLogout}
-                className="w-full py-3 rounded-xl text-sm font-semibold text-rose-600 border border-rose-200 bg-rose-50 hover:bg-rose-100 transition-colors"
+                className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold text-rose-600 border border-rose-200 bg-rose-50 hover:bg-rose-100 transition-colors"
               >
-                🚪 ออกจากระบบ
+                <IconLogout className="w-4 h-4" /> ออกจากระบบ
               </button>
             </div>
           </div>
@@ -681,7 +733,7 @@ function SettingsPageInner() {
                 <p className="text-gray-700 font-semibold mb-1">การชำระเงินล้มเหลว</p>
                 <p className="text-xs text-gray-400 mb-4">QR หมดอายุหรือเกิดข้อผิดพลาด</p>
                 <button onClick={() => { setQrStatus("idle"); setQrImage(""); setCountdown(0); }}
-                  className="px-5 py-2 rounded-xl bg-gray-800 text-white text-sm font-semibold">
+                  className="px-5 py-2 rounded-xl bg-brand-primary text-white text-sm font-semibold">
                   ลองใหม่
                 </button>
               </div>
@@ -772,7 +824,7 @@ function SettingsPageInner() {
 export default function SettingsPage() {
   return (
     <Suspense fallback={
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <main className="min-h-screen bg-brand-neutral flex items-center justify-center">
         <div className="text-center">
           <div className="text-4xl mb-3 animate-pulse">⚙️</div>
           <p className="text-gray-400 text-sm">กำลังโหลด...</p>

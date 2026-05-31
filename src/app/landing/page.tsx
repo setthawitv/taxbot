@@ -1,65 +1,56 @@
 "use client";
 
 import Link from "next/link";
+import type { ComponentType } from "react";
+import {
+  TaxBotLogo,
+  IconScan, IconIncome, IconTax, IconGoogleSheets, IconUpload, IconShield,
+  IconSparkle, IconRocket, IconFire, IconCrown,
+  IconCheck, IconX, IconArrowDown, IconArrowRight,
+} from "@/components/icons";
 
-const FEATURES = [
-  {
-    slug: "scan",
-    emoji: "📸",
-    title: "สแกนใบเสร็จด้วย AI",
+type IconC = ComponentType<{ className?: string }>;
+
+const FEATURES: { slug: string; Icon: IconC; title: string; desc: string; color: string; iconColor: string; chipBg: string }[] = [
+  { slug: "scan",           Icon: IconScan,          title: "สแกนใบเสร็จด้วย AI",
     desc: "ถ่ายรูปสลิปหรืออัปโหลดใบเสร็จ AI อ่านยอด วันที่ ร้านค้า และบันทึกให้อัตโนมัติ",
-    color: "from-purple-500/20 to-purple-600/10 border-purple-500/30",
-    badge: "bg-purple-500/20 text-purple-300",
-  },
-  {
-    slug: "income-expense",
-    emoji: "💰",
-    title: "ติดตามรายรับ-รายจ่าย",
+    color: "from-purple-500/15 to-purple-600/5 border-purple-500/30",
+    iconColor: "text-purple-300",
+    chipBg: "bg-purple-500/15" },
+  { slug: "income-expense", Icon: IconIncome,        title: "ติดตามรายรับ-รายจ่าย",
     desc: "ดูยอดเดือนนี้ ทั้งปี กำไร-ขาดทุน พร้อมแยกแพลตฟอร์ม TikTok / Shopee / Lazada",
-    color: "from-emerald-500/20 to-emerald-600/10 border-emerald-500/30",
-    badge: "bg-emerald-500/20 text-emerald-300",
-  },
-  {
-    slug: "tax",
-    emoji: "📊",
-    title: "คำนวณภาษีอัตโนมัติ",
+    color: "from-emerald-500/15 to-emerald-600/5 border-emerald-500/30",
+    iconColor: "text-emerald-300",
+    chipBg: "bg-emerald-500/15" },
+  { slug: "tax",            Icon: IconTax,           title: "คำนวณภาษีอัตโนมัติ",
     desc: "ประมาณภาษีเงินได้บุคคลธรรมดา ตามอัตราของไทย พร้อมแนะนำวิธีหักค่าใช้จ่าย",
-    color: "from-blue-500/20 to-blue-600/10 border-blue-500/30",
-    badge: "bg-blue-500/20 text-blue-300",
-  },
-  {
-    slug: "sheets",
-    emoji: "📋",
-    title: "ซิงค์ Google Sheets",
+    color: "from-blue-500/15 to-blue-600/5 border-blue-500/30",
+    iconColor: "text-blue-300",
+    chipBg: "bg-blue-500/15" },
+  { slug: "sheets",         Icon: IconGoogleSheets,  title: "ซิงค์ Google Sheets",
     desc: "ทุกรายการบันทึกลง Google Sheets ของคุณอัตโนมัติ ดาวน์โหลดหรือแชร์กับนักบัญชีได้ทันที",
-    color: "from-green-500/20 to-green-600/10 border-green-500/30",
-    badge: "bg-green-500/20 text-green-300",
-  },
-  {
-    slug: "import",
-    emoji: "📤",
-    title: "นำเข้ายอดแพลตฟอร์ม",
+    color: "from-green-500/15 to-green-600/5 border-green-500/30",
+    iconColor: "text-green-300",
+    chipBg: "bg-green-500/15" },
+  { slug: "import",         Icon: IconUpload,        title: "นำเข้ายอดแพลตฟอร์ม",
     desc: "อัปโหลดไฟล์ Excel จาก TikTok Shop, Shopee, Lazada — ระบบแยกยอดให้อัตโนมัติ",
-    color: "from-orange-500/20 to-orange-600/10 border-orange-500/30",
-    badge: "bg-orange-500/20 text-orange-300",
-  },
-  {
-    slug: "team",
-    emoji: "🛡️",
-    title: "แชร์ให้ทีมงาน",
+    color: "from-orange-500/15 to-orange-600/5 border-orange-500/30",
+    iconColor: "text-orange-300",
+    chipBg: "bg-orange-500/15" },
+  { slug: "team",           Icon: IconShield,        title: "แชร์ให้ทีมงาน",
     desc: "เพิ่ม Admin ด้วย Google Email หรือสร้างลิงก์ Staff ให้พนักงานบันทึกรายจ่ายแทนได้",
-    color: "from-rose-500/20 to-rose-600/10 border-rose-500/30",
-    badge: "bg-rose-500/20 text-rose-300",
-  },
+    color: "from-rose-500/15 to-rose-600/5 border-rose-500/30",
+    iconColor: "text-rose-300",
+    chipBg: "bg-rose-500/15" },
 ];
 
-const PLANS = [
-  {
-    name: "Free",
-    planKey: null,
-    price: "ฟรี",
-    period: "",
-    badge: null,
+const PLANS: {
+  name: string; planKey: string | null; price: string; period: string;
+  badge: { Icon: IconC; label: string } | null;
+  color: string; btnClass: string;
+  features: string[]; disabled: number[];
+}[] = [
+  { name: "Free", planKey: null, price: "ฟรี", period: "", badge: null,
     color: "border-white/10 bg-white/5",
     btnClass: "bg-white/10 hover:bg-white/20 text-white",
     features: [
@@ -69,14 +60,8 @@ const PLANS = [
       "ไม่รองรับ Excel import",
       "Google Sheets sync",
     ],
-    disabled: [2, 3] as number[],
-  },
-  {
-    name: "Eco",
-    planKey: "eco",
-    price: "฿100",
-    period: "/เดือน",
-    badge: null,
+    disabled: [2, 3] },
+  { name: "Eco", planKey: "eco", price: "฿100", period: "/เดือน", badge: null,
     color: "border-blue-500/40 bg-blue-500/5",
     btnClass: "bg-blue-500 hover:bg-blue-400 text-white",
     features: [
@@ -86,14 +71,9 @@ const PLANS = [
       "Google Sheets sync",
       "สแกนใบเสร็จด้วย AI",
     ],
-    disabled: [] as number[],
-  },
-  {
-    name: "Pro",
-    planKey: "pro",
-    price: "฿200",
-    period: "/เดือน",
-    badge: "🔥 แนะนำ",
+    disabled: [] },
+  { name: "Pro", planKey: "pro", price: "฿200", period: "/เดือน",
+    badge: { Icon: IconFire, label: "แนะนำ" },
     color: "border-emerald-500/60 bg-emerald-500/10 ring-2 ring-emerald-500/30",
     btnClass: "bg-emerald-500 hover:bg-emerald-400 text-white shadow-lg shadow-emerald-500/25",
     features: [
@@ -103,14 +83,9 @@ const PLANS = [
       "Google Sheets sync",
       "สแกนใบเสร็จด้วย AI",
     ],
-    disabled: [] as number[],
-  },
-  {
-    name: "Platinum",
-    planKey: "platinum",
-    price: "฿700",
-    period: "/เดือน",
-    badge: "👑 ครบทุกอย่าง",
+    disabled: [] },
+  { name: "Platinum", planKey: "platinum", price: "฿700", period: "/เดือน",
+    badge: { Icon: IconCrown, label: "ครบทุกอย่าง" },
     color: "border-amber-500/40 bg-amber-500/5",
     btnClass: "bg-amber-500 hover:bg-amber-400 text-white",
     features: [
@@ -120,14 +95,13 @@ const PLANS = [
       "Google Sheets sync",
       "สแกนใบเสร็จด้วย AI",
     ],
-    disabled: [] as number[],
-  },
+    disabled: [] },
 ];
 
 const STEPS = [
-  { no: "01", title: "เข้าสู่ระบบ", desc: "สมัครฟรี ไม่ต้องดาวน์โหลดแอป ไม่ต้องจำรหัสผ่านใหม่" },
+  { no: "01", title: "เข้าสู่ระบบ",         desc: "สมัครฟรี ไม่ต้องดาวน์โหลดแอป ไม่ต้องจำรหัสผ่านใหม่" },
   { no: "02", title: "เชื่อม Google Drive", desc: "เชื่อมต่อ Google เพื่อเก็บข้อมูลและซิงค์ Sheets อัตโนมัติ" },
-  { no: "03", title: "เริ่มบันทึกได้เลย", desc: "สแกนใบเสร็จ บันทึกรายรับ-รายจ่าย ดูรายงาน — ทำได้ทันที" },
+  { no: "03", title: "เริ่มบันทึกได้เลย",   desc: "สแกนใบเสร็จ บันทึกรายรับ-รายจ่าย ดูรายงาน — ทำได้ทันที" },
 ];
 
 export default function LandingPage() {
@@ -136,22 +110,22 @@ export default function LandingPage() {
 
       {/* ── Navbar ─────────────────────────────────────────────────────────── */}
       <nav className="flex items-center justify-between px-6 py-4 max-w-6xl mx-auto">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">🤖</span>
+        <div className="flex items-center gap-2.5">
+          <TaxBotLogo className="w-8 h-8" />
           <span className="font-bold text-lg tracking-tight">TaxBot</span>
         </div>
         <Link
           href="/onboarding"
-          className="text-sm font-semibold text-gray-300 hover:text-white transition-colors"
+          className="text-sm font-semibold text-gray-300 hover:text-white transition-colors inline-flex items-center gap-1"
         >
-          เข้าสู่ระบบ →
+          เข้าสู่ระบบ <IconArrowRight className="w-4 h-4" />
         </Link>
       </nav>
 
       {/* ── Hero ───────────────────────────────────────────────────────────── */}
       <section className="px-6 pt-16 pb-20 max-w-4xl mx-auto text-center">
         <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold px-4 py-1.5 rounded-full mb-8">
-          ✨ สำหรับร้านค้าออนไลน์และ SME ไทย
+          <IconSparkle className="w-3.5 h-3.5" /> สำหรับร้านค้าออนไลน์และ SME ไทย
         </div>
 
         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight mb-6">
@@ -171,22 +145,22 @@ export default function LandingPage() {
             href="/onboarding"
             className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-base font-bold bg-emerald-500 hover:bg-emerald-400 text-white transition-colors shadow-lg shadow-emerald-500/25"
           >
-            🚀 เริ่มต้นใช้งานฟรี
+            <IconRocket className="w-5 h-5" /> เริ่มต้นใช้งานฟรี
           </Link>
           <a
             href="#pricing"
             className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-base font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 transition-colors"
           >
-            ดูราคา ↓
+            ดูราคา <IconArrowDown className="w-4 h-4" />
           </a>
         </div>
 
         {/* Stats row */}
         <div className="flex flex-wrap justify-center gap-8 mt-14">
           {[
-            { value: "ฟรี 100%", label: "ไม่มีค่าใช้จ่าย" },
-            { value: "< 30 วิ", label: "บันทึกต่อรายการ" },
-            { value: "3 แพลตฟอร์ม", label: "รองรับ TikTok, Shopee, Lazada" },
+            { value: "ฟรี 100%",      label: "ไม่มีค่าใช้จ่าย" },
+            { value: "< 30 วิ",        label: "บันทึกต่อรายการ" },
+            { value: "3 แพลตฟอร์ม",   label: "รองรับ TikTok, Shopee, Lazada" },
           ].map((s) => (
             <div key={s.label} className="text-center">
               <p className="text-2xl font-bold text-white">{s.value}</p>
@@ -204,19 +178,25 @@ export default function LandingPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {FEATURES.map((f) => (
-            <Link
-              key={f.slug}
-              href={`/features/${f.slug}`}
-              className={`bg-gradient-to-br ${f.color} border rounded-2xl p-6 group hover:scale-[1.02] transition-transform duration-200 block`}
-            >
-              <div className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full ${f.badge} mb-4`}>
-                {f.emoji} {f.title}
-              </div>
-              <p className="text-gray-300 text-sm leading-relaxed">{f.desc}</p>
-              <p className="text-xs text-gray-500 mt-3 group-hover:text-gray-400 transition-colors">อ่านเพิ่มเติม →</p>
-            </Link>
-          ))}
+          {FEATURES.map((f) => {
+            const Ic = f.Icon;
+            return (
+              <Link
+                key={f.slug}
+                href={`/features/${f.slug}`}
+                className={`bg-gradient-to-br ${f.color} border rounded-2xl p-6 group hover:scale-[1.02] transition-transform duration-200 block`}
+              >
+                <div className={`inline-flex items-center justify-center w-12 h-12 rounded-xl ${f.chipBg} ${f.iconColor} mb-4`}>
+                  <Ic className="w-6 h-6" />
+                </div>
+                <h3 className="text-white font-bold text-base mb-2">{f.title}</h3>
+                <p className="text-gray-400 text-sm leading-relaxed">{f.desc}</p>
+                <p className="text-xs text-gray-500 mt-3 group-hover:text-gray-300 transition-colors inline-flex items-center gap-1">
+                  อ่านเพิ่มเติม <IconArrowRight className="w-3.5 h-3.5" />
+                </p>
+              </Link>
+            );
+          })}
         </div>
       </section>
 
@@ -228,41 +208,47 @@ export default function LandingPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
-          {PLANS.map((plan) => (
-            <div key={plan.name} className={`relative border rounded-2xl p-6 flex flex-col gap-4 ${plan.color}`}>
-              {plan.badge && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs font-bold px-3 py-1 rounded-full bg-emerald-500 text-white shadow">
-                  {plan.badge}
-                </div>
-              )}
+          {PLANS.map((plan) => {
+            const Badge = plan.badge?.Icon;
+            return (
+              <div key={plan.name} className={`relative border rounded-2xl p-6 flex flex-col gap-4 ${plan.color}`}>
+                {plan.badge && Badge && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs font-bold px-3 py-1 rounded-full bg-emerald-500 text-white shadow inline-flex items-center gap-1">
+                    <Badge className="w-3.5 h-3.5" /> {plan.badge.label}
+                  </div>
+                )}
 
-              <div>
-                <p className="text-gray-400 text-sm font-semibold uppercase tracking-wide mb-1">{plan.name}</p>
-                <div className="flex items-end gap-1">
-                  <span className="text-4xl font-extrabold text-white">{plan.price}</span>
-                  <span className="text-gray-400 text-sm pb-1">{plan.period}</span>
+                <div>
+                  <p className="text-gray-400 text-sm font-semibold uppercase tracking-wide mb-1">{plan.name}</p>
+                  <div className="flex items-end gap-1">
+                    <span className="text-4xl font-extrabold text-white">{plan.price}</span>
+                    <span className="text-gray-400 text-sm pb-1">{plan.period}</span>
+                  </div>
                 </div>
+
+                <ul className="space-y-2.5 flex-1">
+                  {plan.features.map((f, i) => {
+                    const isOff = plan.disabled.includes(i);
+                    return (
+                      <li key={i} className={`flex items-start gap-2 text-sm ${isOff ? "text-gray-600 line-through" : "text-gray-300"}`}>
+                        <span className={`mt-0.5 flex-shrink-0 ${isOff ? "text-gray-600" : "text-emerald-400"}`}>
+                          {isOff ? <IconX className="w-4 h-4" /> : <IconCheck className="w-4 h-4" />}
+                        </span>
+                        {f}
+                      </li>
+                    );
+                  })}
+                </ul>
+
+                <Link
+                  href={plan.planKey ? `/settings?upgrade=${plan.planKey}` : "/onboarding"}
+                  className={`w-full text-center py-3 rounded-xl text-sm font-bold transition-colors ${plan.btnClass}`}
+                >
+                  {plan.name === "Free" ? "เริ่มทดลองใช้ฟรี" : "เลือกแพ็กเกจนี้"}
+                </Link>
               </div>
-
-              <ul className="space-y-2.5 flex-1">
-                {plan.features.map((f, i) => (
-                  <li key={i} className={`flex items-start gap-2 text-sm ${plan.disabled.includes(i) ? "text-gray-600 line-through" : "text-gray-300"}`}>
-                    <span className={`mt-0.5 flex-shrink-0 ${plan.disabled.includes(i) ? "text-gray-600" : "text-emerald-400"}`}>
-                      {plan.disabled.includes(i) ? "✕" : "✓"}
-                    </span>
-                    {f}
-                  </li>
-                ))}
-              </ul>
-
-              <Link
-                href={plan.planKey ? `/settings?upgrade=${plan.planKey}` : "/onboarding"}
-                className={`w-full text-center py-3 rounded-xl text-sm font-bold transition-colors ${plan.btnClass}`}
-              >
-                {plan.name === "Free" ? "เริ่มทดลองใช้ฟรี" : "เลือกแพ็กเกจนี้"}
-              </Link>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <p className="text-center text-gray-600 text-xs mt-6">
@@ -280,15 +266,17 @@ export default function LandingPage() {
         <div className="flex flex-col gap-4">
           {STEPS.map((s, i) => (
             <div key={s.no} className="flex items-start gap-5 bg-white/5 border border-white/10 rounded-2xl p-6">
-              <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gray-800 flex items-center justify-center text-emerald-400 font-bold text-lg">
+              <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-brand-primary flex items-center justify-center text-brand-accent font-bold text-lg">
                 {s.no}
               </div>
-              <div>
+              <div className="flex-1">
                 <h3 className="font-bold text-white text-lg mb-1">{s.title}</h3>
                 <p className="text-gray-400 text-sm leading-relaxed">{s.desc}</p>
               </div>
               {i < STEPS.length - 1 && (
-                <div className="hidden sm:flex ml-auto items-center text-gray-600 text-2xl">↓</div>
+                <div className="hidden sm:flex items-center text-gray-600">
+                  <IconArrowDown className="w-5 h-5" />
+                </div>
               )}
             </div>
           ))}
@@ -298,7 +286,9 @@ export default function LandingPage() {
       {/* ── Final CTA ──────────────────────────────────────────────────────── */}
       <section className="px-6 py-20">
         <div className="max-w-2xl mx-auto bg-gradient-to-br from-emerald-500/20 to-cyan-500/10 border border-emerald-500/30 rounded-3xl p-10 text-center">
-          <div className="text-5xl mb-4">🤖</div>
+          <div className="flex justify-center mb-4">
+            <TaxBotLogo className="w-14 h-14" />
+          </div>
           <h2 className="text-3xl font-bold mb-3">พร้อมเริ่มต้นแล้วหรือยัง?</h2>
           <p className="text-gray-400 mb-8 leading-relaxed">
             ไม่ต้องดาวน์โหลดแอป ไม่ต้องสมัครใหม่ — เปิดเว็บแล้วเริ่มได้เลย
@@ -307,7 +297,7 @@ export default function LandingPage() {
             href="/onboarding"
             className="inline-flex items-center justify-center gap-2 px-10 py-4 rounded-2xl text-base font-bold bg-emerald-500 hover:bg-emerald-400 text-white transition-colors shadow-lg shadow-emerald-500/25"
           >
-            🚀 เริ่มต้นใช้งานฟรี
+            <IconRocket className="w-5 h-5" /> เริ่มต้นใช้งานฟรี
           </Link>
         </div>
       </section>

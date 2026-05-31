@@ -3,79 +3,74 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import {
+  IconHome, IconHelp, IconSettings,
+  IconIncome, IconExpense, IconTax,
+  IconGoogleSheets, IconGoogleDrive,
+  IconScan, IconShield, IconCheckCircle, IconWave, IconLightbulb, IconUser, IconRocket,
+} from "@/components/icons";
+import type { ComponentType } from "react";
 
 // ── Tour steps ────────────────────────────────────────────────────────────────
-const TOUR_STEPS = [
-  {
-    emoji: "👋",
-    title: "ยินดีต้อนรับสู่ TaxBot!",
-    desc: "TaxBot ช่วยให้คุณจัดการรายรับ-รายจ่าย และคำนวณภาษีได้ง่ายๆ โดยไม่ต้องมีความรู้บัญชี มาดูแต่ละฟีเจอร์กันเลย 🚀",
-    highlight: null,
-    cta: "เริ่มเลย →",
-    tip: null,
-  },
-  {
-    emoji: "💰",
+type TourStep = {
+  Icon:  ComponentType<{ className?: string }>;
+  tint:  "blue" | "emerald" | "rose" | "purple" | "amber" | "indigo";
+  title: string;
+  desc:  string;
+  cta:   string;
+  tip:   string | null;
+};
+
+const TOUR_STEPS: TourStep[] = [
+  { Icon: IconWave,         tint: "amber",
+    title: "ยินดีต้อนรับสู่ TaxBot",
+    desc:  "TaxBot ช่วยให้คุณจัดการรายรับ-รายจ่าย และคำนวณภาษีได้ง่าย โดยไม่ต้องมีความรู้บัญชี มาดูแต่ละฟีเจอร์กันเลย",
+    cta:   "เริ่มเลย",  tip: null },
+  { Icon: IconIncome,       tint: "emerald",
     title: "รายรับ — บันทึกรายได้",
-    desc: "นำเข้ายอดขายจาก TikTok Shop, Shopee, Lazada ได้โดยอัปโหลดไฟล์ Excel จากแพลตฟอร์ม หรือบันทึกรายรับ Manual ได้เลย",
-    highlight: "income",
-    cta: "ถัดไป →",
-    tip: "💡 ไปที่ รายรับ → 📤 นำเข้า → เลือกไฟล์ Excel จาก TikTok/Shopee/Lazada",
-  },
-  {
-    emoji: "🧾",
+    desc:  "นำเข้ายอดขายจาก TikTok Shop, Shopee, Lazada ได้โดยอัปโหลดไฟล์ Excel จากแพลตฟอร์ม หรือบันทึกรายรับเองได้ทันที",
+    cta:   "ถัดไป",     tip: "ไปที่ รายรับ → นำเข้า → เลือกไฟล์ Excel จากแพลตฟอร์ม" },
+  { Icon: IconExpense,      tint: "rose",
     title: "รายจ่าย — บันทึกค่าใช้จ่าย",
-    desc: "บันทึกค่าใช้จ่ายทุกรายการ — ค่าสินค้า ค่าขนส่ง ค่าโฆษณา หรือ สแกนใบเสร็จด้วย AI ให้อ่านและบันทึกให้อัตโนมัติ",
-    highlight: "expense",
-    cta: "ถัดไป →",
-    tip: "💡 กดปุ่ม 📸 สแกน แล้วถ่ายรูปใบเสร็จ — AI จะอ่านยอดและบันทึกให้เลย",
-  },
-  {
-    emoji: "📸",
+    desc:  "บันทึกค่าใช้จ่ายทุกรายการ — ค่าสินค้า ค่าขนส่ง ค่าโฆษณา หรือสแกนใบเสร็จด้วย AI ให้อ่านและบันทึกอัตโนมัติ",
+    cta:   "ถัดไป",     tip: "กดปุ่ม สแกน แล้วถ่ายรูปใบเสร็จ — AI จะอ่านยอดและบันทึกให้เลย" },
+  { Icon: IconScan,         tint: "purple",
     title: "สแกนใบเสร็จด้วย AI",
-    desc: "ถ่ายรูปสลิปโอนเงิน หรืออัปโหลดใบเสร็จ — AI จะอ่าน ยอดเงิน, ชื่อร้านค้า, วันที่ และบันทึกลงรายจ่ายหรือรายรับให้อัตโนมัติ",
-    highlight: "expense",
-    cta: "ถัดไป →",
-    tip: "💡 ใช้ได้ทั้งกล้องถ่ายสด และเลือกจากคลังรูปภาพ",
-  },
-  {
-    emoji: "📊",
-    title: "ภาษี — คำนวณให้อัตโนมัติ",
-    desc: "ระบบคำนวณภาษีเงินได้บุคคลธรรมดาให้อัตโนมัติจากรายรับ-รายจ่ายที่บันทึกไว้ พร้อมแนะนำวิธีหักค่าใช้จ่ายแบบประหยัดภาษีสูงสุด",
-    highlight: "tax",
-    cta: "ถัดไป →",
-    tip: "💡 ดูหน้าภาษีเพื่อเปรียบเทียบ 2 วิธีคำนวณ — เลือกแบบที่ประหยัดกว่า",
-  },
-  {
-    emoji: "📋",
+    desc:  "ถ่ายรูปสลิปโอนเงินหรืออัปโหลดใบเสร็จ — AI จะอ่านยอดเงิน ชื่อร้านค้า วันที่ และบันทึกให้อัตโนมัติ",
+    cta:   "ถัดไป",     tip: "ใช้ได้ทั้งกล้องถ่ายสด และเลือกจากคลังรูปภาพ" },
+  { Icon: IconTax,          tint: "blue",
+    title: "ภาษี — คำนวณอัตโนมัติ",
+    desc:  "ระบบคำนวณภาษีบุคคลธรรมดา/นิติบุคคลให้อัตโนมัติจากรายรับ-รายจ่าย พร้อมแนะนำวิธีหักค่าใช้จ่ายที่ประหยัดภาษีสูงสุด",
+    cta:   "ถัดไป",     tip: "เปรียบเทียบ 2 วิธีคำนวณ — เลือกแบบที่ประหยัดกว่า" },
+  { Icon: IconGoogleSheets, tint: "emerald",
     title: "Google Sheets — ซิงค์อัตโนมัติ",
-    desc: "ทุกรายการที่บันทึกจะซิงค์ไป Google Sheets ของคุณอัตโนมัติ สามารถแชร์ให้นักบัญชีหรือดาวน์โหลดรายงานได้ทุกเมื่อ",
-    highlight: "sheets",
-    cta: "ถัดไป →",
-    tip: "💡 ไปที่ ตั้งค่า → เชื่อมต่อ Google เพื่อเปิดใช้ฟีเจอร์นี้",
-  },
-  {
-    emoji: "🛡️",
+    desc:  "ทุกรายการที่บันทึกจะซิงค์ไป Google Sheets ของคุณอัตโนมัติ แชร์ให้นักบัญชีหรือดาวน์โหลดรายงานได้ทุกเมื่อ",
+    cta:   "ถัดไป",     tip: "ไปที่ ตั้งค่า → เชื่อมต่อ Google เพื่อเปิดใช้งาน" },
+  { Icon: IconShield,       tint: "indigo",
     title: "แชร์ให้ทีมงาน",
-    desc: "เพิ่ม Admin ด้วย Google Email เพื่อให้เข้าถึง Dashboard ได้เต็มที่ หรือสร้างลิงก์ Staff ให้พนักงานบันทึกรายจ่ายแทนโดยไม่ต้อง login",
-    highlight: "settings",
-    cta: "ถัดไป →",
-    tip: "💡 ไปที่ ตั้งค่า → ส่วน Admin เพื่อเพิ่มผู้ดูแลร่วม",
-  },
-  {
-    emoji: "🎉",
-    title: "พร้อมแล้ว! เริ่มใช้งานได้เลย",
-    desc: "คุณรู้จักทุกฟีเจอร์แล้ว เริ่มต้นด้วยการบันทึกรายจ่ายแรก หรือนำเข้าไฟล์ยอดขายจากแพลตฟอร์มได้เลย",
-    highlight: null,
-    cta: "เริ่มใช้งาน 🚀",
-    tip: null,
-  },
+    desc:  "เพิ่ม Admin ด้วย Google Email เพื่อให้เข้าถึง Dashboard เต็มที่ หรือสร้างลิงก์ Staff ให้พนักงานบันทึกรายจ่ายโดยไม่ต้อง login",
+    cta:   "ถัดไป",     tip: "ไปที่ ตั้งค่า → ส่วน Admin เพื่อเพิ่มผู้ดูแลร่วม" },
+  { Icon: IconCheckCircle,  tint: "emerald",
+    title: "พร้อมเริ่มใช้งานแล้ว",
+    desc:  "คุณรู้จักทุกฟีเจอร์แล้ว เริ่มต้นด้วยการบันทึกรายจ่ายแรก หรือนำเข้าไฟล์ยอดขายจากแพลตฟอร์มได้เลย",
+    cta:   "เริ่มใช้งาน", tip: null },
 ];
+
+const TINT_CLASSES: Record<TourStep["tint"], { bg: string; ring: string; icon: string; btn: string }> = {
+  blue:    { bg: "bg-blue-50",    ring: "ring-blue-100",    icon: "text-blue-600",    btn: "bg-blue-600 hover:bg-blue-700"       },
+  emerald: { bg: "bg-emerald-50", ring: "ring-emerald-100", icon: "text-emerald-600", btn: "bg-emerald-600 hover:bg-emerald-700" },
+  rose:    { bg: "bg-rose-50",    ring: "ring-rose-100",    icon: "text-rose-600",    btn: "bg-rose-600 hover:bg-rose-700"       },
+  purple:  { bg: "bg-purple-50",  ring: "ring-purple-100",  icon: "text-purple-600",  btn: "bg-purple-600 hover:bg-purple-700"   },
+  amber:   { bg: "bg-amber-50",   ring: "ring-amber-100",   icon: "text-amber-600",   btn: "bg-amber-600 hover:bg-amber-700"     },
+  indigo:  { bg: "bg-indigo-50",  ring: "ring-indigo-100",  icon: "text-indigo-600",  btn: "bg-indigo-600 hover:bg-indigo-700"   },
+};
 
 function TourModal({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState(0);
   const current = TOUR_STEPS[step];
   const isLast  = step === TOUR_STEPS.length - 1;
+  const tint    = TINT_CLASSES[current.tint];
+  const Ico     = current.Icon;
 
   function next() {
     if (isLast) { onClose(); return; }
@@ -83,60 +78,79 @@ function TourModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
-      <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
+      <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-gray-100">
 
         {/* Progress bar */}
         <div className="h-1 bg-gray-100">
           <div
-            className="h-full bg-emerald-500 transition-all duration-300"
+            className={`h-full transition-all duration-300 ${tint.btn.split(" ")[0]}`}
             style={{ width: `${((step + 1) / TOUR_STEPS.length) * 100}%` }}
           />
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-5">
           {/* Step counter */}
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-400 font-medium">{step + 1} / {TOUR_STEPS.length}</span>
-            <button onClick={onClose} className="text-gray-300 hover:text-gray-500 text-sm transition-colors">
+            <span className="text-xs text-gray-400 font-medium tracking-wide">
+              {String(step + 1).padStart(2, "0")} / {String(TOUR_STEPS.length).padStart(2, "0")}
+            </span>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-sm font-medium transition-colors">
               ข้าม
             </button>
           </div>
 
           {/* Content */}
-          <div className="text-center py-2 space-y-3">
-            <div className="text-6xl">{current.emoji}</div>
-            <h2 className="text-xl font-bold text-gray-800">{current.title}</h2>
-            <p className="text-gray-500 text-sm leading-relaxed">{current.desc}</p>
+          <div className="text-center space-y-4 py-2">
+            <div className={`mx-auto w-16 h-16 rounded-2xl flex items-center justify-center ${tint.bg} ring-1 ${tint.ring}`}>
+              <Ico className={`w-8 h-8 ${tint.icon}`} />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 tracking-tight">{current.title}</h2>
+            <p className="text-gray-500 text-sm leading-relaxed max-w-sm mx-auto">{current.desc}</p>
           </div>
 
           {/* Tip box */}
           {current.tip && (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
-              <p className="text-amber-700 text-xs leading-relaxed">{current.tip}</p>
+            <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 flex items-start gap-2.5">
+              <IconLightbulb className={`w-4 h-4 ${tint.icon} flex-shrink-0 mt-0.5`} />
+              <p className="text-gray-600 text-xs leading-relaxed">{current.tip}</p>
             </div>
           )}
 
           {/* Dots */}
-          <div className="flex justify-center gap-1.5">
+          <div className="flex justify-center gap-1.5 pt-1">
             {TOUR_STEPS.map((_, i) => (
               <button
                 key={i}
                 onClick={() => setStep(i)}
+                aria-label={`Step ${i + 1}`}
                 className={`rounded-full transition-all ${
-                  i === step ? "w-5 h-2 bg-emerald-500" : "w-2 h-2 bg-gray-200 hover:bg-gray-300"
+                  i === step
+                    ? `w-6 h-1.5 ${tint.btn.split(" ")[0]}`
+                    : "w-1.5 h-1.5 bg-gray-200 hover:bg-gray-300"
                 }`}
               />
             ))}
           </div>
 
-          {/* Button */}
-          <button
-            onClick={next}
-            className="w-full py-3.5 rounded-2xl text-sm font-bold bg-emerald-500 hover:bg-emerald-600 text-white transition-colors"
-          >
-            {current.cta}
-          </button>
+          {/* Buttons */}
+          <div className="flex gap-2">
+            {step > 0 && (
+              <button
+                onClick={() => setStep((s) => s - 1)}
+                className="px-4 py-3 rounded-xl text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+              >
+                ย้อนกลับ
+              </button>
+            )}
+            <button
+              onClick={next}
+              className={`flex-1 inline-flex items-center justify-center gap-1.5 py-3 rounded-xl text-sm font-semibold text-white transition-colors ${tint.btn}`}
+            >
+              {current.cta}
+              {isLast ? <IconRocket className="w-4 h-4" /> : <span className="text-base leading-none">→</span>}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -171,6 +185,7 @@ type Links = {
   sheetUrl: string | null;
   driveUrl: string | null;
 };
+
 
 function StatCard({
   label, value, sub, color, loading,
@@ -334,7 +349,7 @@ export default function Home() {
   const netYear  = (stats?.yearIncome  ?? 0) - (stats?.yearExpense  ?? 0);
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen bg-brand-neutral">
       <div className="max-w-5xl mx-auto px-4 py-8">
 
         {/* ── Header ─────────────────────────────────────────────────────────── */}
@@ -344,23 +359,23 @@ export default function Home() {
             <img src={userInfo.pictureUrl} alt="profile"
               className="w-14 h-14 rounded-full object-cover border-2 border-white shadow" />
           ) : (
-            <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center text-3xl shadow">🤖</div>
+            <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 shadow"><IconUser className="w-7 h-7" /></div>
           )}
           <div className="flex-1 min-w-0">
             {userInfo?.role === "admin" ? (
               <>
-                <h1 className="text-xl font-bold text-gray-800 truncate">
+                <h1 className="text-xl font-bold text-brand-primary truncate">
                   {userInfo.displayName}
                 </h1>
                 <p className="text-gray-400 text-sm truncate">
                   {userInfo.businessName
-                    ? <>🏢 {userInfo.businessName}</>
+                    ? <>{userInfo.businessName}</>
                     : "Admin · Dashboard"}
                 </p>
               </>
             ) : (
               <>
-                <h1 className="text-xl font-bold text-gray-800 truncate">
+                <h1 className="text-xl font-bold text-brand-primary truncate">
                   {userInfo?.businessName || userInfo?.displayName || "TaxBot"}
                 </h1>
                 <p className="text-gray-400 text-sm truncate">
@@ -371,19 +386,20 @@ export default function Home() {
           </div>
           <div className="flex gap-2">
             <Link href="/landing"
-              className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-600 bg-white border border-gray-200 px-3 py-2 rounded-xl transition-colors">
-              🏠
+              title="หน้าแรก"
+              className="flex items-center justify-center w-10 h-10 text-gray-500 hover:text-gray-800 hover:bg-gray-50 bg-white border border-gray-200 rounded-xl transition-colors">
+              <IconHome />
             </Link>
             <button
               onClick={() => setShowTour(true)}
-              className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 bg-white border border-gray-200 px-3 py-2 rounded-xl transition-colors"
               title="วิธีใช้งาน"
+              className="flex items-center justify-center w-10 h-10 text-gray-500 hover:text-gray-800 hover:bg-gray-50 bg-white border border-gray-200 rounded-xl transition-colors"
             >
-              ❓
+              <IconHelp />
             </button>
             <Link href="/settings"
-              className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 bg-white border border-gray-200 px-4 py-2 rounded-xl transition-colors">
-              ⚙️ ตั้งค่า
+              className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 bg-white border border-gray-200 px-3.5 h-10 rounded-xl transition-colors">
+              <IconSettings className="w-4 h-4" /> <span className="font-medium">ตั้งค่า</span>
             </Link>
           </div>
         </div>
@@ -397,7 +413,9 @@ export default function Home() {
 
             <Link href="/rairab"
               className="flex items-center gap-4 p-4 rounded-2xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-colors">
-              <div className="text-2xl w-11 h-11 flex items-center justify-center rounded-xl bg-emerald-100">💰</div>
+              <div className="w-11 h-11 flex items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
+                <IconIncome />
+              </div>
               <div className="flex-1">
                 <div className="font-semibold text-emerald-700">รายรับ</div>
                 <div className="text-gray-400 text-xs">Income · นำเข้าไฟล์แพลตฟอร์ม</div>
@@ -407,7 +425,9 @@ export default function Home() {
 
             <Link href="/raijhai"
               className="flex items-center gap-4 p-4 rounded-2xl border border-rose-200 bg-rose-50 hover:bg-rose-100 transition-colors">
-              <div className="text-2xl w-11 h-11 flex items-center justify-center rounded-xl bg-rose-100">🧾</div>
+              <div className="w-11 h-11 flex items-center justify-center rounded-xl bg-rose-100 text-rose-600">
+                <IconExpense />
+              </div>
               <div className="flex-1">
                 <div className="font-semibold text-rose-700">รายจ่าย</div>
                 <div className="text-gray-400 text-xs">Expense · บันทึกค่าใช้จ่าย</div>
@@ -417,7 +437,9 @@ export default function Home() {
 
             <Link href="/phasi"
               className="flex items-center gap-4 p-4 rounded-2xl border border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors">
-              <div className="text-2xl w-11 h-11 flex items-center justify-center rounded-xl bg-blue-100">📊</div>
+              <div className="w-11 h-11 flex items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+                <IconTax />
+              </div>
               <div className="flex-1">
                 <div className="font-semibold text-blue-700">ภาษี</div>
                 <div className="text-gray-400 text-xs">Tax · สรุปภาษีรายปี</div>
@@ -429,9 +451,11 @@ export default function Home() {
 
             <button onClick={() => openExternal(links.sheetUrl, "/sheets")}
               className="w-full flex items-center gap-4 p-4 rounded-2xl border border-gray-200 bg-white hover:bg-green-50 hover:border-green-200 transition-colors text-left">
-              <div className="text-2xl w-11 h-11 flex items-center justify-center rounded-xl bg-green-100">📋</div>
+              <div className="w-11 h-11 flex items-center justify-center rounded-xl bg-white border border-gray-100">
+                <IconGoogleSheets className="w-7 h-7" />
+              </div>
               <div className="flex-1">
-                <div className="font-semibold text-green-700">Google Sheets</div>
+                <div className="font-semibold text-gray-800">Google Sheets</div>
                 <div className="text-gray-400 text-xs">
                   {loadingStats ? "กำลังโหลด..." : links.sheetUrl ? "เปิดในแท็บใหม่ ↗" : "ยังไม่มี Sheet"}
                 </div>
@@ -440,9 +464,11 @@ export default function Home() {
 
             <button onClick={() => openExternal(links.driveUrl, "/drive")}
               className="w-full flex items-center gap-4 p-4 rounded-2xl border border-gray-200 bg-white hover:bg-yellow-50 hover:border-yellow-200 transition-colors text-left">
-              <div className="text-2xl w-11 h-11 flex items-center justify-center rounded-xl bg-yellow-100">📁</div>
+              <div className="w-11 h-11 flex items-center justify-center rounded-xl bg-white border border-gray-100">
+                <IconGoogleDrive className="w-7 h-7" />
+              </div>
               <div className="flex-1">
-                <div className="font-semibold text-yellow-700">Google Drive</div>
+                <div className="font-semibold text-gray-800">Google Drive</div>
                 <div className="text-gray-400 text-xs">
                   {loadingStats ? "กำลังโหลด..." : links.driveUrl ? "เปิดในแท็บใหม่ ↗" : "ยังไม่มีโฟลเดอร์"}
                 </div>
@@ -463,7 +489,7 @@ export default function Home() {
                 <StatCard label="รายจ่ายเดือนนี้" value={`฿${fmtInt(stats?.monthExpense ?? 0)}`} color="rose"    loading={loadingStats} />
                 <StatCard
                   label="กำไรสุทธิเดือนนี้"
-                  value={`฿${fmtInt(Math.abs(netMonth))}`}
+                  value={`${netMonth < 0 ? "-" : ""}฿${fmtInt(Math.abs(netMonth))}`}
                   sub={netMonth < 0 ? "ขาดทุน" : undefined}
                   color={netMonth >= 0 ? "blue" : "amber"}
                   loading={loadingStats}
@@ -481,7 +507,7 @@ export default function Home() {
                 <StatCard label="รายจ่ายรวมปีนี้" value={`฿${fmtInt(stats?.yearExpense ?? 0)}`} color="rose"    loading={loadingStats} />
                 <StatCard
                   label="กำไรสุทธิปีนี้"
-                  value={`฿${fmtInt(Math.abs(netYear))}`}
+                  value={`${netYear < 0 ? "-" : ""}฿${fmtInt(Math.abs(netYear))}`}
                   sub={netYear < 0 ? "ขาดทุน" : undefined}
                   color={netYear >= 0 ? "blue" : "amber"}
                   loading={loadingStats}

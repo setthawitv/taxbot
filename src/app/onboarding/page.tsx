@@ -23,8 +23,8 @@ function StepBar({ step }: { step: number }) {
             <div className="flex flex-col items-center">
               <div
                 className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all
-                  ${done ? "bg-gray-900 border-gray-900 text-white"
-                    : active ? "bg-gray-900 border-gray-900 text-white"
+                  ${done ? "bg-brand-primary border-brand-primary text-white"
+                    : active ? "bg-brand-primary border-brand-primary text-white"
                     : "bg-white border-gray-300 text-gray-400"}`}
               >
                 {done ? "✓" : num}
@@ -34,7 +34,7 @@ function StepBar({ step }: { step: number }) {
               </span>
             </div>
             {i < labels.length - 1 && (
-              <div className={`h-0.5 w-8 mx-1 mb-4 rounded ${num < step ? "bg-gray-900" : "bg-gray-200"}`} />
+              <div className={`h-0.5 w-8 mx-1 mb-4 rounded ${num < step ? "bg-brand-primary" : "bg-gray-200"}`} />
             )}
           </div>
         );
@@ -83,7 +83,7 @@ function Step1({
           value={firstName}
           onChange={(e) => onFirstName(e.target.value)}
           placeholder="กรอกชื่อ (ภาษาไทยหรืออังกฤษ)"
-          className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 placeholder-gray-400"
+          className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary placeholder-gray-400"
         />
       </div>
 
@@ -95,14 +95,14 @@ function Step1({
           value={lastName}
           onChange={(e) => onLastName(e.target.value)}
           placeholder="กรอกนามสกุล (ภาษาไทยหรืออังกฤษ)"
-          className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 placeholder-gray-400"
+          className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary placeholder-gray-400"
         />
       </div>
 
       <button
         onClick={onNext}
         disabled={!canProceed}
-        className="w-full bg-gray-900 text-white font-semibold py-3.5 rounded-2xl mt-2 hover:bg-gray-800 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+        className="w-full bg-brand-primary text-white font-semibold py-3.5 rounded-2xl mt-2 hover:bg-brand-primary/90 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
       >
         ไปสร้างธุรกิจ
       </button>
@@ -130,7 +130,7 @@ function Step2({
         <select
           value={businessType}
           onChange={(e) => onBusinessType(e.target.value as BusinessType)}
-          className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gray-900"
+          className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary"
         >
           <option value="individual">บุคคลธรรมดา / ฟรีแลนซ์</option>
           <option value="partnership">ห้างหุ้นส่วน</option>
@@ -167,7 +167,7 @@ function Step2({
           value={businessName}
           onChange={(e) => onBusinessName(e.target.value)}
           placeholder="เช่น ร้านค้าออนไลน์ของฉัน"
-          className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 placeholder-gray-400"
+          className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary placeholder-gray-400"
         />
       </div>
 
@@ -181,7 +181,7 @@ function Step2({
           value={phone}
           onChange={(e) => onPhone(e.target.value)}
           placeholder="0XX-XXX-XXXX"
-          className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 placeholder-gray-400"
+          className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary placeholder-gray-400"
         />
       </div>
 
@@ -192,7 +192,7 @@ function Step2({
         <button
           onClick={onNext}
           disabled={!canProceed}
-          className="flex-1 bg-gray-900 text-white font-semibold py-3.5 rounded-2xl hover:bg-gray-800 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          className="flex-1 bg-brand-primary text-white font-semibold py-3.5 rounded-2xl hover:bg-brand-primary/90 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >
           สร้างธุรกิจ
         </button>
@@ -267,7 +267,7 @@ function Step3({
         <button
           onClick={onFinish}
           disabled={!connected}
-          className="flex-1 bg-gray-900 text-white font-semibold py-3.5 rounded-2xl hover:bg-gray-800 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          className="flex-1 bg-brand-primary text-white font-semibold py-3.5 rounded-2xl hover:bg-brand-primary/90 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >
           เริ่มใช้งาน TaxBot →
         </button>
@@ -425,7 +425,7 @@ export default function OnboardingPage() {
       ?? (googleEmail ? `google_${googleEmail.toLowerCase().replace(/[@.+]/g, "_")}` : null);
 
     try {
-      const token = (session as typeof session & { accessToken?: string })?.accessToken;
+      const s = session as typeof session & { accessToken?: string; refreshToken?: string };
       await fetch("/api/user/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -438,7 +438,8 @@ export default function OnboardingPage() {
           phone,
           vatRegistered,
           googleEmail,
-          googleAccessToken: token ?? null,
+          googleAccessToken:  s?.accessToken  ?? null,
+          googleRefreshToken: s?.refreshToken ?? null,
         }),
       });
     } catch (err) {
