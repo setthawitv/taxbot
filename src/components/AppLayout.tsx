@@ -185,13 +185,6 @@ export default function AppLayout({
           )}
         </header>
 
-        {/* Desktop top bar */}
-        <div className="hidden lg:flex items-center gap-4 h-16 px-6 bg-white border-b border-gray-100 flex-shrink-0">
-          <h1 className="text-[#0A192F] font-bold text-lg flex-1">
-            {title || NAV.find((n) => n.href === pathname)?.labelTh || "TaxBot"}
-          </h1>
-        </div>
-
         {/* Page content */}
         <main className="flex-1 pb-20 lg:pb-0">
           {children}

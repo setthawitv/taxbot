@@ -220,15 +220,14 @@ function PieChart({ income, expense }: { income: number; expense: number }) {
   const total = income + expense;
   if (total === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-2">
-        <svg viewBox="0 0 80 80" className="w-24 h-24">
+      <div className="flex flex-col items-center gap-2">
+        <svg viewBox="0 0 80 80" className="w-40 h-40">
           <circle cx="40" cy="40" r="32" fill="none" stroke="#e5e7eb" strokeWidth="14" />
         </svg>
         <p className="text-xs text-gray-400">ยังไม่มีข้อมูล</p>
       </div>
     );
   }
-  const net     = income - expense;
   const r       = 32;
   const cx      = 40;
   const cy      = 40;
@@ -254,30 +253,11 @@ function PieChart({ income, expense }: { income: number; expense: number }) {
   const expFrac = expense / total;
 
   return (
-    <div className="flex flex-col items-center gap-4">
-      <svg viewBox="0 0 80 80" className="w-32 h-32 drop-shadow-sm">
-        {slice(0, incFrac, "#10B981")}
-        {slice(incFrac, 1, "#F43F5E")}
-        <circle cx={cx} cy={cy} r={16} fill="white" />
-      </svg>
-
-      <div className="w-full space-y-2">
-        <div className="flex items-center justify-between text-xs">
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#10B981] inline-block" />รายรับ</span>
-          <span className="font-semibold text-[#10B981]">{(incFrac * 100).toFixed(1)}%</span>
-        </div>
-        <div className="flex items-center justify-between text-xs">
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block" />รายจ่าย</span>
-          <span className="font-semibold text-rose-500">{(expFrac * 100).toFixed(1)}%</span>
-        </div>
-        <div className="pt-1 border-t border-gray-100 flex items-center justify-between text-xs">
-          <span className="text-gray-500">กำไรสุทธิ</span>
-          <span className={`font-bold ${net >= 0 ? "text-[#0A192F]" : "text-amber-500"}`}>
-            {net < 0 ? "-" : ""}฿{fmtInt(Math.abs(net))}
-          </span>
-        </div>
-      </div>
-    </div>
+    <svg viewBox="0 0 80 80" className="w-40 h-40 drop-shadow-sm">
+      {slice(0, incFrac, "#10B981")}
+      {slice(incFrac, 1, "#F43F5E")}
+      <circle cx={cx} cy={cy} r={18} fill="white" />
+    </svg>
   );
 }
 
@@ -424,29 +404,6 @@ export default function Home() {
     <AppLayout userInfo={layoutUserInfo} title="หน้าหลัก">
       <div className="px-4 py-5 lg:px-6 lg:py-6 max-w-5xl mx-auto space-y-6">
 
-        {/* ── Month selector ───────────────────────────────────────────────── */}
-        <div className="flex items-center gap-3">
-          <label className="text-xs font-semibold text-[#4A5568] uppercase tracking-widest whitespace-nowrap">
-            เดือน
-          </label>
-          <select
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(Number(e.target.value))}
-            className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white text-[#0A192F] font-medium focus:outline-none focus:ring-2 focus:ring-[#0A192F]/20 cursor-pointer"
-          >
-            {MONTH_TH.slice(1).map((label, i) => (
-              <option key={i + 1} value={i + 1}>{label} {CURRENT_YEAR}</option>
-            ))}
-          </select>
-          {selectedMonth !== CURRENT_MONTH && (
-            <button
-              onClick={() => setSelectedMonth(CURRENT_MONTH)}
-              className="text-xs text-[#4A5568] hover:text-[#0A192F] underline underline-offset-2 transition-colors"
-            >
-              กลับเดือนนี้
-            </button>
-          )}
-        </div>
 
         {/* ── Big stat cards (year) ─────────────────────────────────────────── */}
         <div>
@@ -515,36 +472,57 @@ export default function Home() {
 
           {/* Month stats */}
           <div className="lg:col-span-3 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <p className="text-xs font-semibold text-[#4A5568] uppercase tracking-widest mb-4">
-              เดือน {MONTH_TH[selectedMonth]} {CURRENT_YEAR}
-            </p>
-            <div className="flex gap-5 items-start">
-              {/* Pie chart */}
-              <div className="flex-shrink-0 w-36">
+            {/* Card header with inline month dropdown */}
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-xs font-semibold text-[#4A5568] uppercase tracking-widest">เดือน</p>
+              <div className="flex items-center gap-2">
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                  className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm bg-white text-[#0A192F] font-medium focus:outline-none focus:ring-2 focus:ring-[#0A192F]/20 cursor-pointer"
+                >
+                  {MONTH_TH.slice(1).map((label, i) => (
+                    <option key={i + 1} value={i + 1}>{label} {CURRENT_YEAR}</option>
+                  ))}
+                </select>
+                {selectedMonth !== CURRENT_MONTH && (
+                  <button
+                    onClick={() => setSelectedMonth(CURRENT_MONTH)}
+                    className="text-xs text-[#4A5568] hover:text-[#0A192F] underline underline-offset-2 transition-colors whitespace-nowrap"
+                  >
+                    เดือนนี้
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-0">
+              {/* Pie chart — 50% */}
+              <div className="w-1/2 flex items-center justify-center">
                 {loadingStats ? (
-                  <div className="w-32 h-32 rounded-full bg-gray-100 animate-pulse mx-auto" />
+                  <div className="w-36 h-36 rounded-full bg-gray-100 animate-pulse" />
                 ) : (
                   <PieChart income={stats?.monthIncome ?? 0} expense={stats?.monthExpense ?? 0} />
                 )}
               </div>
-              {/* Numbers */}
-              <div className="flex-1 space-y-3 pt-1">
+              {/* Numbers — 50% */}
+              <div className="w-1/2 flex flex-col justify-center gap-4 pl-4 border-l border-gray-100">
                 <div>
                   <p className="text-xs text-gray-400 mb-1">รายรับ</p>
                   {loadingStats ? <div className="h-6 bg-gray-100 rounded animate-pulse" /> : (
-                    <p className="text-lg font-bold text-emerald-600">฿{fmtInt(stats?.monthIncome ?? 0)}</p>
+                    <p className="text-xl font-bold text-emerald-600">฿{fmtInt(stats?.monthIncome ?? 0)}</p>
                   )}
                 </div>
                 <div>
                   <p className="text-xs text-gray-400 mb-1">รายจ่าย</p>
                   {loadingStats ? <div className="h-6 bg-gray-100 rounded animate-pulse" /> : (
-                    <p className="text-lg font-bold text-rose-500">฿{fmtInt(stats?.monthExpense ?? 0)}</p>
+                    <p className="text-xl font-bold text-rose-500">฿{fmtInt(stats?.monthExpense ?? 0)}</p>
                   )}
                 </div>
                 <div>
                   <p className="text-xs text-gray-400 mb-1">กำไร</p>
                   {loadingStats ? <div className="h-6 bg-gray-100 rounded animate-pulse" /> : (
-                    <p className={`text-lg font-bold ${netMonth >= 0 ? "text-blue-600" : "text-amber-500"}`}>
+                    <p className={`text-xl font-bold ${netMonth >= 0 ? "text-blue-600" : "text-amber-500"}`}>
                       {netMonth < 0 ? "-" : ""}฿{fmtInt(Math.abs(netMonth))}
                     </p>
                   )}
