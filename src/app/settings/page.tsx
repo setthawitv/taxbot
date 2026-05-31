@@ -185,10 +185,10 @@ function SettingsPageInner() {
     })
       .then((r) => r.json())
       .then((d) => {
-        if (d.ok) setSyncResult({ synced: 0, failed: 0, skipped: 0, message: "✅ เชื่อมต่อ Google ใหม่สำเร็จ" });
-        else       setSyncResult({ synced: 0, failed: 0, skipped: 0, message: "❌ บันทึก token ไม่สำเร็จ" });
+        if (d.ok) setSyncResult({ synced: 0, failed: 0, skipped: 0, message: "เชื่อมต่อ Google ใหม่สำเร็จ" });
+        else       setSyncResult({ synced: 0, failed: 0, skipped: 0, message: "บันทึก token ไม่สำเร็จ" });
       })
-      .catch(() => setSyncResult({ synced: 0, failed: 0, skipped: 0, message: "❌ เชื่อมต่อใหม่ไม่สำเร็จ" }))
+      .catch(() => setSyncResult({ synced: 0, failed: 0, skipped: 0, message: "เชื่อมต่อใหม่ไม่สำเร็จ" }))
       .finally(() => setReconnecting(false));
   }, [reconnecting, lineUserId, session]);
 
@@ -223,7 +223,7 @@ function SettingsPageInner() {
       setSyncResult(data);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "เกิดข้อผิดพลาด";
-      setSyncResult({ synced: 0, failed: 0, skipped: 0, message: `❌ ${msg}` });
+      setSyncResult({ synced: 0, failed: 0, skipped: 0, message: msg });
     } finally {
       setSyncing(false);
     }
@@ -459,10 +459,10 @@ function SettingsPageInner() {
                   currentPlan === "eco"      ? "bg-teal-100 text-teal-700" :
                   "bg-gray-100 text-gray-500"
                 }`}>
-                  {currentPlan === "trial"    ? "🎁 ทดลองใช้" :
-                   currentPlan === "eco"      ? "🌿 Eco"       :
-                   currentPlan === "pro"      ? "⚡ Pro"       :
-                   currentPlan === "platinum" ? "👑 Platinum"  : currentPlan}
+                  {currentPlan === "trial"    ? "ทดลองใช้" :
+                   currentPlan === "eco"      ? "Eco"       :
+                   currentPlan === "pro"      ? "Pro"       :
+                   currentPlan === "platinum" ? "Platinum"  : currentPlan}
                 </span>
                 {currentPlan !== "platinum" && (
                   <button
@@ -492,7 +492,7 @@ function SettingsPageInner() {
                   href={`${typeof window !== "undefined" ? window.location.origin : ""}/connect-google?lid=${lineUserId}&ext=1&openExternalBrowser=1`}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold text-white bg-blue-500 active:bg-blue-600 transition-colors text-center"
                 >
-                  🌐 กดที่นี่เพื่อเปิด Safari / Chrome
+                  กดที่นี่เพื่อเปิด Safari / Chrome
                 </a>
               ) : googleEmail ? (
                 <div className="flex flex-col gap-3">
@@ -511,7 +511,7 @@ function SettingsPageInner() {
               ) : (
                 <button onClick={handleGoogleConnect} disabled={!lineUserId}
                   className="w-full py-3 rounded-xl text-sm font-semibold text-white bg-blue-500 hover:bg-blue-600 transition-colors disabled:opacity-40">
-                  🔗 เชื่อมต่อ Google
+                  เชื่อมต่อ Google
                 </button>
               )}
             </div>
@@ -646,7 +646,7 @@ function SettingsPageInner() {
                           <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full mt-1 ${
                             a.status === "accepted" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
                           }`}>
-                            {a.status === "accepted" ? <span className="inline-flex items-center gap-1"><IconCheck className="w-3 h-3" /> ยืนยันแล้ว</span> : "⏳ รอยืนยัน"}
+                            {a.status === "accepted" ? <span className="inline-flex items-center gap-1"><IconCheck className="w-3 h-3" /> ยืนยันแล้ว</span> : "รอยืนยัน"}
                           </span>
                         </div>
                         <div className="flex flex-col gap-1 flex-shrink-0">
@@ -659,7 +659,7 @@ function SettingsPageInner() {
                                   : "bg-blue-50 text-blue-600 hover:bg-blue-100"
                               }`}
                             >
-                              {adminCopied === a.invite_code ? "✅ คัดลอก" : "🔗 คัดลอก"}
+                              {adminCopied === a.invite_code ? "คัดลอกแล้ว" : "คัดลอกลิงก์"}
                             </button>
                           )}
                           <button
@@ -699,7 +699,9 @@ function SettingsPageInner() {
 
             {qrStatus === "completed" ? (
               <div className="text-center py-6">
-                <div className="text-5xl mb-3">🎉</div>
+                <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-3">
+                  <IconCheckCircle className="w-8 h-8 text-emerald-600" />
+                </div>
                 <h3 className="text-xl font-bold text-gray-800 mb-1">ชำระเงินสำเร็จ!</h3>
                 <p className="text-gray-500 text-sm">แพ็กเกจของคุณได้รับการอัปเกรดแล้ว</p>
               </div>
@@ -717,7 +719,7 @@ function SettingsPageInner() {
                   <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold ${
                     countdown <= 60 ? "bg-red-50 text-red-500" : "bg-amber-50 text-amber-600"
                   }`}>
-                    <span>⏱</span>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="10" strokeWidth="2"/><path strokeLinecap="round" d="M12 6v6l4 2" strokeWidth="2"/></svg>
                     จ่ายภายใน {Math.floor(countdown / 60)}:{String(countdown % 60).padStart(2, "0")} นาที
                   </div>
 
@@ -725,13 +727,15 @@ function SettingsPageInner() {
                     เปิดแอปธนาคาร → สแกน QR → ยืนยันการชำระเงิน
                   </p>
                   <div className="flex items-center gap-2 text-xs text-gray-400">
-                    <span className="animate-pulse">⏳</span> รอการยืนยัน...
+                    <span className="animate-pulse w-2 h-2 rounded-full bg-current inline-block" /> รอการยืนยัน...
                   </div>
                 </div>
               </>
             ) : qrStatus === "failed" ? (
               <div className="text-center py-4">
-                <div className="text-4xl mb-3">❌</div>
+                <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
+                  <svg className="w-7 h-7 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </div>
                 <p className="text-gray-700 font-semibold mb-1">การชำระเงินล้มเหลว</p>
                 <p className="text-xs text-gray-400 mb-4">QR หมดอายุหรือเกิดข้อผิดพลาด</p>
                 <button onClick={() => { setQrStatus("idle"); setQrImage(""); setCountdown(0); }}
@@ -776,7 +780,7 @@ function SettingsPageInner() {
                         <div className="flex-1 text-left">
                           <p className="font-semibold text-gray-800 text-sm">{p.name}</p>
                           <p className="text-xs text-gray-400">
-                            {isCurrent ? "✅ แพ็กเกจปัจจุบัน" : p.desc}
+                            {isCurrent ? "แพ็กเกจปัจจุบัน" : p.desc}
                           </p>
                         </div>
                         <div className="text-right flex-shrink-0">
@@ -809,7 +813,7 @@ function SettingsPageInner() {
                       disabled={paying || !lineUserId}
                       className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-violet-500 to-purple-600 text-white font-bold text-sm hover:opacity-90 disabled:opacity-40 transition-opacity"
                     >
-                      {paying ? "⏳ กำลังสร้าง QR..." : `💳 จ่าย ฿${chargeThb} ผ่าน PromptPay`}
+                      {paying ? "กำลังสร้าง QR..." : `จ่าย ฿${chargeThb} ผ่าน PromptPay`}
                     </button>
                   );
                 })()}
