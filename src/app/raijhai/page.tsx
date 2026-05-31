@@ -425,7 +425,7 @@ export default function RaiJhai() {
               <div className="bg-white rounded-2xl p-8 text-center text-gray-400 border border-rose-100">
                 <div className="flex justify-center mb-2 text-rose-300"><IconInbox className="w-10 h-10" /></div>
                 <p>ไม่มีรายจ่ายในช่วงนี้</p>
-                <p className="text-sm mt-1">กด + เพิ่มรายจ่าย หรือส่งสลิปใน LINE</p>
+                <p className="text-sm mt-1">กด + เพิ่มรายจ่าย</p>
               </div>
             ) : (
               <ul className="flex flex-col gap-3">
