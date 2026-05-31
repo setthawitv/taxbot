@@ -266,7 +266,7 @@ export default function LandingPage() {
         <div className="flex flex-col gap-4">
           {STEPS.map((s, i) => (
             <div key={s.no} className="flex items-start gap-5 bg-white/5 border border-white/10 rounded-2xl p-6">
-              <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-brand-primary flex items-center justify-center text-brand-accent font-bold text-lg">
+              <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-[#0A192F] flex items-center justify-center text-[#10B981] font-bold text-lg">
                 {s.no}
               </div>
               <div className="flex-1">

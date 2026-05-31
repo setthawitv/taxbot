@@ -349,25 +349,25 @@ export default function Home() {
   const netYear  = (stats?.yearIncome  ?? 0) - (stats?.yearExpense  ?? 0);
 
   return (
-    <main className="min-h-screen bg-brand-neutral">
+    <main className="min-h-screen bg-[#F8FAFC]">
       <div className="max-w-5xl mx-auto px-4 py-8">
 
         {/* ── Header ─────────────────────────────────────────────────────────── */}
-        <div className="flex items-center gap-4 mb-8">
+        <div className="flex items-center gap-4 mb-8 bg-[#0A192F] rounded-2xl px-5 py-4">
           {userInfo?.pictureUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={userInfo.pictureUrl} alt="profile"
               className="w-14 h-14 rounded-full object-cover border-2 border-white shadow" />
           ) : (
-            <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 shadow"><IconUser className="w-7 h-7" /></div>
+            <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center text-white shadow"><IconUser className="w-7 h-7" /></div>
           )}
           <div className="flex-1 min-w-0">
             {userInfo?.role === "admin" ? (
               <>
-                <h1 className="text-xl font-bold text-brand-primary truncate">
+                <h1 className="text-xl font-bold text-white truncate">
                   {userInfo.displayName}
                 </h1>
-                <p className="text-gray-400 text-sm truncate">
+                <p className="text-white/60 text-sm truncate">
                   {userInfo.businessName
                     ? <>{userInfo.businessName}</>
                     : "Admin · Dashboard"}
@@ -375,10 +375,10 @@ export default function Home() {
               </>
             ) : (
               <>
-                <h1 className="text-xl font-bold text-brand-primary truncate">
+                <h1 className="text-xl font-bold text-white truncate">
                   {userInfo?.businessName || userInfo?.displayName || "TaxBot"}
                 </h1>
-                <p className="text-gray-400 text-sm truncate">
+                <p className="text-white/60 text-sm truncate">
                   {userInfo?.businessName ? userInfo.displayName || "Dashboard" : "Dashboard · ปี " + CURRENT_YEAR}
                 </p>
               </>
@@ -387,18 +387,18 @@ export default function Home() {
           <div className="flex gap-2">
             <Link href="/landing"
               title="หน้าแรก"
-              className="flex items-center justify-center w-10 h-10 text-gray-500 hover:text-gray-800 hover:bg-gray-50 bg-white border border-gray-200 rounded-xl transition-colors">
+              className="flex items-center justify-center w-10 h-10 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors">
               <IconHome />
             </Link>
             <button
               onClick={() => setShowTour(true)}
               title="วิธีใช้งาน"
-              className="flex items-center justify-center w-10 h-10 text-gray-500 hover:text-gray-800 hover:bg-gray-50 bg-white border border-gray-200 rounded-xl transition-colors"
+              className="flex items-center justify-center w-10 h-10 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
             >
               <IconHelp />
             </button>
             <Link href="/settings"
-              className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 bg-white border border-gray-200 px-3.5 h-10 rounded-xl transition-colors">
+              className="flex items-center gap-2 text-sm text-white/70 hover:text-white hover:bg-white/10 px-3.5 h-10 rounded-xl transition-colors">
               <IconSettings className="w-4 h-4" /> <span className="font-medium">ตั้งค่า</span>
             </Link>
           </div>

@@ -401,7 +401,7 @@ function SettingsPageInner() {
   }
 
   return (
-    <main className="min-h-screen bg-brand-neutral px-4 py-8">
+    <main className="min-h-screen bg-[#F8FAFC] px-4 py-8">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center gap-3 mb-4">
           <Link href="/" className="text-gray-500 text-sm">← กลับ</Link>
@@ -440,7 +440,7 @@ function SettingsPageInner() {
                 <button
                   type="submit"
                   disabled={savingBusinessName || !businessNameDraft.trim() || !lineUserId || businessNameDraft.trim() === businessName}
-                  className="px-4 py-2.5 rounded-xl text-sm font-semibold bg-brand-primary text-white hover:bg-[#0d2240] disabled:opacity-40 transition-colors flex-shrink-0"
+                  className="px-4 py-2.5 rounded-xl text-sm font-semibold bg-[#0A192F] text-white hover:bg-[#0d2240] disabled:opacity-40 transition-colors flex-shrink-0"
                 >
                   {businessNameSaved ? <IconCheck className="w-4 h-4" /> : savingBusinessName ? "..." : "บันทึก"}
                 </button>
@@ -577,7 +577,7 @@ function SettingsPageInner() {
                   </button>
                 </div>
                 <button type="submit" disabled={saving || !name.trim()}
-                  className="bg-brand-primary text-white py-2.5 rounded-xl text-sm font-medium hover:bg-[#0d2240] disabled:opacity-40 transition-colors">
+                  className="bg-[#0A192F] text-white py-2.5 rounded-xl text-sm font-medium hover:bg-[#0d2240] disabled:opacity-40 transition-colors">
                   {saving ? "กำลังบันทึก..." : "+ เพิ่มรายการ"}
                 </button>
               </form>
@@ -624,7 +624,7 @@ function SettingsPageInner() {
                 <button
                   type="submit"
                   disabled={adminAdding || !adminEmail.trim() || !lineUserId}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold bg-brand-primary text-white hover:bg-[#0d2240] disabled:opacity-40 transition-colors flex-shrink-0"
+                  className="px-4 py-2 rounded-xl text-sm font-semibold bg-[#0A192F] text-white hover:bg-[#0d2240] disabled:opacity-40 transition-colors flex-shrink-0"
                 >
                   {adminAdding ? "..." : "+ เพิ่ม"}
                 </button>
@@ -733,7 +733,7 @@ function SettingsPageInner() {
                 <p className="text-gray-700 font-semibold mb-1">การชำระเงินล้มเหลว</p>
                 <p className="text-xs text-gray-400 mb-4">QR หมดอายุหรือเกิดข้อผิดพลาด</p>
                 <button onClick={() => { setQrStatus("idle"); setQrImage(""); setCountdown(0); }}
-                  className="px-5 py-2 rounded-xl bg-brand-primary text-white text-sm font-semibold">
+                  className="px-5 py-2 rounded-xl bg-[#0A192F] text-white text-sm font-semibold">
                   ลองใหม่
                 </button>
               </div>
@@ -824,7 +824,7 @@ function SettingsPageInner() {
 export default function SettingsPage() {
   return (
     <Suspense fallback={
-      <main className="min-h-screen bg-brand-neutral flex items-center justify-center">
+      <main className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
         <div className="text-center">
           <div className="text-4xl mb-3 animate-pulse">⚙️</div>
           <p className="text-gray-400 text-sm">กำลังโหลด...</p>
