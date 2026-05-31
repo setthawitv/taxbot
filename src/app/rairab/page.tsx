@@ -292,7 +292,7 @@ export default function RaiRab() {
 
   return (
     <AppLayout title="รายรับ">
-    <main className="min-h-screen bg-emerald-50 px-4 py-8">
+    <main className="min-h-screen bg-[#F8FAFC] px-4 py-8">
       <div className="max-w-5xl mx-auto">
 
         {/* Header */}

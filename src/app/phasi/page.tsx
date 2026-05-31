@@ -250,7 +250,7 @@ export default function PhasiPage() {
 
   return (
     <AppLayout title="ภาษี">
-    <main className="min-h-screen bg-blue-50 px-4 py-8">
+    <main className="min-h-screen bg-[#F8FAFC] px-4 py-8">
       <div className="max-w-6xl mx-auto">
 
         {/* Header */}

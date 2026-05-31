@@ -272,7 +272,7 @@ export default function RaiJhai() {
 
   return (
     <AppLayout title="รายจ่าย">
-    <main className="min-h-screen bg-rose-50 px-4 py-8">
+    <main className="min-h-screen bg-[#F8FAFC] px-4 py-8">
       <div className="max-w-5xl mx-auto">
 
         {/* Header */}
