@@ -28,6 +28,15 @@ type Summary = {
 
 type AdjustEntry = { id: string; amount: number; vendor: string; transaction_date: string };
 
+type TxnRow = {
+  id: string;
+  amount: number;
+  vendor: string;
+  description: string;
+  transaction_date: string;
+  source?: string;
+};
+
 const PLATFORM_OPTIONS: { id: Platform; label: string; emoji: string; color: string }[] = [
   { id: "all",    label: "ทั้งหมด", emoji: "📊", color: "bg-emerald-500" },
   { id: "tiktok", label: "TikTok",  emoji: "🎵", color: "bg-gray-800"   },
@@ -40,6 +49,77 @@ const MONTHS = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","�
 const CURRENT_YEAR  = new Date().getFullYear();
 const CURRENT_MONTH = new Date().getMonth() + 1;
 const YEARS = [CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2];
+
+const PLATFORM_COLORS: Record<string, string> = {
+  tiktok: "#1f2937",
+  shopee: "#f97316",
+  lazada: "#2563eb",
+  manual: "#8b5cf6",
+};
+const PLATFORM_LABELS: Record<string, string> = {
+  tiktok: "TikTok Shop",
+  shopee: "Shopee",
+  lazada: "Lazada",
+  manual: "Manual",
+};
+
+function PlatformDonut({ byPlatform, total }: { byPlatform: Record<string, number>; total: number }) {
+  const entries = Object.entries(byPlatform).filter(([, v]) => v > 0);
+  const r = 36; const cx = 44; const cy = 44; const tau = 2 * Math.PI;
+  let cursor = 0;
+  const slices = entries.map(([key, val]) => {
+    const frac = total > 0 ? val / total : 0;
+    const start = cursor;
+    cursor += frac;
+    return { key, val, frac, start, end: cursor };
+  });
+
+  function arc(startFrac: number, endFrac: number, color: string) {
+    const gap = 0.012;
+    const s = (startFrac + gap / 2) * tau - Math.PI / 2;
+    const e = (endFrac  - gap / 2) * tau - Math.PI / 2;
+    if (e - s <= 0) return null;
+    const large = endFrac - startFrac > 0.5 ? 1 : 0;
+    const x1 = cx + r * Math.cos(s); const y1 = cy + r * Math.sin(s);
+    const x2 = cx + r * Math.cos(e); const y2 = cy + r * Math.sin(e);
+    return <path key={color} d={`M${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2}`}
+      fill="none" stroke={color} strokeWidth="14" strokeLinecap="round" />;
+  }
+
+  if (entries.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-2">
+        <svg viewBox="0 0 88 88" className="w-28 h-28">
+          <circle cx={cx} cy={cy} r={r} fill="none" stroke="#e5e7eb" strokeWidth="14" />
+        </svg>
+        <p className="text-xs text-gray-400">ยังไม่มีข้อมูล</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-4">
+      <div className="relative">
+        <svg viewBox="0 0 88 88" className="w-36 h-36">
+          {slices.map((sl) => arc(sl.start, sl.end, PLATFORM_COLORS[sl.key] ?? "#9ca3af"))}
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+          <p className="text-base font-bold text-[#0A192F]">Total</p>
+          <p className="text-[10px] text-gray-400">{entries.length} Sources</p>
+        </div>
+      </div>
+      <div className="w-full space-y-2">
+        {slices.map((sl) => (
+          <div key={sl.key} className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 border border-gray-100">
+            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: PLATFORM_COLORS[sl.key] ?? "#9ca3af" }} />
+            <span className="flex-1 text-xs text-gray-600">{PLATFORM_LABELS[sl.key] ?? sl.key}</span>
+            <span className="text-xs font-bold text-gray-800">{(sl.frac * 100).toFixed(0)}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function RaiRab() {
   const [lineUserId, setLineUserId] = useState("");
@@ -71,6 +151,9 @@ export default function RaiRab() {
   // Past adjustments list
   const [adjusts,    setAdjusts]    = useState<AdjustEntry[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Recent transactions for table
+  const [recentTxns, setRecentTxns] = useState<TxnRow[]>([]);
 
   // Scan receipt
   const [showScan,    setShowScan]    = useState(false);
@@ -136,12 +219,16 @@ export default function RaiRab() {
       .catch((e) => { if (e.name !== "AbortError") console.error(e); })
       .finally(() => setLoading(false));
 
-    // Manual adjustments (year-wide, no platform filter)
+    // All transactions (year-wide, no platform filter)
     fetch(`/api/transactions?type=income&lineUserId=${lineUserId}&year=${year}`, { signal: ctrl.signal })
       .then((r) => r.json())
       .then((d) => {
-        const manual = (d.transactions ?? []).filter((t: AdjustEntry & { source?: string }) => !t.source);
+        const all: (AdjustEntry & { source?: string; description?: string })[] = d.transactions ?? [];
+        const manual = all.filter((t) => !t.source);
         setAdjusts(manual);
+        // Recent: latest 20, any source
+        const sorted = [...all].sort((a, b) => b.transaction_date.localeCompare(a.transaction_date));
+        setRecentTxns(sorted.slice(0, 20));
       })
       .catch((e) => { if (e.name !== "AbortError") console.error(e); });
 
@@ -160,8 +247,10 @@ export default function RaiRab() {
     fetch(`/api/transactions?type=income&lineUserId=${uid}&year=${year}`)
       .then((r) => r.json())
       .then((d) => {
-        const manual = (d.transactions ?? []).filter((t: AdjustEntry & { source?: string }) => !t.source);
-        setAdjusts(manual);
+        const all: (AdjustEntry & { source?: string; description?: string })[] = d.transactions ?? [];
+        setAdjusts(all.filter((t) => !t.source));
+        const sorted = [...all].sort((a, b) => b.transaction_date.localeCompare(a.transaction_date));
+        setRecentTxns(sorted.slice(0, 20));
       });
   }
 
@@ -597,6 +686,82 @@ export default function RaiRab() {
           </div>
         </div>
       </div>
+
+      {/* ── Recent transactions + Platform donut ─────────────────────────── */}
+        {(recentTxns.length > 0 || (summary && Object.keys(summary.byPlatform).length > 0)) && (
+          <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+            {/* Recent transactions table */}
+            <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                <p className="text-sm font-bold text-[#0A192F]">รายการรายรับล่าสุด</p>
+                <span className="text-xs text-gray-400">ทั้งหมด {recentTxns.length} รายการ</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-gray-50 text-gray-400 font-semibold uppercase tracking-wide">
+                      <th className="text-left px-5 py-2.5">วันที่ / เวลา</th>
+                      <th className="text-left px-3 py-2.5">รายละเอียดรายการ</th>
+                      <th className="text-left px-3 py-2.5 hidden sm:table-cell">แพลตฟอร์ม</th>
+                      <th className="text-right px-3 py-2.5">จำนวนเงิน</th>
+                      <th className="text-left px-3 py-2.5 hidden md:table-cell">สถานะ</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {recentTxns.map((t) => {
+                      const src = t.source ?? "manual";
+                      const color = PLATFORM_COLORS[src] ?? "#8b5cf6";
+                      const label = PLATFORM_LABELS[src] ?? src;
+                      const positive = Number(t.amount) >= 0;
+                      return (
+                        <tr key={t.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-5 py-3 whitespace-nowrap text-gray-500">
+                            {t.transaction_date}
+                          </td>
+                          <td className="px-3 py-3 min-w-[140px]">
+                            <p className="font-semibold text-[#0A192F] truncate max-w-[180px]">{t.vendor || t.description || "—"}</p>
+                            {t.description && t.description !== t.vendor && (
+                              <p className="text-gray-400 truncate max-w-[180px]">{t.description}</p>
+                            )}
+                          </td>
+                          <td className="px-3 py-3 hidden sm:table-cell">
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-semibold text-white"
+                              style={{ background: color }}>{label}</span>
+                          </td>
+                          <td className="px-3 py-3 text-right whitespace-nowrap">
+                            <span className={`font-bold ${positive ? "text-[#0A192F]" : "text-rose-500"}`}>
+                              {positive ? "" : "-"}฿{Math.abs(Number(t.amount)).toLocaleString("th-TH", { minimumFractionDigits: 2 })}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3 hidden md:table-cell">
+                            {positive ? (
+                              <span className="flex items-center gap-1.5 text-emerald-600">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />ตรวจสอบแล้ว
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1.5 text-rose-500">
+                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 flex-shrink-0" />รอดำเนินการ
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Platform donut */}
+            {summary && Object.keys(summary.byPlatform).length > 0 && (
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <p className="text-sm font-bold text-[#0A192F] mb-4">สัดส่วนแพลตฟอร์ม</p>
+                <PlatformDonut byPlatform={summary.byPlatform} total={summary.total} />
+              </div>
+            )}
+          </div>
+        )}
 
       {/* ── Scan modal ──────────────────────────────────────────────────────── */}
       {showScan && (
