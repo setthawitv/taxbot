@@ -7,6 +7,7 @@ import {
   IconTax, IconCheck, IconIncome, IconMusic, IconCart, IconBag, IconNote, IconExpense,
   IconPlus, IconUser,
 } from "@/components/icons";
+import AppLayout from "@/components/AppLayout";
 import {
   DEDUCTIONS, GROUP_LABELS, SHARE_CAPS, maxAllowed, sumDeductions,
   type DeductionItem,
@@ -248,6 +249,7 @@ export default function PhasiPage() {
   }, [raw, deductions, taxpayer, isSME, salaryIncome, commissionIncome]);
 
   return (
+    <AppLayout title="ภาษี">
     <main className="min-h-screen bg-blue-50 px-4 py-8">
       <div className="max-w-6xl mx-auto">
 
@@ -571,6 +573,7 @@ export default function PhasiPage() {
         )}
       </div>
     </main>
+    </AppLayout>
   );
 }
 

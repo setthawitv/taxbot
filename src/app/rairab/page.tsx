@@ -7,6 +7,7 @@ import {
   IconIncome, IconScan, IconPlus, IconPencil, IconUpload,
   IconAll, IconMusic, IconCart, IconBag, IconNote, IconInbox,
 } from "@/components/icons";
+import AppLayout from "@/components/AppLayout";
 
 type Platform = "all" | "tiktok" | "shopee" | "lazada" | "manual";
 
@@ -290,6 +291,7 @@ export default function RaiRab() {
   const pl = PLATFORM_OPTIONS.find((p) => p.id === platform)!;
 
   return (
+    <AppLayout title="รายรับ">
     <main className="min-h-screen bg-emerald-50 px-4 py-8">
       <div className="max-w-5xl mx-auto">
 
@@ -649,5 +651,6 @@ export default function RaiRab() {
         </div>
       )}
     </main>
+    </AppLayout>
   );
 }

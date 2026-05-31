@@ -4,11 +4,12 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import {
-  IconHome, IconHelp, IconSettings,
+  IconHelp,
   IconIncome, IconExpense, IconTax,
   IconGoogleSheets, IconGoogleDrive,
   IconScan, IconShield, IconCheckCircle, IconWave, IconLightbulb, IconUser, IconRocket,
 } from "@/components/icons";
+import AppLayout from "@/components/AppLayout";
 import type { ComponentType } from "react";
 
 // ── Tour steps ────────────────────────────────────────────────────────────────
@@ -348,200 +349,168 @@ export default function Home() {
   const netMonth = (stats?.monthIncome ?? 0) - (stats?.monthExpense ?? 0);
   const netYear  = (stats?.yearIncome  ?? 0) - (stats?.yearExpense  ?? 0);
 
+  const layoutUserInfo = userInfo
+    ? { displayName: userInfo.displayName, pictureUrl: userInfo.pictureUrl, businessName: userInfo.businessName }
+    : null;
+
   return (
-    <main className="min-h-screen bg-[#F8FAFC]">
-      <div className="max-w-5xl mx-auto px-4 py-8">
+    <AppLayout userInfo={layoutUserInfo} title="หน้าหลัก">
+      <div className="px-4 py-5 lg:px-6 lg:py-6 max-w-5xl mx-auto space-y-6">
 
-        {/* ── Header ─────────────────────────────────────────────────────────── */}
-        <div className="flex items-center gap-4 mb-8 bg-[#0A192F] rounded-2xl px-5 py-4">
-          {userInfo?.pictureUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={userInfo.pictureUrl} alt="profile"
-              className="w-14 h-14 rounded-full object-cover border-2 border-white shadow" />
-          ) : (
-            <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center text-white shadow"><IconUser className="w-7 h-7" /></div>
-          )}
-          <div className="flex-1 min-w-0">
-            {userInfo?.role === "admin" ? (
-              <>
-                <h1 className="text-xl font-bold text-white truncate">
-                  {userInfo.displayName}
-                </h1>
-                <p className="text-white/60 text-sm truncate">
-                  {userInfo.businessName
-                    ? <>{userInfo.businessName}</>
-                    : "Admin · Dashboard"}
+        {/* ── Big stat cards (year) ─────────────────────────────────────────── */}
+        <div>
+          <p className="text-xs font-semibold text-[#4A5568] uppercase tracking-widest mb-3">
+            ภาพรวมทั้งปี {CURRENT_YEAR}
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+            {/* Income */}
+            <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                  <IconIncome className="w-4 h-4 text-emerald-600" />
+                </div>
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">รายรับรวม</span>
+              </div>
+              {loadingStats ? (
+                <div className="h-8 bg-gray-100 rounded animate-pulse w-3/4 mb-1" />
+              ) : (
+                <p className="text-2xl font-bold text-[#0A192F]">฿{fmtInt(stats?.yearIncome ?? 0)}</p>
+              )}
+              <p className="text-xs text-gray-400 mt-1">Income · {CURRENT_YEAR}</p>
+            </div>
+
+            {/* Expense */}
+            <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center">
+                  <IconExpense className="w-4 h-4 text-rose-600" />
+                </div>
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">รายจ่ายรวม</span>
+              </div>
+              {loadingStats ? (
+                <div className="h-8 bg-gray-100 rounded animate-pulse w-3/4 mb-1" />
+              ) : (
+                <p className="text-2xl font-bold text-[#0A192F]">฿{fmtInt(stats?.yearExpense ?? 0)}</p>
+              )}
+              <p className="text-xs text-gray-400 mt-1">Expense · {CURRENT_YEAR}</p>
+            </div>
+
+            {/* Net */}
+            <div className={`rounded-2xl border p-5 shadow-sm ${netYear >= 0 ? "bg-[#0A192F] border-[#0A192F]" : "bg-white border-amber-100"}`}>
+              <div className="flex items-center gap-2 mb-3">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${netYear >= 0 ? "bg-white/10" : "bg-amber-50"}`}>
+                  <IconTax className={`w-4 h-4 ${netYear >= 0 ? "text-[#10B981]" : "text-amber-500"}`} />
+                </div>
+                <span className={`text-xs font-semibold uppercase tracking-wide ${netYear >= 0 ? "text-white/50" : "text-gray-400"}`}>กำไรสุทธิ</span>
+              </div>
+              {loadingStats ? (
+                <div className={`h-8 rounded animate-pulse w-3/4 mb-1 ${netYear >= 0 ? "bg-white/10" : "bg-gray-100"}`} />
+              ) : (
+                <p className={`text-2xl font-bold ${netYear >= 0 ? "text-white" : "text-amber-600"}`}>
+                  {netYear < 0 ? "-" : ""}฿{fmtInt(Math.abs(netYear))}
                 </p>
-              </>
-            ) : (
-              <>
-                <h1 className="text-xl font-bold text-white truncate">
-                  {userInfo?.businessName || userInfo?.displayName || "TaxBot"}
-                </h1>
-                <p className="text-white/60 text-sm truncate">
-                  {userInfo?.businessName ? userInfo.displayName || "Dashboard" : "Dashboard · ปี " + CURRENT_YEAR}
-                </p>
-              </>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <Link href="/landing"
-              title="หน้าแรก"
-              className="flex items-center justify-center w-10 h-10 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors">
-              <IconHome />
-            </Link>
-            <button
-              onClick={() => setShowTour(true)}
-              title="วิธีใช้งาน"
-              className="flex items-center justify-center w-10 h-10 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
-            >
-              <IconHelp />
-            </button>
-            <Link href="/settings"
-              className="flex items-center gap-2 text-sm text-white/70 hover:text-white hover:bg-white/10 px-3.5 h-10 rounded-xl transition-colors">
-              <IconSettings className="w-4 h-4" /> <span className="font-medium">ตั้งค่า</span>
-            </Link>
+              )}
+              <p className={`text-xs mt-1 ${netYear >= 0 ? "text-white/40" : "text-amber-400"}`}>
+                {netYear < 0 ? "ขาดทุน" : "Net Profit"} · {CURRENT_YEAR}
+              </p>
+            </div>
+
           </div>
         </div>
 
-        {/* ── Main grid (desktop: 3 cols, mobile: 1 col) ─────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* ── Month stats + Tax ─────────────────────────────────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
 
-          {/* LEFT: Navigation + Tools ──────────────────────────────────────── */}
-          <div className="space-y-3 lg:order-first">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">เมนูหลัก</p>
+          {/* Month stats */}
+          <div className="lg:col-span-3 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <p className="text-xs font-semibold text-[#4A5568] uppercase tracking-widest mb-4">
+              เดือนนี้ — {MONTH_TH[CURRENT_MONTH]} {CURRENT_YEAR}
+            </p>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <p className="text-xs text-gray-400 mb-1">รายรับ</p>
+                {loadingStats ? <div className="h-6 bg-gray-100 rounded animate-pulse" /> : (
+                  <p className="text-lg font-bold text-emerald-600">฿{fmtInt(stats?.monthIncome ?? 0)}</p>
+                )}
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 mb-1">รายจ่าย</p>
+                {loadingStats ? <div className="h-6 bg-gray-100 rounded animate-pulse" /> : (
+                  <p className="text-lg font-bold text-rose-500">฿{fmtInt(stats?.monthExpense ?? 0)}</p>
+                )}
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 mb-1">กำไร</p>
+                {loadingStats ? <div className="h-6 bg-gray-100 rounded animate-pulse" /> : (
+                  <p className={`text-lg font-bold ${netMonth >= 0 ? "text-blue-600" : "text-amber-500"}`}>
+                    {netMonth < 0 ? "-" : ""}฿{fmtInt(Math.abs(netMonth))}
+                  </p>
+                )}
+              </div>
+            </div>
 
-            <Link href="/rairab"
-              className="flex items-center gap-4 p-4 rounded-2xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-colors">
-              <div className="w-11 h-11 flex items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
-                <IconIncome />
-              </div>
-              <div className="flex-1">
-                <div className="font-semibold text-emerald-700">รายรับ</div>
-                <div className="text-gray-400 text-xs">Income · นำเข้าไฟล์แพลตฟอร์ม</div>
-              </div>
-              <span className="text-gray-300 text-xl">›</span>
-            </Link>
+            {/* Quick links */}
+            <div className="mt-5 pt-4 border-t border-gray-100 grid grid-cols-2 gap-3">
+              <button onClick={() => openExternal(links.sheetUrl, "/sheets")}
+                className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-green-200 hover:bg-green-50 transition-colors text-left">
+                <IconGoogleSheets className="w-6 h-6 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-gray-700 truncate">Google Sheets</p>
+                  <p className="text-[10px] text-gray-400 truncate">{links.sheetUrl ? "เปิด ↗" : "ยังไม่มี"}</p>
+                </div>
+              </button>
+              <button onClick={() => openExternal(links.driveUrl, "/drive")}
+                className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-yellow-200 hover:bg-yellow-50 transition-colors text-left">
+                <IconGoogleDrive className="w-6 h-6 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-gray-700 truncate">Google Drive</p>
+                  <p className="text-[10px] text-gray-400 truncate">{links.driveUrl ? "เปิด ↗" : "ยังไม่มี"}</p>
+                </div>
+              </button>
+            </div>
+          </div>
 
-            <Link href="/raijhai"
-              className="flex items-center gap-4 p-4 rounded-2xl border border-rose-200 bg-rose-50 hover:bg-rose-100 transition-colors">
-              <div className="w-11 h-11 flex items-center justify-center rounded-xl bg-rose-100 text-rose-600">
-                <IconExpense />
+          {/* Tax card */}
+          <div className="lg:col-span-2 bg-[#0A192F] rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+                  <IconTax className="w-4 h-4 text-[#10B981]" />
+                </div>
+                <span className="text-white/50 text-xs font-semibold uppercase tracking-wide">ภาษีโดยประมาณ</span>
               </div>
-              <div className="flex-1">
-                <div className="font-semibold text-rose-700">รายจ่าย</div>
-                <div className="text-gray-400 text-xs">Expense · บันทึกค่าใช้จ่าย</div>
-              </div>
-              <span className="text-gray-300 text-xl">›</span>
-            </Link>
-
+              {loadingStats ? (
+                <div className="h-10 bg-white/10 rounded animate-pulse w-2/3 mb-2" />
+              ) : (
+                <p className="text-3xl font-bold text-white">฿{fmt(stats?.estimatedTax ?? 0)}</p>
+              )}
+              {!loadingStats && (stats?.estimatedTax ?? 0) === 0 && (
+                <p className="text-white/30 text-xs mt-1">ยังไม่ถึงเกณฑ์เสียภาษี</p>
+              )}
+              <p className="text-white/30 text-xs mt-1">ปี {CURRENT_YEAR}</p>
+            </div>
             <Link href="/phasi"
-              className="flex items-center gap-4 p-4 rounded-2xl border border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors">
-              <div className="w-11 h-11 flex items-center justify-center rounded-xl bg-blue-100 text-blue-600">
-                <IconTax />
-              </div>
-              <div className="flex-1">
-                <div className="font-semibold text-blue-700">ภาษี</div>
-                <div className="text-gray-400 text-xs">Tax · สรุปภาษีรายปี</div>
-              </div>
-              <span className="text-gray-300 text-xl">›</span>
+              className="mt-6 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#10B981] hover:bg-[#0ea572] transition-colors text-white text-sm font-semibold">
+              ดูรายละเอียด →
             </Link>
-
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide pt-2">Google Tools</p>
-
-            <button onClick={() => openExternal(links.sheetUrl, "/sheets")}
-              className="w-full flex items-center gap-4 p-4 rounded-2xl border border-gray-200 bg-white hover:bg-green-50 hover:border-green-200 transition-colors text-left">
-              <div className="w-11 h-11 flex items-center justify-center rounded-xl bg-white border border-gray-100">
-                <IconGoogleSheets className="w-7 h-7" />
-              </div>
-              <div className="flex-1">
-                <div className="font-semibold text-gray-800">Google Sheets</div>
-                <div className="text-gray-400 text-xs">
-                  {loadingStats ? "กำลังโหลด..." : links.sheetUrl ? "เปิดในแท็บใหม่ ↗" : "ยังไม่มี Sheet"}
-                </div>
-              </div>
-            </button>
-
-            <button onClick={() => openExternal(links.driveUrl, "/drive")}
-              className="w-full flex items-center gap-4 p-4 rounded-2xl border border-gray-200 bg-white hover:bg-yellow-50 hover:border-yellow-200 transition-colors text-left">
-              <div className="w-11 h-11 flex items-center justify-center rounded-xl bg-white border border-gray-100">
-                <IconGoogleDrive className="w-7 h-7" />
-              </div>
-              <div className="flex-1">
-                <div className="font-semibold text-gray-800">Google Drive</div>
-                <div className="text-gray-400 text-xs">
-                  {loadingStats ? "กำลังโหลด..." : links.driveUrl ? "เปิดในแท็บใหม่ ↗" : "ยังไม่มีโฟลเดอร์"}
-                </div>
-              </div>
-            </button>
-          </div>
-
-          {/* RIGHT: Stats + Tax ─────────────────────────────────────────────── */}
-          <div className="lg:col-span-2 space-y-5">
-
-            {/* Month stats row */}
-            <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
-                {MONTH_TH[CURRENT_MONTH]} {CURRENT_YEAR}
-              </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <StatCard label="รายรับเดือนนี้"  value={`฿${fmtInt(stats?.monthIncome  ?? 0)}`} color="emerald" loading={loadingStats} />
-                <StatCard label="รายจ่ายเดือนนี้" value={`฿${fmtInt(stats?.monthExpense ?? 0)}`} color="rose"    loading={loadingStats} />
-                <StatCard
-                  label="กำไรสุทธิเดือนนี้"
-                  value={`${netMonth < 0 ? "-" : ""}฿${fmtInt(Math.abs(netMonth))}`}
-                  sub={netMonth < 0 ? "ขาดทุน" : undefined}
-                  color={netMonth >= 0 ? "blue" : "amber"}
-                  loading={loadingStats}
-                />
-              </div>
-            </div>
-
-            {/* Year stats row */}
-            <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
-                ทั้งปี {CURRENT_YEAR}
-              </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <StatCard label="รายรับรวมปีนี้"  value={`฿${fmtInt(stats?.yearIncome  ?? 0)}`} color="emerald" loading={loadingStats} />
-                <StatCard label="รายจ่ายรวมปีนี้" value={`฿${fmtInt(stats?.yearExpense ?? 0)}`} color="rose"    loading={loadingStats} />
-                <StatCard
-                  label="กำไรสุทธิปีนี้"
-                  value={`${netYear < 0 ? "-" : ""}฿${fmtInt(Math.abs(netYear))}`}
-                  sub={netYear < 0 ? "ขาดทุน" : undefined}
-                  color={netYear >= 0 ? "blue" : "amber"}
-                  loading={loadingStats}
-                />
-              </div>
-            </div>
-
-            {/* Tax banner */}
-            <div className="bg-blue-600 text-white rounded-2xl p-5">
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="text-blue-100 text-sm mb-1">ภาษีโดยประมาณ ปี {CURRENT_YEAR}</p>
-                  {loadingStats ? (
-                    <div className="h-8 bg-blue-500 rounded animate-pulse w-40" />
-                  ) : (
-                    <p className="text-3xl font-bold">฿{fmt(stats?.estimatedTax ?? 0)}</p>
-                  )}
-                  {!loadingStats && (stats?.estimatedTax ?? 0) === 0 && (
-                    <p className="text-blue-200 text-xs mt-1">ยังไม่ถึงเกณฑ์เสียภาษี</p>
-                  )}
-                </div>
-                <Link href="/phasi"
-                  className="bg-white/20 hover:bg-white/30 transition-colors text-white text-sm font-semibold px-4 py-2.5 rounded-xl whitespace-nowrap">
-                  ดูรายละเอียด →
-                </Link>
-              </div>
-            </div>
-
           </div>
 
         </div>
+
+        {/* ── Help button ───────────────────────────────────────────────────── */}
+        <div className="flex justify-end">
+          <button
+            onClick={() => setShowTour(true)}
+            className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <IconHelp className="w-4 h-4" /> วิธีใช้งาน
+          </button>
+        </div>
+
       </div>
 
       {showTour && <TourModal onClose={closeTour} />}
-    </main>
+    </AppLayout>
   );
 }

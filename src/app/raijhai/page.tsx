@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { IconExpense, IconScan, IconPlus, IconInbox } from "@/components/icons";
+import AppLayout from "@/components/AppLayout";
 
 const EXPENSE_CATEGORIES = [
   "ค่าสินค้า", "ค่าขนส่ง", "ค่าแพ็คเกจ", "ค่าโฆษณา",
@@ -270,6 +271,7 @@ export default function RaiJhai() {
   }
 
   return (
+    <AppLayout title="รายจ่าย">
     <main className="min-h-screen bg-rose-50 px-4 py-8">
       <div className="max-w-5xl mx-auto">
 
@@ -515,5 +517,6 @@ export default function RaiJhai() {
         </div>
       )}
     </main>
+    </AppLayout>
   );
 }
