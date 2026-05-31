@@ -102,7 +102,7 @@ function Step1({
       <button
         onClick={onNext}
         disabled={!canProceed}
-        className="w-full bg-brand-primary text-white font-semibold py-3.5 rounded-2xl mt-2 hover:bg-brand-primary/90 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+        className="w-full bg-brand-primary text-white font-semibold py-3.5 rounded-2xl mt-2 hover:bg-[#0d2240] active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
       >
         ไปสร้างธุรกิจ
       </button>
@@ -192,7 +192,7 @@ function Step2({
         <button
           onClick={onNext}
           disabled={!canProceed}
-          className="flex-1 bg-brand-primary text-white font-semibold py-3.5 rounded-2xl hover:bg-brand-primary/90 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          className="flex-1 bg-brand-primary text-white font-semibold py-3.5 rounded-2xl hover:bg-[#0d2240] active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >
           สร้างธุรกิจ
         </button>
@@ -267,7 +267,7 @@ function Step3({
         <button
           onClick={onFinish}
           disabled={!connected}
-          className="flex-1 bg-brand-primary text-white font-semibold py-3.5 rounded-2xl hover:bg-brand-primary/90 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          className="flex-1 bg-brand-primary text-white font-semibold py-3.5 rounded-2xl hover:bg-[#0d2240] active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >
           เริ่มใช้งาน TaxBot →
         </button>

@@ -440,7 +440,7 @@ function SettingsPageInner() {
                 <button
                   type="submit"
                   disabled={savingBusinessName || !businessNameDraft.trim() || !lineUserId || businessNameDraft.trim() === businessName}
-                  className="px-4 py-2.5 rounded-xl text-sm font-semibold bg-brand-primary text-white hover:bg-brand-primary/90 disabled:opacity-40 transition-colors flex-shrink-0"
+                  className="px-4 py-2.5 rounded-xl text-sm font-semibold bg-brand-primary text-white hover:bg-[#0d2240] disabled:opacity-40 transition-colors flex-shrink-0"
                 >
                   {businessNameSaved ? <IconCheck className="w-4 h-4" /> : savingBusinessName ? "..." : "บันทึก"}
                 </button>
@@ -577,7 +577,7 @@ function SettingsPageInner() {
                   </button>
                 </div>
                 <button type="submit" disabled={saving || !name.trim()}
-                  className="bg-brand-primary text-white py-2.5 rounded-xl text-sm font-medium hover:bg-brand-primary/90 disabled:opacity-40 transition-colors">
+                  className="bg-brand-primary text-white py-2.5 rounded-xl text-sm font-medium hover:bg-[#0d2240] disabled:opacity-40 transition-colors">
                   {saving ? "กำลังบันทึก..." : "+ เพิ่มรายการ"}
                 </button>
               </form>
@@ -624,7 +624,7 @@ function SettingsPageInner() {
                 <button
                   type="submit"
                   disabled={adminAdding || !adminEmail.trim() || !lineUserId}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold bg-brand-primary text-white hover:bg-brand-primary/90 disabled:opacity-40 transition-colors flex-shrink-0"
+                  className="px-4 py-2 rounded-xl text-sm font-semibold bg-brand-primary text-white hover:bg-[#0d2240] disabled:opacity-40 transition-colors flex-shrink-0"
                 >
                   {adminAdding ? "..." : "+ เพิ่ม"}
                 </button>
