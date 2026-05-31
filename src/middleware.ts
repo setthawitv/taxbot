@@ -14,6 +14,8 @@ const PUBLIC_PATHS = [
   "/api/staff",
   "/api/admin/join",    // Admin join endpoint (called before full auth)
   "/api/setup-richmenu",
+  "/api/payment",         // Payment API + webhook
+  "/payment",             // Payment done redirect page
 ];
 
 export function middleware(request: NextRequest) {

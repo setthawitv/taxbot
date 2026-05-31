@@ -151,23 +151,121 @@ export function parseTikTok(rows: string[][]): ParseResult {
 }
 
 // ─── Shopee ───────────────────────────────────────────────────────────────────
-// Shopee TH export — all headers in Thai (verified from real file)
-// col 0  หมายเลขคำสั่งซื้อ   = Order ID
-// col 1  สถานะการสั่งซื้อ     = Order Status  ("สำเร็จแล้ว" | "ยกเลิกแล้ว")
-// col 4  สถานะการคืนเงิน...   = Return/Refund status
-// col 6  วันที่ทำการสั่งซื้อ   = Order Date  (YYYY-MM-DD HH:MM)
-// col 18 ชื่อสินค้า             = Product Name
-// col 19 เลขอ้างอิง SKU         = SKU Reference (line-item unique ID)
-// col 20 ชื่อตัวเลือก           = Variant
-// col 25 ราคาขายสุทธิ           = Net sale price per item (after Shopee discount)
-// col 40 ราคาสินค้าที่ชำระ...  = Amount paid by buyer (may be order total)
-// Unique key = Order ID + SKU Reference (same pattern as TikTok)
+// Supports two Shopee export formats:
+//
+// A) Income/Payout Report ("รายงานรายรับ" / "Income.โอนเงินสำเร็จ")
+//    - Multi-sheet XLSX with "Income" sheet
+//    - Metadata rows 1-5, headers on row 6
+//    - Key columns: หมายเลขคำสั่งซื้อ, วันที่โอนชำระเงินสำเร็จ, จำนวนเงินทั้งหมดที่โอนแล้ว (฿)
+//    - All rows = successful transfers (no status filtering needed)
+//
+// B) Order Report (older format)
+//    - Headers on row 1, has สถานะการสั่งซื้อ, ราคาขายสุทธิ, etc.
+//
 export function parseShopee(rows: string[][]): ParseResult {
-  const header = rows[0].map((h) => String(h ?? "").trim());
+  // ── Find header row (scan first 10 rows for หมายเลขคำสั่งซื้อ) ──────────────
+  let headerRowIdx = 0;
+  for (let i = 0; i < Math.min(rows.length, 10); i++) {
+    if (rows[i].some((cell) => String(cell ?? "").includes("หมายเลขคำสั่งซื้อ"))) {
+      headerRowIdx = i;
+      break;
+    }
+  }
+
+  const header = rows[headerRowIdx].map((h) => String(h ?? "").trim());
   const find = (...candidates: string[]) =>
     header.findIndex((h) => candidates.some((c) => h.includes(c)));
 
-  const iOrderId  = find("หมายเลขคำสั่งซื้อ", "Order ID", "เลขที่คำสั่งซื้อ");
+  const iOrderId = find("หมายเลขคำสั่งซื้อ", "Order ID", "เลขที่คำสั่งซื้อ");
+
+  // ── Detect: Income/Payout report vs Order report ───────────────────────────
+  const isIncomeReport = find("จำนวนเงินทั้งหมดที่โอนแล้ว") >= 0;
+
+  console.log("[Shopee parser] headerRow:", headerRowIdx, "isIncomeReport:", isIncomeReport);
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // FORMAT A — Income/Payout Report
+  // ════════════════════════════════════════════════════════════════════════════
+  if (isIncomeReport) {
+    // Tax formula (per Shopee University):
+    // รายได้ = สินค้าราคาปกติ (A)
+    //        − ส่วนลดสินค้าจากผู้ขาย (B1)
+    //        − โค้ดส่วนลดที่ออกโดยผู้ขาย (B2)
+    //        − โค้ดส่วนลดร่วมที่ออกโดยผู้ขาย
+    //        − จำนวนเงินที่คืนให้ผู้ซื้อ
+    //        + ค่าจัดส่งที่ชำระโดยผู้ซื้อ (C)
+    // (columns B1, B2, refund are already negative values in the file)
+    const iDate     = find("วันที่โอนชำระเงินสำเร็จ");
+    const iListPrice = find("สินค้าราคาปกติ");                    // A
+    const iSellerDisc = find("ส่วนลดสินค้าจากผู้ขาย");           // B1 (negative)
+    const iVoucherDisc = find("โค้ดส่วนลดที่ออกโดยผู้ขาย");     // B2 (negative)
+    const iCoVoucherDisc = find("โค้ดส่วนลดร่วมที่ออกโดยผู้ขาย"); // (negative)
+    const iRefund   = find("จำนวนเงินที่ทำการคืนให้ผู้ซื้อ");    // (negative)
+    const iBuyerShip = find("ค่าจัดส่งที่ชำระโดยผู้ซื้อ");       // C (positive)
+
+    console.log("[Shopee income] cols:", {
+      iOrderId, iDate, iListPrice, iSellerDisc, iVoucherDisc, iCoVoucherDisc, iRefund, iBuyerShip,
+    });
+
+    function col(r: string[], i: number): number {
+      if (i < 0) return 0;
+      return parseFloat(String(r[i] ?? "0").replace(/,/g, "").trim() || "0");
+    }
+
+    const seen   = new Set<string>();
+    const result: ImportedRow[] = [];
+    let skipped  = 0;
+
+    for (let i = headerRowIdx + 1; i < rows.length; i++) {
+      const r = rows[i];
+      if (r.length < 3) continue;
+
+      const orderId = (iOrderId >= 0 ? r[iOrderId] : "")?.trim();
+      if (!orderId) continue;
+
+      if (seen.has(orderId)) continue;
+      seen.add(orderId);
+
+      // รายได้ = A + B1 + B2 + co-voucher + refund + C
+      // (B1, B2, refund stored as negative → naturally subtracted)
+      const amount =
+        col(r, iListPrice)     +   // A  (+)
+        col(r, iSellerDisc)    +   // B1 (-)
+        col(r, iVoucherDisc)   +   // B2 (-)
+        col(r, iCoVoucherDisc) +   // co-funded voucher (-)
+        col(r, iRefund)        +   // refund (-)
+        col(r, iBuyerShip);        // C  (+)
+
+      // Negative or zero = full refund order, skip
+      if (amount <= 0) { skipped++; continue; }
+
+      const date = parseISODate(String(iDate >= 0 ? r[iDate] : "").trim());
+
+      result.push({
+        lineKey:     `shopee_income_${orderId}`,
+        orderId,
+        skuLineId:   "",
+        date,
+        amount:      Math.round(amount * 100) / 100,
+        platform:    "shopee",
+        productName: "Shopee",
+        variant:     "",
+      });
+    }
+
+    return {
+      rows:      result,
+      cancelled: 0,
+      returned:  skipped,
+      skipped,
+      total:     result.reduce((s, r) => s + r.amount, 0),
+      platform:  "shopee",
+    };
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // FORMAT B — Order Report (original format)
+  // ════════════════════════════════════════════════════════════════════════════
   const iStatus   = find("สถานะการสั่งซื้อ", "Order Status", "สถานะ");
   const iReturn   = find("สถานะการคืนเงินหรือคืนสินค้า", "สถานะการคืน");
   const iDate     = find("วันที่ทำการสั่งซื้อ", "Order Creation Date", "วันที่สร้าง");
@@ -177,17 +275,17 @@ export function parseShopee(rows: string[][]): ParseResult {
   const iNetPrice = find("ราคาขายสุทธิ", "Net Price", "Seller Net Price");
   const iQty      = find("จำนวน", "Quantity", "Qty");
 
-  console.log("[Shopee parser] columns:", {
+  console.log("[Shopee order] columns:", {
     iOrderId, iStatus, iReturn, iDate, iProduct, iSkuRef, iVariant, iNetPrice, iQty,
   });
 
-  const seen        = new Set<string>();
-  const orderCount  = new Map<string, number>(); // orderId → row count within order
+  const seen       = new Set<string>();
+  const orderCount = new Map<string, number>();
   const result: ImportedRow[] = [];
   let cancelled = 0;
   let returned  = 0;
 
-  for (let i = 1; i < rows.length; i++) {
+  for (let i = headerRowIdx + 1; i < rows.length; i++) {
     const r = rows[i];
     if (r.length < 3) continue;
 
@@ -200,10 +298,8 @@ export function parseShopee(rows: string[][]): ParseResult {
     if (status.includes("ยกเลิก") || status.includes("Cancel")) {
       cancelled++; continue;
     }
-    // returnStatus = "คำขอได้รับการยอมรับแล้ว" when Shopee accepted return request
     if (
-      returnStatus !== "" &&
-      returnStatus !== "-" &&
+      returnStatus !== "" && returnStatus !== "-" &&
       (returnStatus.includes("คืน") || returnStatus.includes("Return") ||
        returnStatus.includes("Refund") || returnStatus.includes("ยอมรับ") ||
        returnStatus.includes("Accepted") || returnStatus.includes("accepted"))
@@ -211,17 +307,14 @@ export function parseShopee(rows: string[][]): ParseResult {
       returned++; continue;
     }
 
-    // Unique key: prefer skuRef, fall back to orderId_N (N = position within order)
-    // This handles multi-SKU orders where skuRef might be identical or empty
     const skuRef = (iSkuRef >= 0 ? r[iSkuRef] : "")?.trim() || "";
     const seq    = (orderCount.get(orderId) ?? 0) + 1;
     orderCount.set(orderId, seq);
     const lineKey = skuRef ? `${orderId}_${skuRef}` : `${orderId}_${seq}`;
 
-    if (seen.has(lineKey)) { continue; }
+    if (seen.has(lineKey)) continue;
     seen.add(lineKey);
 
-    // Net price per item × quantity
     const netPrice = parseFloat((iNetPrice >= 0 ? r[iNetPrice] : "0")?.replace(/,/g, "").trim() || "0");
     const qty      = parseFloat((iQty      >= 0 ? r[iQty]      : "1")?.replace(/,/g, "").trim() || "1");
     const amount   = netPrice * (qty || 1);

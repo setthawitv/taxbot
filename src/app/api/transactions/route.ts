@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { supabaseAdmin } from "@/lib/supabase";
-import { appendTransaction } from "@/lib/sheets";
+import { appendTransaction, deleteRowByTxId, updateRowByTxId } from "@/lib/sheets";
+import { ensureReceiptFolder, uploadFileToDrive } from "@/lib/drive";
+import { generateReceiptPdf } from "@/lib/receipt-pdf";
 import { google } from "googleapis";
 import type { ReceiptData } from "@/lib/groq";
 
@@ -156,6 +158,7 @@ export async function POST(req: NextRequest) {
     const description = String(body.description ?? "").trim();
     const date        = String(body.date ?? new Date().toISOString().slice(0, 10));
     const category    = String(body.expenseCategory ?? body.incomeCategory ?? "อื่นๆ").trim();
+    const imageBase64 = typeof body.imageBase64 === "string" ? body.imageBase64 : null;
 
     if (!lineUserId && !staffCode)
       return NextResponse.json({ error: "Missing lineUserId or staffCode" }, { status: 400 });
@@ -163,7 +166,14 @@ export async function POST(req: NextRequest) {
     if (!vendor)      return NextResponse.json({ error: "Missing vendor" }, { status: 400 });
 
     // Resolve user — either by lineUserId or via staffCode (staff entry)
-    let user: { id: string; google_access_token: string | null; google_refresh_token: string | null; sheet_id: string | null } | null = null;
+    let user: {
+      id: string;
+      google_access_token: string | null;
+      google_refresh_token: string | null;
+      sheet_id: string | null;
+      drive_folder_id: string | null;
+      business_name: string | null;
+    } | null = null;
 
     if (staffCode) {
       // Verify invite code and find owner
@@ -177,14 +187,14 @@ export async function POST(req: NextRequest) {
 
       const { data: owner } = await supabaseAdmin
         .from("users")
-        .select("id, google_access_token, google_refresh_token, sheet_id")
+        .select("id, google_access_token, google_refresh_token, sheet_id, drive_folder_id, business_name")
         .eq("id", invite.owner_user_id)
         .single();
       user = owner;
     } else {
       const { data: owner } = await supabaseAdmin
         .from("users")
-        .select("id, google_access_token, google_refresh_token, sheet_id")
+        .select("id, google_access_token, google_refresh_token, sheet_id, drive_folder_id, business_name")
         .eq("line_user_id", lineUserId!)
         .single();
       user = owner;
@@ -209,37 +219,93 @@ export async function POST(req: NextRequest) {
 
     if (txErr) return NextResponse.json({ error: txErr.message }, { status: 500 });
 
-    // Sync to Google Sheets if connected
-    let sheetSynced = false;
-    if (user.google_access_token && user.sheet_id) {
-      try {
-        const gToken = await getFreshGoogleToken(user.id, user.google_access_token, user.google_refresh_token ?? null);
-        const receiptData: ReceiptData = {
-          type:             "expense",
-          amount,
-          vendor,
-          date,
-          description:      description || vendor,
-          docType:          "ใบเสร็จ",
-          expenseCategory:  category,
-          quantity:         1,
-          unitPrice:        amount,
-          vatAmount:        0,
-          withholdingTax:   0,
-          invoiceNo:        "",
-          invoiceName:      vendor,
-          taxId:            "",
-          branch:           "",
-          transactionId:    tx.id,
-        };
-        await appendTransaction(gToken, user.sheet_id, receiptData, tx.id);
-        sheetSynced = true;
-      } catch (e) {
-        console.error("[transactions POST] sheet sync failed:", e);
+    // Build receipt data (used for both Sheets + PDF)
+    const receiptData: ReceiptData = {
+      type:            txType,
+      amount,
+      vendor,
+      date,
+      description:     description || vendor,
+      docType:         "ใบเสร็จ",
+      expenseCategory: category,
+      quantity:        1,
+      unitPrice:       amount,
+      vatAmount:       0,
+      withholdingTax:  0,
+      invoiceNo:       "",
+      invoiceName:     vendor,
+      taxId:           "",
+      branch:          "",
+      transactionId:   tx.id,
+    };
+
+    let sheetSynced  = false;
+    let driveSynced  = false;
+    let sheetError   = "";
+    let driveError   = "";
+
+    if (!user.google_access_token) {
+      sheetError = driveError = "no_token";
+    } else if (!user.sheet_id && !user.drive_folder_id) {
+      sheetError = driveError = "no_sheet_or_folder";
+    } else {
+      const gToken = await getFreshGoogleToken(user.id, user.google_access_token, user.google_refresh_token ?? null);
+
+      // Sync to Google Sheets
+      if (user.sheet_id) {
+        try {
+          await appendTransaction(gToken, user.sheet_id, receiptData, tx.id);
+          sheetSynced = true;
+        } catch (e) {
+          sheetError = e instanceof Error ? e.message : String(e);
+          console.error("[transactions POST] sheet sync failed:", sheetError);
+        }
+      } else {
+        sheetError = "no_sheet_id";
+      }
+
+      // Upload to Google Drive
+      if (user.drive_folder_id) {
+        try {
+          const bizName   = user.business_name || "ธุรกิจของฉัน";
+          const receiptNo = tx.id.slice(0, 8).toUpperCase();
+          const pdfBuffer = await generateReceiptPdf(receiptData, bizName, receiptNo);
+          const { folderId, accountingFolderId } = await ensureReceiptFolder(
+            gToken,
+            user.drive_folder_id,
+            date,
+            vendor
+          );
+          const safeVendor = vendor.replace(/[/\\:*?"<>|]/g, "").trim().slice(0, 40);
+          const baseName   = `${date}_${safeVendor}_${receiptNo}`;
+
+          // รวมหลักฐาน: store original receipt image if available, otherwise PDF
+          if (imageBase64) {
+            // imageBase64 is a data URL: "data:image/jpeg;base64,..."
+            const [meta, b64] = imageBase64.split(",");
+            const mime = meta.match(/:(.*?);/)?.[1] ?? "image/jpeg";
+            const ext  = mime.split("/")[1]?.split("+")[0] ?? "jpg";
+            const imgBuffer = Buffer.from(b64, "base64");
+            await uploadFileToDrive(gToken, folderId, `${baseName}.${ext}`, imgBuffer, mime);
+          } else {
+            // No image — fall back to PDF in รวมหลักฐาน too
+            await uploadFileToDrive(gToken, folderId, `${baseName}.pdf`, pdfBuffer, "application/pdf");
+          }
+
+          // สำนักงานบัญชี: always store PDF
+          await uploadFileToDrive(gToken, accountingFolderId, `${baseName}.pdf`, pdfBuffer, "application/pdf");
+
+          driveSynced = true;
+        } catch (e) {
+          driveError = e instanceof Error ? e.message : String(e);
+          console.error("[transactions POST] drive upload failed:", driveError);
+        }
+      } else {
+        driveError = "no_drive_folder_id";
       }
     }
 
-    return NextResponse.json({ ok: true, id: tx.id, sheetSynced });
+    return NextResponse.json({ ok: true, id: tx.id, sheetSynced, driveSynced, sheetError, driveError });
 
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : JSON.stringify(err);
@@ -254,7 +320,10 @@ export async function DELETE(req: NextRequest) {
     if (!id || !lineUserId) return NextResponse.json({ error: "Missing id or lineUserId" }, { status: 400 });
 
     const { data: user } = await supabaseAdmin
-      .from("users").select("id").eq("line_user_id", lineUserId).single();
+      .from("users")
+      .select("id, google_access_token, google_refresh_token, sheet_id")
+      .eq("line_user_id", lineUserId)
+      .single();
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
     if (table === "platform_orders") {
@@ -265,6 +334,19 @@ export async function DELETE(req: NextRequest) {
       const { error } = await supabaseAdmin
         .from("transactions").delete().eq("id", id).eq("user_id", user.id);
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+      // Sync deletion to Google Sheets
+      let sheetDeleted = false;
+      if (user.google_access_token && user.sheet_id) {
+        try {
+          const gToken = await getFreshGoogleToken(user.id, user.google_access_token, user.google_refresh_token ?? null);
+          await deleteRowByTxId(gToken, user.sheet_id, id);
+          sheetDeleted = true;
+        } catch (e) {
+          console.error("[transactions DELETE] sheet sync failed:", e);
+        }
+      }
+      return NextResponse.json({ ok: true, sheetDeleted });
     }
 
     return NextResponse.json({ ok: true });
@@ -281,21 +363,45 @@ export async function PATCH(req: NextRequest) {
     if (!id || !lineUserId) return NextResponse.json({ error: "Missing id or lineUserId" }, { status: 400 });
 
     const { data: user } = await supabaseAdmin
-      .from("users").select("id").eq("line_user_id", lineUserId).single();
+      .from("users")
+      .select("id, google_access_token, google_refresh_token, sheet_id")
+      .eq("line_user_id", lineUserId)
+      .single();
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+    const newAmount      = Number(amount);
+    const newVendor      = String(vendor      ?? "").trim();
+    const newDescription = String(description ?? "").trim();
+    const newDate        = String(date);
 
     const { error } = await supabaseAdmin
       .from("transactions")
       .update({
-        amount:           Number(amount),
-        vendor:           String(vendor ?? "").trim(),
-        description:      String(description ?? "").trim(),
-        transaction_date: String(date),
+        amount:           newAmount,
+        vendor:           newVendor,
+        description:      newDescription,
+        transaction_date: newDate,
       })
       .eq("id", id)
       .eq("user_id", user.id);
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    // Sync update to Google Sheets
+    if (user.google_access_token && user.sheet_id) {
+      try {
+        const gToken = await getFreshGoogleToken(user.id, user.google_access_token, user.google_refresh_token ?? null);
+        await updateRowByTxId(gToken, user.sheet_id, id, {
+          date:        newDate,
+          description: newDescription || newVendor,
+          amount:      newAmount,
+          vendor:      newVendor,
+        });
+      } catch (e) {
+        console.error("[transactions PATCH] sheet sync failed:", e);
+      }
+    }
+
     return NextResponse.json({ ok: true });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : JSON.stringify(err);

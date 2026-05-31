@@ -1,26 +1,11 @@
 import { PDFDocument, rgb, StandardFonts, RGB } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import { ReceiptData } from "./groq";
+import { SARABUN_B64 } from "./sarabun-b64";
 
-// ─── Thai font (woff via IE User-Agent trick) ─────────────────────────────────
-async function loadThaiFont(): Promise<ArrayBuffer | null> {
-  try {
-    const css = await fetch(
-      "https://fonts.googleapis.com/css?family=Sarabun:400,700&subset=thai",
-      {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0)",
-        },
-      }
-    ).then((r) => r.text());
-
-    const match = css.match(/url\((https:\/\/fonts\.gstatic\.com[^)]+)\)/);
-    if (!match) return null;
-    return fetch(match[1]).then((r) => r.arrayBuffer());
-  } catch {
-    return null;
-  }
+// ─── Thai font — decoded from bundled base64 string (works on Vercel) ─────────
+function loadThaiFont(): Uint8Array {
+  return new Uint8Array(Buffer.from(SARABUN_B64, "base64"));
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -47,16 +32,16 @@ export async function generateReceiptPdf(
   const pdfDoc = await PDFDocument.create();
   pdfDoc.registerFontkit(fontkit);
 
-  // Try to embed Thai font; fall back to Helvetica
+  // Embed Thai font (Sarabun) from bundled base64; fall back to Helvetica on error
   let font     = await pdfDoc.embedFont(StandardFonts.Helvetica);
   let boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   try {
-    const fontData = await loadThaiFont();
-    if (fontData) {
-      font     = await pdfDoc.embedFont(fontData as ArrayBuffer);
-      boldFont = font;
-    }
-  } catch { /* use fallback */ }
+    const fontData = loadThaiFont();
+    font     = await pdfDoc.embedFont(fontData, { subset: true });
+    boldFont = font;
+  } catch (e) {
+    console.error("[receipt-pdf] Thai font embed failed:", e);
+  }
 
   // A4 page
   const page = pdfDoc.addPage([595.28, 841.89]);
@@ -181,7 +166,7 @@ export async function generateReceiptPdf(
   // ── Totals section (right-aligned) ────────────────────────────────────────────
   const totalsX    = ML + CW - 200;
   const totalsW    = 200;
-  let   totalsY    = dataY - 10;
+  let   totalsY    = dataY - 30;
   const preTax     = receipt.amount - receipt.vatAmount;
 
   function totalRow(label: string, value: string, y: number, highlight = false, labelColor?: RGB) {

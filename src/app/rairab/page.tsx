@@ -3,8 +3,20 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
+import {
+  IconIncome, IconScan, IconPlus, IconPencil, IconUpload,
+  IconAll, IconMusic, IconCart, IconBag, IconNote, IconInbox,
+} from "@/components/icons";
 
 type Platform = "all" | "tiktok" | "shopee" | "lazada" | "manual";
+
+const PLATFORM_ICONS: Record<Platform, React.ComponentType<{ className?: string }>> = {
+  all:    IconAll,
+  tiktok: IconMusic,
+  shopee: IconCart,
+  lazada: IconBag,
+  manual: IconNote,
+};
 
 type Summary = {
   total:      number;
@@ -287,7 +299,9 @@ export default function RaiRab() {
         </div>
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
-            <div className="text-4xl">💰</div>
+            <div className="w-11 h-11 flex items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
+              <IconIncome />
+            </div>
             <div>
               <h1 className="text-xl font-bold text-emerald-700">รายรับ</h1>
               <p className="text-emerald-500 text-sm">Income Dashboard</p>
@@ -295,20 +309,20 @@ export default function RaiRab() {
           </div>
           <div className="flex gap-2 flex-wrap">
             <button onClick={() => { setShowScan(true); setScanPreview(null); setScanError(""); }}
-              className="flex items-center gap-1 bg-purple-500 text-white text-xs font-semibold px-3 py-2 rounded-xl active:scale-95 transition-all">
-              📸 สแกน
+              className="flex items-center gap-1.5 bg-purple-500 text-white text-xs font-semibold px-3 py-2 rounded-xl active:scale-95 transition-all">
+              <IconScan className="w-4 h-4" /> สแกน
             </button>
             <button onClick={() => { setShowAdd((v) => !v); setShowAdjust(false); setAddMsg(null); }}
-              className="flex items-center gap-1 bg-emerald-500 text-white text-xs font-semibold px-3 py-2 rounded-xl active:scale-95 transition-all">
-              + เพิ่ม
+              className="flex items-center gap-1.5 bg-emerald-500 text-white text-xs font-semibold px-3 py-2 rounded-xl active:scale-95 transition-all">
+              <IconPlus className="w-4 h-4" /> เพิ่ม
             </button>
             <button onClick={() => { setShowAdjust((v) => !v); setShowAdd(false); setAdjMsg(null); }}
-              className="flex items-center gap-1 bg-white border border-emerald-300 text-emerald-600 text-xs font-semibold px-3 py-2 rounded-xl active:scale-95 transition-all">
-              ✏️ ปรับยอด
+              className="flex items-center gap-1.5 bg-white border border-emerald-300 text-emerald-600 text-xs font-semibold px-3 py-2 rounded-xl active:scale-95 transition-all">
+              <IconPencil className="w-4 h-4" /> ปรับยอด
             </button>
             <Link href="/rairab/import"
               className="flex items-center gap-1.5 bg-white border border-emerald-300 text-emerald-600 text-xs font-semibold px-3 py-2 rounded-xl active:scale-95 transition-all">
-              📤 นำเข้า
+              <IconUpload className="w-4 h-4" /> นำเข้า
             </Link>
           </div>
         </div>
@@ -333,14 +347,17 @@ export default function RaiRab() {
 
             {/* Platform filter */}
             <div className="flex gap-2 overflow-x-auto pb-1">
-              {PLATFORM_OPTIONS.map((p) => (
-                <button key={p.id} onClick={() => setPlatform(p.id)}
-                  className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                    platform === p.id ? `${p.color} text-white shadow-sm` : "bg-white text-gray-500 border border-gray-200"
-                  }`}>
-                  {p.emoji} {p.label}
-                </button>
-              ))}
+              {PLATFORM_OPTIONS.map((p) => {
+                const Ico = PLATFORM_ICONS[p.id];
+                return (
+                  <button key={p.id} onClick={() => setPlatform(p.id)}
+                    className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                      platform === p.id ? `${p.color} text-white shadow-sm` : "bg-white text-gray-500 border border-gray-200"
+                    }`}>
+                    <Ico className="w-3.5 h-3.5" /> {p.label}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Total card */}
@@ -372,7 +389,7 @@ export default function RaiRab() {
                   return (
                     <div key={p.id} className="mb-3 last:mb-0">
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-600 font-medium">{p.emoji} {p.label}</span>
+                        <span className="text-gray-600 font-medium flex items-center gap-1.5">{(() => { const Ic = PLATFORM_ICONS[p.id]; return <Ic className="w-3.5 h-3.5" />; })()} {p.label}</span>
                         <span className="text-gray-800 font-semibold">฿{amt.toLocaleString("th-TH", { maximumFractionDigits: 0 })}</span>
                       </div>
                       <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -569,7 +586,7 @@ export default function RaiRab() {
             {/* Empty state */}
             {!loading && (summary?.count ?? 0) === 0 && adjusts.length === 0 && !showAdd && !showAdjust && (
               <div className="bg-white rounded-2xl p-6 text-center text-gray-400 border border-emerald-100">
-                <p className="text-3xl mb-2">📭</p>
+                <div className="flex justify-center mb-2 text-emerald-300"><IconInbox className="w-10 h-10" /></div>
                 <p>ยังไม่มีรายรับในช่วงนี้</p>
                 <p className="text-sm mt-1">กด "+ เพิ่ม" หรือ "นำเข้า" เพื่อเพิ่มข้อมูล</p>
               </div>

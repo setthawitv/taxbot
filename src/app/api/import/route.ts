@@ -31,8 +31,18 @@ export async function POST(req: NextRequest) {
       const result = Papa.parse<string[]>(text, { skipEmptyLines: true });
       rows = result.data as string[][];
     } else if (name.endsWith(".xlsx") || name.endsWith(".xls")) {
-      const wb    = XLSX.read(buffer, { type: "array" });
-      const ws    = wb.Sheets[wb.SheetNames[0]];
+      const wb = XLSX.read(buffer, { type: "array" });
+
+      // Shopee Income Report has multiple sheets — use "Income" sheet if present
+      let sheetName = wb.SheetNames[0];
+      if (platform === "shopee") {
+        const incomeSheet = wb.SheetNames.find(
+          (n) => n === "Income" || n.toLowerCase() === "income"
+        );
+        if (incomeSheet) sheetName = incomeSheet;
+      }
+
+      const ws = wb.Sheets[sheetName];
       rows = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1, defval: "" }) as string[][];
     } else {
       return NextResponse.json({ error: "รองรับเฉพาะไฟล์ .csv, .xlsx, .xls" }, { status: 400 });

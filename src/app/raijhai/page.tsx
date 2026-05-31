@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
+import { IconExpense, IconScan, IconPlus, IconInbox } from "@/components/icons";
 
 const EXPENSE_CATEGORIES = [
   "ค่าสินค้า", "ค่าขนส่ง", "ค่าแพ็คเกจ", "ค่าโฆษณา",
@@ -51,10 +52,11 @@ export default function RaiJhai() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Scan receipt
-  const [showScan,    setShowScan]    = useState(false);
-  const [scanPreview, setScanPreview] = useState<string | null>(null);
-  const [scanning,    setScanning]    = useState(false);
-  const [scanError,   setScanError]   = useState("");
+  const [showScan,           setShowScan]           = useState(false);
+  const [scanPreview,        setScanPreview]        = useState<string | null>(null);
+  const [scanning,           setScanning]           = useState(false);
+  const [scanError,          setScanError]          = useState("");
+  const [scannedImageBase64, setScannedImageBase64] = useState<string | null>(null); // persists for upload
   const scanFileRef   = useRef<HTMLInputElement>(null);
   const scanCamRef    = useRef<HTMLInputElement>(null);
 
@@ -126,6 +128,7 @@ export default function RaiJhai() {
     setEditId(null);
     setVendor(""); setAmount(""); setDesc(""); setCategory("อื่นๆ");
     setDate(new Date().toISOString().slice(0, 10));
+    setScannedImageBase64(null);
     setSaveMsg(null);
     setShowForm(true);
   }
@@ -163,15 +166,35 @@ export default function RaiJhai() {
         res = await fetch("/api/transactions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ lineUserId, amount: parseFloat(amount), vendor: vendor.trim(), description: desc.trim(), date, expenseCategory: category }),
+          body: JSON.stringify({
+            lineUserId,
+            amount:           parseFloat(amount),
+            vendor:           vendor.trim(),
+            description:      desc.trim(),
+            date,
+            expenseCategory:  category,
+            imageBase64:      scannedImageBase64 ?? undefined,
+          }),
         });
       }
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "เกิดข้อผิดพลาด");
 
-      setSaveMsg({ ok: true, text: editId ? "✅ แก้ไขแล้ว" : (data.sheetSynced ? "✅ บันทึกแล้ว · ซิงค์ Sheets แล้ว" : "✅ บันทึกแล้ว") });
+      let msg = "✅ บันทึกแล้ว";
+      if (!editId) {
+        if (data.driveSynced)       msg = "✅ บันทึกแล้ว · ซิงค์ Sheets · อัปโหลด PDF ไป Drive แล้ว";
+        else if (data.sheetSynced)  msg = "✅ บันทึกแล้ว · ซิงค์ Sheets แล้ว";
+        else if (data.sheetError || data.driveError) {
+          const detail = data.sheetError || data.driveError || "";
+          msg = `⚠️ บันทึกแล้ว แต่ sync ไม่ได้ (${detail})`;
+        }
+      } else {
+        msg = "✅ แก้ไขแล้ว";
+      }
+      setSaveMsg({ ok: !editId && (data.sheetError || data.driveError) ? false : true, text: msg });
       setShowForm(false);
       setEditId(null);
+      setScannedImageBase64(null);
       loadTxns(lineUserId);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "เกิดข้อผิดพลาด";
@@ -191,14 +214,18 @@ export default function RaiJhai() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, lineUserId, table: "transactions" }),
       });
-      if (!res.ok) throw new Error();
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "ลบไม่สำเร็จ");
       setTransactions((prev) => prev.filter((t) => t.id !== id));
       setTotal((prev) => {
         const t = transactions.find((t) => t.id === id);
         return t ? prev - Number(t.amount) : prev;
       });
-    } catch {
-      setSaveMsg({ ok: false, text: "❌ ลบไม่สำเร็จ" });
+      if (data.sheetDeleted === false) {
+        setSaveMsg({ ok: false, text: "⚠️ ลบแล้ว แต่ลบใน Sheets ไม่ได้ — ลองเชื่อมต่อ Google ใหม่ใน Settings" });
+      }
+    } catch (err: unknown) {
+      setSaveMsg({ ok: false, text: `❌ ${err instanceof Error ? err.message : "ลบไม่สำเร็จ"}` });
     } finally {
       setDeletingId(null);
     }
@@ -224,12 +251,13 @@ export default function RaiJhai() {
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error ?? "เกิดข้อผิดพลาด");
-      // Pre-fill form with scan result
+      // Pre-fill form with scan result; keep image for Drive upload
       setVendor(data.receipt.vendor ?? "");
       setAmount(String(data.receipt.amount ?? ""));
       setDate(data.receipt.date ?? new Date().toISOString().slice(0, 10));
       setDesc(data.receipt.description ?? "");
       setCategory(data.receipt.expenseCategory ?? "อื่นๆ");
+      setScannedImageBase64(scanPreview); // keep for Drive รวมหลักฐาน upload
       setEditId(null);
       setShowScan(false);
       setScanPreview(null);
@@ -251,7 +279,9 @@ export default function RaiJhai() {
         </div>
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="text-4xl">🧾</div>
+            <div className="w-11 h-11 flex items-center justify-center rounded-xl bg-rose-100 text-rose-600">
+              <IconExpense />
+            </div>
             <div>
               <h1 className="text-xl font-bold text-rose-700">รายจ่าย</h1>
               <p className="text-rose-500 text-sm">Expense</p>
@@ -260,15 +290,15 @@ export default function RaiJhai() {
           <div className="flex gap-2">
             <button
               onClick={() => { setShowScan(true); setScanPreview(null); setScanError(""); }}
-              className="bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold px-3 py-2 rounded-xl transition-colors"
+              className="flex items-center gap-1.5 bg-purple-500 hover:bg-purple-600 text-white text-sm font-semibold px-3 py-2 rounded-xl transition-colors"
             >
-              📸 สแกน
+              <IconScan className="w-4 h-4" /> สแกน
             </button>
             <button
               onClick={showForm ? () => { setShowForm(false); setEditId(null); setSaveMsg(null); } : openAddForm}
-              className="bg-rose-500 hover:bg-rose-600 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
+              className="flex items-center gap-1.5 bg-rose-500 hover:bg-rose-600 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
             >
-              {showForm ? "ยกเลิก" : "+ เพิ่ม"}
+              {showForm ? "ยกเลิก" : <><IconPlus className="w-4 h-4" /> เพิ่ม</>}
             </button>
           </div>
         </div>
@@ -391,7 +421,7 @@ export default function RaiJhai() {
               <p className="text-center text-gray-400 py-10">กำลังโหลด...</p>
             ) : transactions.length === 0 ? (
               <div className="bg-white rounded-2xl p-8 text-center text-gray-400 border border-rose-100">
-                <p className="text-3xl mb-2">📭</p>
+                <div className="flex justify-center mb-2 text-rose-300"><IconInbox className="w-10 h-10" /></div>
                 <p>ไม่มีรายจ่ายในช่วงนี้</p>
                 <p className="text-sm mt-1">กด + เพิ่มรายจ่าย หรือส่งสลิปใน LINE</p>
               </div>
@@ -399,8 +429,8 @@ export default function RaiJhai() {
               <ul className="flex flex-col gap-3">
                 {transactions.map((t) => (
                   <li key={t.id} className="bg-white rounded-2xl p-4 border border-rose-100 flex items-center gap-3 hover:shadow-sm transition-shadow">
-                    <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center text-lg flex-shrink-0">
-                      🧾
+                    <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center text-rose-600 flex-shrink-0">
+                      <IconExpense className="w-5 h-5" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-gray-700 truncate">{t.vendor}</p>
