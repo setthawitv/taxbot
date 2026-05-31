@@ -215,6 +215,72 @@ function StatCard({
   );
 }
 
+// ── Simple SVG Pie Chart ──────────────────────────────────────────────────────
+function PieChart({ income, expense }: { income: number; expense: number }) {
+  const total = income + expense;
+  if (total === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-2">
+        <svg viewBox="0 0 80 80" className="w-24 h-24">
+          <circle cx="40" cy="40" r="32" fill="none" stroke="#e5e7eb" strokeWidth="14" />
+        </svg>
+        <p className="text-xs text-gray-400">ยังไม่มีข้อมูล</p>
+      </div>
+    );
+  }
+  const net     = income - expense;
+  const r       = 32;
+  const cx      = 40;
+  const cy      = 40;
+  const tau     = 2 * Math.PI;
+
+  function slice(startFrac: number, endFrac: number, color: string) {
+    const s = startFrac * tau - Math.PI / 2;
+    const e = endFrac   * tau - Math.PI / 2;
+    const large = endFrac - startFrac > 0.5 ? 1 : 0;
+    const x1 = cx + r * Math.cos(s);
+    const y1 = cy + r * Math.sin(s);
+    const x2 = cx + r * Math.cos(e);
+    const y2 = cy + r * Math.sin(e);
+    return (
+      <path
+        d={`M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} Z`}
+        fill={color}
+      />
+    );
+  }
+
+  const incFrac = income / total;
+  const expFrac = expense / total;
+
+  return (
+    <div className="flex flex-col items-center gap-4">
+      <svg viewBox="0 0 80 80" className="w-32 h-32 drop-shadow-sm">
+        {slice(0, incFrac, "#10B981")}
+        {slice(incFrac, 1, "#F43F5E")}
+        <circle cx={cx} cy={cy} r={16} fill="white" />
+      </svg>
+
+      <div className="w-full space-y-2">
+        <div className="flex items-center justify-between text-xs">
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#10B981] inline-block" />รายรับ</span>
+          <span className="font-semibold text-[#10B981]">{(incFrac * 100).toFixed(1)}%</span>
+        </div>
+        <div className="flex items-center justify-between text-xs">
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block" />รายจ่าย</span>
+          <span className="font-semibold text-rose-500">{(expFrac * 100).toFixed(1)}%</span>
+        </div>
+        <div className="pt-1 border-t border-gray-100 flex items-center justify-between text-xs">
+          <span className="text-gray-500">กำไรสุทธิ</span>
+          <span className={`font-bold ${net >= 0 ? "text-[#0A192F]" : "text-amber-500"}`}>
+            {net < 0 ? "-" : ""}฿{fmtInt(Math.abs(net))}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const [lineUserId,   setLineUserId]   = useState("");
   const [authReady,    setAuthReady]    = useState(false);
@@ -223,6 +289,7 @@ export default function Home() {
   const [links,        setLinks]        = useState<Links>({ sheetUrl: null, driveUrl: null });
   const [loadingStats, setLoadingStats] = useState(true);
   const [showTour,     setShowTour]     = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(CURRENT_MONTH);
 
   const { data: session, status: sessionStatus } = useSession();
 
@@ -300,7 +367,7 @@ export default function Home() {
     setLoadingStats(true);
     const uid = lineUserId;
     const yr  = CURRENT_YEAR;
-    const mo  = CURRENT_MONTH;
+    const mo  = selectedMonth;
 
     Promise.all([
       fetch(`/api/income/summary?lineUserId=${uid}&year=${yr}&month=${mo}`).then((r) => r.json()),
@@ -339,7 +406,7 @@ export default function Home() {
       });
       setLinks({ sheetUrl: lnks.sheet_url ?? null, driveUrl: lnks.drive_url ?? null });
     }).finally(() => setLoadingStats(false));
-  }, [authReady, lineUserId]);
+  }, [authReady, lineUserId, selectedMonth]);
 
   function openExternal(url: string | null, fallback: string) {
     // Always open in new tab — use URL if ready, otherwise fallback page
@@ -356,6 +423,30 @@ export default function Home() {
   return (
     <AppLayout userInfo={layoutUserInfo} title="หน้าหลัก">
       <div className="px-4 py-5 lg:px-6 lg:py-6 max-w-5xl mx-auto space-y-6">
+
+        {/* ── Month selector ───────────────────────────────────────────────── */}
+        <div className="flex items-center gap-3">
+          <label className="text-xs font-semibold text-[#4A5568] uppercase tracking-widest whitespace-nowrap">
+            เดือน
+          </label>
+          <select
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(Number(e.target.value))}
+            className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white text-[#0A192F] font-medium focus:outline-none focus:ring-2 focus:ring-[#0A192F]/20 cursor-pointer"
+          >
+            {MONTH_TH.slice(1).map((label, i) => (
+              <option key={i + 1} value={i + 1}>{label} {CURRENT_YEAR}</option>
+            ))}
+          </select>
+          {selectedMonth !== CURRENT_MONTH && (
+            <button
+              onClick={() => setSelectedMonth(CURRENT_MONTH)}
+              className="text-xs text-[#4A5568] hover:text-[#0A192F] underline underline-offset-2 transition-colors"
+            >
+              กลับเดือนนี้
+            </button>
+          )}
+        </div>
 
         {/* ── Big stat cards (year) ─────────────────────────────────────────── */}
         <div>
@@ -425,28 +516,39 @@ export default function Home() {
           {/* Month stats */}
           <div className="lg:col-span-3 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <p className="text-xs font-semibold text-[#4A5568] uppercase tracking-widest mb-4">
-              เดือนนี้ — {MONTH_TH[CURRENT_MONTH]} {CURRENT_YEAR}
+              เดือน {MONTH_TH[selectedMonth]} {CURRENT_YEAR}
             </p>
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <p className="text-xs text-gray-400 mb-1">รายรับ</p>
-                {loadingStats ? <div className="h-6 bg-gray-100 rounded animate-pulse" /> : (
-                  <p className="text-lg font-bold text-emerald-600">฿{fmtInt(stats?.monthIncome ?? 0)}</p>
+            <div className="flex gap-5 items-start">
+              {/* Pie chart */}
+              <div className="flex-shrink-0 w-36">
+                {loadingStats ? (
+                  <div className="w-32 h-32 rounded-full bg-gray-100 animate-pulse mx-auto" />
+                ) : (
+                  <PieChart income={stats?.monthIncome ?? 0} expense={stats?.monthExpense ?? 0} />
                 )}
               </div>
-              <div>
-                <p className="text-xs text-gray-400 mb-1">รายจ่าย</p>
-                {loadingStats ? <div className="h-6 bg-gray-100 rounded animate-pulse" /> : (
-                  <p className="text-lg font-bold text-rose-500">฿{fmtInt(stats?.monthExpense ?? 0)}</p>
-                )}
-              </div>
-              <div>
-                <p className="text-xs text-gray-400 mb-1">กำไร</p>
-                {loadingStats ? <div className="h-6 bg-gray-100 rounded animate-pulse" /> : (
-                  <p className={`text-lg font-bold ${netMonth >= 0 ? "text-blue-600" : "text-amber-500"}`}>
-                    {netMonth < 0 ? "-" : ""}฿{fmtInt(Math.abs(netMonth))}
-                  </p>
-                )}
+              {/* Numbers */}
+              <div className="flex-1 space-y-3 pt-1">
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">รายรับ</p>
+                  {loadingStats ? <div className="h-6 bg-gray-100 rounded animate-pulse" /> : (
+                    <p className="text-lg font-bold text-emerald-600">฿{fmtInt(stats?.monthIncome ?? 0)}</p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">รายจ่าย</p>
+                  {loadingStats ? <div className="h-6 bg-gray-100 rounded animate-pulse" /> : (
+                    <p className="text-lg font-bold text-rose-500">฿{fmtInt(stats?.monthExpense ?? 0)}</p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">กำไร</p>
+                  {loadingStats ? <div className="h-6 bg-gray-100 rounded animate-pulse" /> : (
+                    <p className={`text-lg font-bold ${netMonth >= 0 ? "text-blue-600" : "text-amber-500"}`}>
+                      {netMonth < 0 ? "-" : ""}฿{fmtInt(Math.abs(netMonth))}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 
