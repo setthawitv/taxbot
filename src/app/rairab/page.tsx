@@ -32,7 +32,7 @@ type TxnRow = {
   id: string;
   amount: number;
   vendor: string;
-  description: string;
+  description?: string;
   transaction_date: string;
   source?: string;
 };
