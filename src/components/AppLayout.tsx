@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import {
   IconHome, IconIncome, IconExpense, IconTax, IconSettings,
 } from "@/components/icons";
@@ -19,9 +21,79 @@ const NAV: NavItem[] = [
 
 type UserInfo = { displayName: string; pictureUrl: string; businessName: string };
 
+function useResolvedUser(externalUserInfo?: UserInfo | null) {
+  const { data: session, status } = useSession();
+  const [user, setUser] = useState<UserInfo | null>(externalUserInfo ?? null);
+
+  useEffect(() => {
+    if (externalUserInfo) { setUser(externalUserInfo); return; }
+    if (status === "loading") return;
+
+    async function resolve() {
+      // Try LIFF first
+      const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
+      if (liffId) {
+        try {
+          const { default: liff } = await import("@line/liff");
+          await liff.init({ liffId });
+          if (liff.isLoggedIn()) {
+            const p = await liff.getProfile();
+            // Fetch business name from DB
+            try {
+              const res = await fetch(`/api/user/status?lineUserId=${p.userId}`);
+              if (res.ok) {
+                const d = await res.json();
+                setUser({
+                  displayName: p.displayName,
+                  pictureUrl: p.pictureUrl ?? "",
+                  businessName: d.profile?.businessName ?? "",
+                });
+                return;
+              }
+            } catch { /* ignore */ }
+            setUser({ displayName: p.displayName, pictureUrl: p.pictureUrl ?? "", businessName: "" });
+            return;
+          }
+        } catch { /* not in LINE */ }
+      }
+
+      // Fallback: Google session
+      if (session?.user?.email) {
+        try {
+          const res = await fetch("/api/user/by-email");
+          if (res.ok) {
+            const d = await res.json();
+            if (d.lineUserId) {
+              const statusRes = await fetch(`/api/user/status?lineUserId=${d.lineUserId}`);
+              if (statusRes.ok) {
+                const sd = await statusRes.json();
+                setUser({
+                  displayName: session.user.name ?? session.user.email ?? "",
+                  pictureUrl: session.user.image ?? "",
+                  businessName: sd.profile?.businessName ?? "",
+                });
+                return;
+              }
+            }
+          }
+        } catch { /* ignore */ }
+        setUser({
+          displayName: session.user.name ?? session.user.email ?? "",
+          pictureUrl: session.user.image ?? "",
+          businessName: "",
+        });
+      }
+    }
+
+    resolve();
+  }, [externalUserInfo, status, session]);
+
+  return user;
+}
+
 export default function AppLayout({
   children,
-  userInfo,
+  userInfo: externalUserInfo,
   title,
 }: {
   children: ReactNode;
@@ -29,9 +101,10 @@ export default function AppLayout({
   title?: string;
 }) {
   const pathname = usePathname();
+  const user = useResolvedUser(externalUserInfo);
 
-  const displayName = userInfo?.businessName || userInfo?.displayName || "TaxBot";
-  const subName = userInfo?.businessName ? userInfo.displayName : "";
+  const displayName = user?.businessName || user?.displayName || "TaxBot";
+  const subName = user?.businessName ? user.displayName : "";
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex">
@@ -48,24 +121,22 @@ export default function AppLayout({
         </div>
 
         {/* User card */}
-        {userInfo && (
-          <div className="px-4 py-4 border-b border-white/10 flex-shrink-0">
-            <div className="flex items-center gap-3 bg-white/5 rounded-xl px-3 py-2.5">
-              {userInfo.pictureUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={userInfo.pictureUrl} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-[#10B981]/30 flex items-center justify-center text-[#10B981] text-xs font-bold flex-shrink-0">
-                  {displayName[0] ?? "T"}
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-white text-xs font-semibold truncate">{displayName}</p>
-                {subName && <p className="text-white/40 text-xs truncate">{subName}</p>}
+        <div className="px-4 py-4 border-b border-white/10 flex-shrink-0">
+          <div className="flex items-center gap-3 bg-white/5 rounded-xl px-3 py-2.5">
+            {user?.pictureUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={user.pictureUrl} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/60 text-xs font-bold flex-shrink-0">
+                {displayName[0] ?? "T"}
               </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-xs font-semibold truncate">{displayName}</p>
+              {subName && <p className="text-white/40 text-xs truncate">{subName}</p>}
             </div>
           </div>
-        )}
+        </div>
 
         {/* Nav items */}
         <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
@@ -104,11 +175,11 @@ export default function AppLayout({
         <header className="lg:hidden sticky top-0 z-30 bg-[#0A192F] flex items-center gap-3 px-4 h-14 flex-shrink-0">
           <div className="w-7 h-7 rounded-md bg-[#10B981] flex items-center justify-center text-white font-extrabold text-xs select-none">T</div>
           <span className="text-white font-bold flex-1 text-sm">
-            {title || displayName || "TaxBot"}
+            {title || NAV.find((n) => n.href === pathname)?.labelTh || "TaxBot"}
           </span>
-          {userInfo?.pictureUrl ? (
+          {user?.pictureUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={userInfo.pictureUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
+            <img src={user.pictureUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
           ) : (
             <div className="w-8 h-8 rounded-full bg-white/15" />
           )}
@@ -128,7 +199,7 @@ export default function AppLayout({
       </div>
 
       {/* ── Mobile bottom nav ───────────────────────────────────────────── */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-gray-100 safe-area-pb">
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-gray-100">
         <div className="flex h-16">
           {NAV.map(({ href, Icon, labelTh }) => {
             const active = pathname === href;
@@ -140,9 +211,8 @@ export default function AppLayout({
                   active ? "text-[#0A192F]" : "text-gray-400 hover:text-gray-600"
                 }`}
               >
-                <Icon className={`w-5 h-5 ${active ? "stroke-[2.5]" : ""}`} />
+                <Icon className="w-5 h-5" />
                 <span className="text-[9px] font-semibold">{labelTh}</span>
-                {active && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-[#0A192F] rounded-t-full" />}
               </Link>
             );
           })}
