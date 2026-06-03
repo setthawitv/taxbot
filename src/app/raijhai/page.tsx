@@ -14,7 +14,7 @@ const EXPENSE_CATEGORIES = [
 const MONTHS = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 const CURRENT_YEAR  = new Date().getFullYear();
 const CURRENT_MONTH = new Date().getMonth() + 1;
-const YEARS = [CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2];
+const YEARS = Array.from({ length: 6 }, (_, i) => CURRENT_YEAR - i);
 
 type Transaction = {
   id: string;
@@ -174,6 +174,7 @@ export default function RaiJhai() {
             description:      desc.trim(),
             date,
             expenseCategory:  category,
+            source:           scannedImageBase64 ? "slip_photo" : "manual",
             imageBase64:      scannedImageBase64 ?? undefined,
           }),
         });
@@ -277,7 +278,7 @@ export default function RaiJhai() {
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-4">
-          <Link href="/" className="text-rose-600 text-sm">← กลับ</Link>
+          <Link href="/home" className="text-rose-600 text-sm">← กลับ</Link>
         </div>
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -311,34 +312,25 @@ export default function RaiJhai() {
           {/* LEFT — Filters + Summary + Form */}
           <div className="lg:col-span-2 space-y-4 mb-6 lg:mb-0">
 
-            {/* Year selector */}
+            {/* Year + Month dropdowns */}
             <div className="flex gap-2">
-              {YEARS.map((y) => (
-                <button key={y} onClick={() => setYear(y)}
-                  className={`flex-1 py-1.5 rounded-xl text-sm font-semibold transition-all ${
-                    year === y ? "bg-rose-500 text-white shadow-sm" : "bg-white text-gray-500 border border-rose-100"
-                  }`}>
-                  {y}
-                </button>
-              ))}
-            </div>
-
-            {/* Month selector */}
-            <div className="flex flex-wrap gap-1.5">
-              <button onClick={() => setMonth(0)}
-                className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                  month === 0 ? "bg-rose-500 text-white" : "bg-white text-gray-500 border border-gray-200"
-                }`}>
-                ทั้งปี
-              </button>
-              {MONTHS.map((label, i) => (
-                <button key={i} onClick={() => setMonth(i + 1)}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                    month === i + 1 ? "bg-rose-500 text-white" : "bg-white text-gray-500 border border-gray-200"
-                  }`}>
-                  {label}
-                </button>
-              ))}
+              <select
+                value={year}
+                onChange={(e) => setYear(Number(e.target.value))}
+                className="flex-1 bg-white border border-rose-200 rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-rose-300"
+              >
+                {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
+              </select>
+              <select
+                value={month}
+                onChange={(e) => setMonth(Number(e.target.value))}
+                className="flex-[2] bg-white border border-rose-200 rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-rose-300"
+              >
+                <option value={0}>ทั้งปี</option>
+                {MONTHS.map((label, i) => (
+                  <option key={i} value={i + 1}>{label}</option>
+                ))}
+              </select>
             </div>
 
             {/* Total card */}
