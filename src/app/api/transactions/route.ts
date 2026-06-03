@@ -217,11 +217,11 @@ export async function POST(req: NextRequest) {
         vendor,
         description:      description || vendor,
         transaction_date: date,
-        source,
-        ...(vatAmount      ? { vat_amount:       vatAmount      } : {}),
-        ...(withholdingTax ? { withholding_tax:  withholdingTax } : {}),
-        ...(invoiceNo      ? { invoice_no:        invoiceNo      } : {}),
-        ...(taxId          ? { tax_id:            taxId          } : {}),
+        ...(source         ? { source }                                         : {}),
+        ...(vatAmount      ? { vat_amount:      vatAmount      }               : {}),
+        ...(withholdingTax ? { withholding_tax: withholdingTax }               : {}),
+        ...(invoiceNo      ? { invoice_no:      invoiceNo      }               : {}),
+        ...(taxId          ? { tax_id:          taxId          }               : {}),
         ...(staffCode ? { staff_code: staffCode, staff_name: staffName ?? "Staff" } : {}),
       })
       .select("id")
