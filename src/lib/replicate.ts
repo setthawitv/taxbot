@@ -141,10 +141,13 @@ FIELDS:
 - type: "expense"
 - amount: total paid (number)
 - vendor: recipient name (string)
-- date: Gregorian "YYYY-MM-DD". Year conversion rules:
-  * "DD MMM YY" format: 2-digit year 20-30 = AD 20YY. "24 May 26" → 2026-05-24. "3 Jun 26" → 2026-06-03.
-  * 2-digit year 60-69 = Thai BE last 2 digits → AD = (2500+YY)-543. "67" → BE2567 → AD2024.
-  * 4-digit year ≥ 2500 = Thai BE → subtract 543. 4-digit year < 2500 = AD as-is.
+- date: Gregorian "YYYY-MM-DD". Rules:
+  * Thai bank slips use "DD MMM YY" → FIRST number = DAY, MIDDLE = month, LAST number = year.
+  * NEVER treat the first number as the year. "20 May 26" = day 20, month May, year 26 → "2026-05-20".
+  * Examples: "24 May 26"→"2026-05-24", "3 Jun 26"→"2026-06-03", "15 Jan 25"→"2025-01-15".
+  * 2-digit year 20-30 → prepend "20" → AD. "26"→2026, "25"→2025.
+  * 2-digit year 60-69 = Thai BE → AD = (2500+YY)-543. "67"→BE2567→AD2024.
+  * 4-digit year ≥ 2500 = Thai BE → subtract 543. 4-digit < 2500 = AD as-is.
   * Use ${today} if date not visible.
 - description: short Thai description (never empty; use vendor name if nothing else)
 - docType: "สลิปโอนเงิน" | "ใบเสร็จรับเงิน" | "ใบกำกับภาษี" | "อื่นๆ"
