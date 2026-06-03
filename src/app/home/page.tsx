@@ -534,8 +534,8 @@ export default function Home() {
                   <div className="w-36 h-36 rounded-full bg-gray-100 animate-pulse" />
                 ) : (
                   <>
-                    <PieChart income={stats?.yearIncome ?? 0} expense={stats?.yearExpense ?? 0} />
-                    <p className="text-[10px] text-gray-400">ภาพรวมทั้งปี {selectedYear}</p>
+                    <PieChart income={stats?.monthIncome ?? 0} expense={stats?.monthExpense ?? 0} />
+                    <p className="text-[10px] text-gray-400">{MONTH_TH[selectedMonth]} {selectedYear}</p>
                   </>
                 )}
               </div>
