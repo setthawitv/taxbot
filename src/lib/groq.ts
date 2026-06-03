@@ -132,6 +132,69 @@ async function callWithFallback(base64Image: string, today: string): Promise<str
   throw lastError;
 }
 
+/** Parse structured receipt data from raw OCR text (used by Datalab flow) */
+export async function readReceiptFromText(rawText: string, today: string): Promise<ReceiptData> {
+  const TEXT_MODELS = [
+    "meta-llama/llama-4-scout-17b-16e-instruct",
+    "llama-3.3-70b-versatile",
+  ];
+
+  const prompt = [
+    "You are a Thai receipt/slip parser. Extract structured data from the OCR text below.",
+    "Reply with a single JSON object only — no explanation, no markdown.",
+    "",
+    ...PROMPT_LINES.slice(2), // reuse same field rules
+    "",
+    `Today's date: ${today}`,
+    "",
+    "OCR TEXT:",
+    rawText,
+  ].join("\n");
+
+  let jsonText = "";
+  for (const model of TEXT_MODELS) {
+    try {
+      const res = await client.chat.completions.create({
+        model,
+        max_tokens: 600,
+        messages: [{ role: "user", content: prompt }],
+      });
+      jsonText = res.choices[0].message.content?.trim() ?? "";
+      break;
+    } catch { /* try next */ }
+  }
+
+  if (!jsonText) throw new Error("Groq text parsing failed for all models");
+
+  let parsed: Partial<ReceiptData> = {};
+  try {
+    parsed = JSON.parse(extractJson(jsonText));
+  } catch {
+    throw new Error(`Failed to parse Groq text response: ${jsonText.slice(0, 200)}`);
+  }
+
+  if (!parsed.amount || !parsed.vendor) throw new Error("Missing required fields (amount, vendor)");
+
+  return {
+    type:            parsed.type === "income" ? "income" : "expense",
+    amount:          safeNum(parsed.amount),
+    vendor:          String(parsed.vendor ?? "ไม่ระบุ"),
+    date:            String(parsed.date ?? today),
+    description:     String(parsed.description ?? ""),
+    docType:         String(parsed.docType ?? "อื่นๆ"),
+    expenseCategory: String(parsed.expenseCategory ?? "อื่นๆ"),
+    quantity:        safeNum(parsed.quantity, 1) || 1,
+    unitPrice:       safeNum(parsed.unitPrice) || safeNum(parsed.amount),
+    vatAmount:       safeNum(parsed.vatAmount, 0),
+    withholdingTax:  safeNum(parsed.withholdingTax, 0),
+    invoiceNo:       String(parsed.invoiceNo ?? ""),
+    invoiceName:     String(parsed.invoiceName ?? "ไม่มี"),
+    taxId:           String(parsed.taxId ?? ""),
+    branch:          String(parsed.branch ?? ""),
+    transactionId:   String(parsed.transactionId ?? ""),
+  };
+}
+
 export async function readReceipt(base64Image: string): Promise<ReceiptData> {
   const today = new Date().toISOString().split("T")[0];
 

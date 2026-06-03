@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readReceipt as replicateRead } from "@/lib/replicate";
-import { readReceipt as groqRead }     from "@/lib/groq";
+import { readReceipt as datalabRead } from "@/lib/datalab";
+import { readReceipt as groqRead }    from "@/lib/groq";
 
 // POST /api/scan  { lineUserId, imageBase64, forceType? }
 // Returns OCR data only — does NOT save to DB or Sheets.
 // The caller is responsible for saving via POST /api/transactions after user review.
+//
+// Priority:  Datalab OCR → Groq vision (fallback)
 export async function POST(req: NextRequest) {
   try {
     const { imageBase64, forceType } = await req.json();
@@ -14,13 +16,22 @@ export async function POST(req: NextRequest) {
     // Strip data-url prefix if present
     const base64 = imageBase64.replace(/^data:image\/[a-z]+;base64,/, "");
 
-    // Call AI — Replicate OCR first, Groq as fallback
     let receipt;
-    try {
-      receipt = await replicateRead(base64);
-    } catch (replicateErr) {
-      console.warn("[scan] Replicate OCR failed, falling back to Groq:", replicateErr);
+
+    // 1. Try Datalab OCR (best accuracy for Thai bank slips)
+    if (process.env.DATALAB_API_KEY) {
+      try {
+        receipt = await datalabRead(base64);
+        console.log("[scan] used Datalab OCR");
+      } catch (datalabErr) {
+        console.warn("[scan] Datalab failed, falling back to Groq:", datalabErr);
+      }
+    }
+
+    // 2. Fallback: Groq vision
+    if (!receipt) {
       receipt = await groqRead(base64);
+      console.log("[scan] used Groq vision");
     }
 
     // Override type if caller specifies
