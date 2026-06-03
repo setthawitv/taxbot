@@ -421,15 +421,25 @@ export default function Home() {
         <div>
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs font-semibold text-[#4A5568] uppercase tracking-widest">ภาพรวมทั้งปี</p>
-            <select
-              value={selectedYear}
-              onChange={(e) => { setSelectedYear(Number(e.target.value)); setSelectedMonth(CURRENT_MONTH); }}
-              className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm bg-white text-[#0A192F] font-medium focus:outline-none focus:ring-2 focus:ring-[#0A192F]/20 cursor-pointer"
-            >
-              {Array.from({ length: 4 }, (_, i) => CURRENT_YEAR - i).map((y) => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
+            <div className="flex items-center gap-2">
+              <select
+                value={selectedYear}
+                onChange={(e) => { setSelectedYear(Number(e.target.value)); setSelectedMonth(CURRENT_MONTH); }}
+                className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm bg-white text-[#0A192F] font-medium focus:outline-none focus:ring-2 focus:ring-[#0A192F]/20 cursor-pointer"
+              >
+                {Array.from({ length: 4 }, (_, i) => CURRENT_YEAR - i).map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+              {selectedYear !== CURRENT_YEAR && (
+                <button
+                  onClick={() => { setSelectedYear(CURRENT_YEAR); setSelectedMonth(CURRENT_MONTH); }}
+                  className="text-xs text-[#4A5568] hover:text-[#0A192F] underline underline-offset-2 transition-colors whitespace-nowrap"
+                >
+                  ปีนี้
+                </button>
+              )}
+            </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
