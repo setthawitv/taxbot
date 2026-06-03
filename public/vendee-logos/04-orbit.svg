@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="orbitGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e3a8a"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+  </defs>
+  <!-- Minimal mono mark on transparent: orbit ring + bold V -->
+  <circle cx="100" cy="100" r="84" fill="none"
+          stroke="url(#orbitGrad)" stroke-width="4" stroke-dasharray="3 8" opacity="0.5"/>
+  <!-- Solid V -->
+  <path d="M52 56 L100 144 L148 56"
+        stroke="url(#orbitGrad)" stroke-width="22"
+        stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Filled accent dot orbiting top-right -->
+  <circle cx="148" cy="56" r="11" fill="#f59e0b"/>
+</svg>

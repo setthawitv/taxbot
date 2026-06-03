@@ -15,7 +15,7 @@ import {
 import { calcPIT, calcCIT, type Breakdown } from "@/lib/tax-calc";
 
 const CURRENT_YEAR = new Date().getFullYear();
-const YEARS = [CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2];
+const YEARS = Array.from({ length: 6 }, (_, i) => CURRENT_YEAR - i);
 
 type RawSummary = {
   year:           number;
@@ -127,6 +127,7 @@ export default function PhasiPage() {
   // Deductions state — key: item id, value: THB
   const [deductions, setDeductions] = useState<Record<string, number>>({ personal: 60_000 });
   const [showDeductions, setShowDeductions] = useState(false);
+  const [migratedBanner, setMigratedBanner] = useState(false);
 
   const { data: session, status: sessionStatus } = useSession();
 
@@ -191,6 +192,34 @@ export default function PhasiPage() {
     if (sal) setSalaryIncome(parseFloat(sal) || 0);
     const com = localStorage.getItem(`taxbot_commission_${year}`);
     if (com) setCommissionIncome(parseFloat(com) || 0);
+
+    // ── Migrate from landing-page calculator (one-time) ────────────────────
+    // If user filled in the public calculator before signup, port that into
+    // their account-bound data. Only migrate fields that aren't already set.
+    const landing = localStorage.getItem("taxbot_landing_calc");
+    if (landing) {
+      try {
+        const d = JSON.parse(landing);
+        let migrated = false;
+        if (!saved && d.deductions && typeof d.deductions === "object") {
+          setDeductions({ personal: 60_000, ...d.deductions });
+          migrated = true;
+        }
+        if (!sal && typeof d.salary === "number" && d.salary > 0) {
+          setSalaryIncome(d.salary);
+          migrated = true;
+        }
+        if (tp === null && (d.taxpayer === "individual" || d.taxpayer === "corporate")) {
+          setTaxpayer(d.taxpayer);
+        }
+        if (sme === null && typeof d.isSME === "boolean") {
+          setIsSME(d.isSME);
+        }
+        if (migrated) setMigratedBanner(true);
+      } catch {}
+      // Clear after migration so it doesn't re-trigger
+      localStorage.removeItem("taxbot_landing_calc");
+    }
   }, [year]);
 
   // ── Persist deductions ─────────────────────────────────────────────────────
@@ -223,7 +252,8 @@ export default function PhasiPage() {
       const totalDeductions = totalNonDonation + totalDonation;
 
       // Method 1: ธุรกิจหักเหมา 60% + เงินเดือนหัก 50% (≤100k auto)
-      const std1Business = Math.min(businessIncome * 0.6, 600_000);
+      // มาตรา 40(8) หักเหมา 60% ไม่มีเพดาน (กฎปัจจุบัน ตั้งแต่ปี 2563)
+      const std1Business = businessIncome * 0.6;
       const taxable1     = Math.max(0, grandIncome - std1Business - salaryFlatDed - totalDeductions);
       const { tax: tax1, breakdown: bd1 } = calcPIT(taxable1);
 
@@ -255,7 +285,7 @@ export default function PhasiPage() {
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-4">
-          <Link href="/" className="text-blue-600 text-sm">← กลับ</Link>
+          <Link href="/home" className="text-blue-600 text-sm">← กลับ</Link>
         </div>
         <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
           <div className="flex items-center gap-3">
@@ -267,16 +297,13 @@ export default function PhasiPage() {
               <p className="text-blue-400 text-sm">Tax Summary</p>
             </div>
           </div>
-          <div className="flex gap-2">
-            {YEARS.map((y) => (
-              <button key={y} onClick={() => setYear(y)}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                  year === y ? "bg-blue-600 text-white shadow-sm" : "bg-white text-gray-500 border border-blue-100"
-                }`}>
-                {y}
-              </button>
-            ))}
-          </div>
+          <select
+            value={year}
+            onChange={(e) => setYear(Number(e.target.value))}
+            className="bg-white border border-blue-200 rounded-xl px-4 py-2 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+          >
+            {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
+          </select>
         </div>
 
         {/* Taxpayer-type toggle */}
@@ -304,6 +331,18 @@ export default function PhasiPage() {
 
             {/* LEFT — Income + deductions */}
             <div className="space-y-4 mb-6 lg:mb-0">
+
+              {migratedBanner && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-start gap-3">
+                  <span className="text-emerald-500 flex-shrink-0 mt-0.5"><IconCheck className="w-5 h-5" /></span>
+                  <div className="flex-1">
+                    <p className="text-emerald-800 font-semibold text-sm">บันทึกข้อมูลที่กรอกไว้ก่อนสมัครแล้ว</p>
+                    <p className="text-emerald-600 text-xs mt-0.5">เราย้ายค่าลดหย่อนและเงินเดือนที่คุณกรอกไว้ในหน้าคำนวณภาษีมาให้บัญชีนี้แล้ว</p>
+                  </div>
+                  <button onClick={() => setMigratedBanner(false)}
+                    className="text-emerald-400 hover:text-emerald-600 text-xl leading-none">×</button>
+                </div>
+              )}
 
               {raw.vatWarning && (
                 <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
@@ -628,9 +667,7 @@ function PITMethodCard({
           <span>รายได้รวม</span><span>฿{fmtInt(income)}</span>
         </div>
         <div className="flex justify-between text-emerald-600">
-          <span>{expenseLabel}{index === 1 && expense >= 600_000 && (
-            <span className="text-xs text-gray-400 ml-1">(สูงสุด 600k)</span>
-          )}</span>
+          <span>{expenseLabel}</span>
           <span>-฿{fmtInt(expense)}</span>
         </div>
         {salaryFlatDed > 0 && (

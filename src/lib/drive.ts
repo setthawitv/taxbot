@@ -41,7 +41,7 @@ async function findOrCreateFolder(
 }
 
 /**
- * Create the root TaxBot folder for a user on first onboarding.
+ * Create the root Vendee Finance folder for a user on first onboarding.
  * Returns the folder ID to store in users.drive_folder_id.
  */
 export async function createRootFolder(
@@ -49,7 +49,7 @@ export async function createRootFolder(
   businessName: string
 ): Promise<string> {
   const drive = getDriveClient(accessToken);
-  const taxbotId = await findOrCreateFolder(drive, "root", "TaxBot");
+  const taxbotId = await findOrCreateFolder(drive, "root", "Vendee Finance");
   return findOrCreateFolder(drive, taxbotId, businessName);
 }
 

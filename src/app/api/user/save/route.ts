@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
       if (!sheetId) {
         sheetId = await createSheet(googleAccessToken, businessName || "ธุรกิจของฉัน");
       }
-      // Create root Drive folder (TaxBot/{businessName}) if not yet created
+      // Create root Drive folder (Vendee Finance/{businessName}) if not yet created
       if (!driveFolderId) {
         driveFolderId = await createRootFolder(
           googleAccessToken,

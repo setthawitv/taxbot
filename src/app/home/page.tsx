@@ -280,8 +280,23 @@ export default function Home() {
   const [links,        setLinks]        = useState<Links>({ sheetUrl: null, driveUrl: null });
   const [loadingStats, setLoadingStats] = useState(true);
   const [showTour,      setShowTour]      = useState(false);
-  const [selectedYear,  setSelectedYear]  = useState(CURRENT_YEAR);
-  const [selectedMonth, setSelectedMonth] = useState(CURRENT_MONTH);
+  const [selectedYear,  setSelectedYear]  = useState<number>(() => {
+    if (typeof window === "undefined") return CURRENT_YEAR;
+    return parseInt(localStorage.getItem("taxbot_year") || String(CURRENT_YEAR), 10);
+  });
+  const [selectedMonth, setSelectedMonth] = useState<number>(() => {
+    if (typeof window === "undefined") return CURRENT_MONTH;
+    return parseInt(localStorage.getItem("taxbot_month") || String(CURRENT_MONTH), 10);
+  });
+
+  function pickYear(y: number) {
+    setSelectedYear(y);
+    localStorage.setItem("taxbot_year", String(y));
+  }
+  function pickMonth(m: number) {
+    setSelectedMonth(m);
+    localStorage.setItem("taxbot_month", String(m));
+  }
 
   const { data: session, status: sessionStatus } = useSession();
 
@@ -421,21 +436,15 @@ export default function Home() {
         <div>
           <div className="w-full flex items-center justify-between mb-3">
             <p className="text-xs font-semibold text-[#4A5568] uppercase tracking-widest">ภาพรวมทั้งปี</p>
-            <div className="flex items-center gap-1.5">
+            <select
+              value={selectedYear}
+              onChange={(e) => { pickYear(Number(e.target.value)); pickMonth(CURRENT_MONTH); }}
+              className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm bg-white text-[#0A192F] font-medium focus:outline-none focus:ring-2 focus:ring-[#0A192F]/20 cursor-pointer"
+            >
               {Array.from({ length: 4 }, (_, i) => CURRENT_YEAR - i).map((y) => (
-                <button
-                  key={y}
-                  onClick={() => { setSelectedYear(y); setSelectedMonth(CURRENT_MONTH); }}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
-                    selectedYear === y
-                      ? "bg-[#0A192F] text-white border-[#0A192F]"
-                      : "bg-white text-gray-500 border-gray-200 hover:border-gray-400"
-                  }`}
-                >
-                  {y}
-                </button>
+                <option key={y} value={y}>{y}</option>
               ))}
-            </div>
+            </select>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
@@ -505,7 +514,7 @@ export default function Home() {
               <div className="flex items-center gap-2">
                 <select
                   value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                  onChange={(e) => pickMonth(Number(e.target.value))}
                   className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm bg-white text-[#0A192F] font-medium focus:outline-none focus:ring-2 focus:ring-[#0A192F]/20 cursor-pointer"
                 >
                   {MONTH_TH.slice(1).map((label, i) => (
@@ -514,7 +523,7 @@ export default function Home() {
                 </select>
                 {(selectedMonth !== CURRENT_MONTH || selectedYear !== CURRENT_YEAR) && (
                   <button
-                    onClick={() => setSelectedMonth(CURRENT_MONTH)}
+                    onClick={() => pickMonth(CURRENT_MONTH)}
                     className="text-xs text-[#4A5568] hover:text-[#0A192F] underline underline-offset-2 transition-colors whitespace-nowrap"
                   >
                     เดือนนี้

@@ -72,7 +72,7 @@ function AdminJoinInner() {
         <div className="text-center mb-8">
           <div className="text-5xl mb-3">🛡️</div>
           <h1 className="text-2xl font-bold text-white">เข้าร่วมเป็น Admin</h1>
-          <p className="text-gray-400 text-sm mt-1">TaxBot Account Access</p>
+          <p className="text-gray-400 text-sm mt-1">Vendee Finance Account Access</p>
         </div>
 
         <div className="bg-gray-800 rounded-2xl p-6 space-y-4">
@@ -96,7 +96,7 @@ function AdminJoinInner() {
                 </p>
               )}
               <a
-                href="/"
+                href="/home"
                 className="mt-5 w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
               >
                 🏠 ไปยัง Dashboard

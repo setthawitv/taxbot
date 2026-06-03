@@ -237,7 +237,7 @@ export default function StaffExpensePage() {
         </form>
 
         <p className="text-xs text-gray-300 text-center mt-6">
-          TaxBot · ระบบบันทึกรายจ่าย
+          Vendee Finance · ระบบบันทึกรายจ่าย
         </p>
       </div>
     </main>

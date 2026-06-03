@@ -98,7 +98,7 @@ const FEATURES: FeatureData[] = [
       "ทุกรายการที่บันทึกจะถูกส่งไปยัง Google Sheets ของคุณอัตโนมัติ ดาวน์โหลดเป็น Excel แชร์กับนักบัญชีหรือสรรพากรได้ทันที ไม่ต้องพิมพ์ซ้ำ",
     steps: [
       { icon: "1️⃣", title: "เชื่อมต่อ Google", desc: "ไปที่ ตั้งค่า → เชื่อมต่อ Google และให้สิทธิ์เข้าถึง Drive" },
-      { icon: "2️⃣", title: "ระบบสร้าง Sheet ให้อัตโนมัติ", desc: "สร้าง Google Sheet ชื่อ \"TaxBot - [ชื่อธุรกิจ]\" ใน Drive ของคุณ" },
+      { icon: "2️⃣", title: "ระบบสร้าง Sheet ให้อัตโนมัติ", desc: "สร้าง Google Sheet ชื่อ \"Vendee Finance - [ชื่อธุรกิจ]\" ใน Drive ของคุณ" },
       { icon: "3️⃣", title: "ซิงค์อัตโนมัติ", desc: "ทุกรายการที่บันทึกจะถูก append ลง Sheet ทันที" },
       { icon: "4️⃣", title: "เปิดหรือแชร์ได้เลย", desc: "กด Google Sheets ใน Dashboard เพื่อเปิด หรือ Share URL ให้นักบัญชี" },
     ],
@@ -118,7 +118,7 @@ const FEATURES: FeatureData[] = [
     accentText: "text-orange-400",
     accentBg: "bg-orange-500/10 border-orange-500/30",
     description:
-      "ดาวน์โหลดรายงานยอดขายจาก TikTok Shop, Shopee หรือ Lazada แล้วอัปโหลดเข้า TaxBot — ระบบจะแยกยอดรายรับของแต่ละออเดอร์ให้อัตโนมัติ ไม่ต้องกรอกทีละรายการ",
+      "ดาวน์โหลดรายงานยอดขายจาก TikTok Shop, Shopee หรือ Lazada แล้วอัปโหลดเข้า Vendee Finance — ระบบจะแยกยอดรายรับของแต่ละออเดอร์ให้อัตโนมัติ ไม่ต้องกรอกทีละรายการ",
     steps: [
       { icon: "1️⃣", title: "ดาวน์โหลดรายงานจากแพลตฟอร์ม", desc: "TikTok: Order Management → Export / Shopee: My Income → Export / Lazada: Orders → Export" },
       { icon: "2️⃣", title: "ไปที่หน้ารายรับ → นำเข้า", desc: "กดปุ่ม 📤 นำเข้า แล้วเลือกแพลตฟอร์มที่ต้องการ" },
@@ -171,7 +171,7 @@ export default async function FeaturePage({ params }: { params: Promise<{ slug: 
       <div className="max-w-2xl mx-auto px-6 py-10">
 
         {/* Back */}
-        <Link href="/landing" className="inline-flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors mb-8">
+        <Link href="/" className="inline-flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors mb-8">
           ← กลับหน้าหลัก
         </Link>
 

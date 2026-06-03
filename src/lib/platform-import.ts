@@ -26,8 +26,12 @@ export type ParseResult = {
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 function parseThaiDate(raw: string): string {
-  // TikTok: "27/04/2026 20:56:55"  →  2026-04-27
-  const m = String(raw ?? "").trim().match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  const s = String(raw ?? "").trim();
+  // TikTok Income Report: "2025/11/14" → 2025-11-14
+  const mISO = s.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})/);
+  if (mISO) return `${mISO[1]}-${mISO[2].padStart(2, "0")}-${mISO[3].padStart(2, "0")}`;
+  // TikTok Order Report: "27/04/2026 20:56:55" → 2026-04-27
+  const m = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
   if (!m) return new Date().toISOString().slice(0, 10);
   return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
 }
@@ -39,13 +43,92 @@ function parseISODate(raw: string): string {
 }
 
 // ─── TikTok ───────────────────────────────────────────────────────────────────
-// Unique key = Order ID + SKU ID (line-item level)
-// Amount     = per-item net ("Seller Revenue" / col 15), NOT total order amount
-// Reason: same SKU ID can appear in different orders (different customers),
-//         same Order ID can have multiple SKU IDs (multi-item order).
-//         Only the combination Order ID + SKU ID is truly unique per line.
+// Supports two TikTok export formats:
+//
+// A) Income Report (รายงานรายรับ) — filename: income_*.xlsx
+//    Thai headers: หมายเลขคำสั่งซื้อ/การปรับ, ประเภทธุรกรรม, เวลาที่ชำระคำสั่งซื้อ, รายได้รวม, ...
+//    Income = รายได้รวม (ค่าสินค้า + ค่าส่งที่ลูกค้าจ่าย)
+//
+// B) Order Report — English headers: Order ID, Order Status, SKU ID, Seller Revenue, ...
+//    Income = per-item Seller Revenue
 export function parseTikTok(rows: string[][]): ParseResult {
-  const header = rows[0].map((h) => h.trim());
+  const header = rows[0].map((h) => String(h ?? "").trim());
+
+  // Detect Income Report by Thai header signature
+  const isIncomeReport = header.some((h) => h.includes("หมายเลขคำสั่งซื้อ/การปรับ") || h === "รายได้รวม");
+
+  if (isIncomeReport) {
+    return parseTikTokIncomeReport(rows, header);
+  }
+  return parseTikTokOrderReport(rows, header);
+}
+
+// ── Format A: TikTok Income Report ───────────────────────────────────────────
+function parseTikTokIncomeReport(rows: string[][], header: string[]): ParseResult {
+  const idx = (name: string) => header.findIndex((h) => h.includes(name));
+
+  const iOrderId  = idx("หมายเลขคำสั่งซื้อ");  // หมายเลขคำสั่งซื้อ/การปรับ
+  const iType     = idx("ประเภทธุรกรรม");
+  const iDate     = idx("เวลาที่ชำระคำสั่งซื้อ");
+  const iIncome   = idx("รายได้รวม");            // ค่าสินค้า + ค่าส่งลูกค้า
+
+  console.log("[TikTok income] column map:", { iOrderId, iType, iDate, iIncome, totalCols: header.length });
+
+  const seen = new Set<string>();
+  const result: ImportedRow[] = [];
+  let cancelled = 0;
+  let returned  = 0;
+
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (r.length < 4) continue;
+
+    const orderId = String(r[iOrderId] ?? "").trim();
+    if (!orderId) continue;
+
+    const txType = String(r[iType] ?? "").trim();
+
+    // Skip refunds and adjustments — only "คำสั่งซื้อ" (order) rows
+    if (txType.includes("คืน") || txType.includes("Refund") || txType.includes("Return")) {
+      returned++; continue;
+    }
+    if (txType.includes("ยกเลิก") || txType.includes("Cancel")) {
+      cancelled++; continue;
+    }
+
+    if (seen.has(orderId)) continue;
+    seen.add(orderId);
+
+    const income = parseFloat(String(iIncome >= 0 ? r[iIncome] : "0").replace(/,/g, "").trim() || "0");
+    if (income <= 0) { cancelled++; continue; }
+
+    const date = parseThaiDate(String(iDate >= 0 ? r[iDate] : "").trim());
+
+    result.push({
+      lineKey:     `tiktok_income_${orderId}`,
+      orderId,
+      skuLineId:   "",
+      date,
+      amount:      Math.round(income * 100) / 100,
+      platform:    "tiktok",
+      productName: "TikTok Shop",
+      variant:     "",
+    });
+  }
+
+  return {
+    rows:      result,
+    cancelled,
+    returned,
+    skipped:   cancelled + returned,
+    total:     result.reduce((s, r) => s + r.amount, 0),
+    platform:  "tiktok",
+  };
+}
+
+// ── Format B: TikTok Order Report ─────────────────────────────────────────────
+// Unique key = Order ID + SKU ID (line-item level)
+function parseTikTokOrderReport(rows: string[][], header: string[]): ParseResult {
   const idx  = (name: string) => header.findIndex((h) => h === name);
   const idxAny = (...names: string[]) =>
     names.reduce<number>((found, n) => (found >= 0 ? found : idx(n)), -1);
@@ -64,13 +147,12 @@ export function parseTikTok(rows: string[][]): ParseResult {
   const iProduct  = idx("Product Name");
   const iVariant  = idxAny("Variation", "SKU Variation", "Variation Name", "SKU Name");
 
-  // Log resolved indices for debugging
-  console.log("[TikTok parser] column map:", {
+  console.log("[TikTok order] column map:", {
     iOrderId, iStatus, iSkuId, iRevenue, iUnitPrice, iDiscount, iPaidTime, iProduct, iVariant,
     totalCols: header.length,
   });
 
-  const seen = new Set<string>(); // key = orderId_skuId
+  const seen = new Set<string>();
   const result: ImportedRow[] = [];
   let cancelled = 0;
   let returned  = 0;
@@ -83,54 +165,33 @@ export function parseTikTok(rows: string[][]): ParseResult {
     const status  = r[iStatus]?.trim() ?? "";
     if (!orderId) continue;
 
-    // Skip cancelled
-    if (status.includes("ยกเลิก") || status.includes("Cancel")) {
-      cancelled++;
-      continue;
-    }
-    // Skip returned / refunded
-    if (status.includes("Return") || status.includes("คืน") || status.includes("Refund")) {
-      returned++;
-      continue;
-    }
+    if (status.includes("ยกเลิก") || status.includes("Cancel")) { cancelled++; continue; }
+    if (status.includes("Return") || status.includes("คืน") || status.includes("Refund")) { returned++; continue; }
 
-    // Unique key = Order ID + SKU line-item ID
     const skuId   = iSkuId >= 0 ? (r[iSkuId]?.trim() || "") : "";
     const lineKey = skuId ? `${orderId}_${skuId}` : orderId;
 
-    if (seen.has(lineKey)) {
-      console.log(`[TikTok skip] row ${i} DUPLICATE key=${lineKey}`);
-      continue;
-    }
+    if (seen.has(lineKey)) continue;
     seen.add(lineKey);
 
-    // Per-item net revenue — try named column first, then compute from price - discount,
-    // then fallback to col-15 (positional, consistent across known TikTok exports)
     let net = 0;
     if (iRevenue >= 0) {
       net = parseFloat(r[iRevenue]?.trim() || "0");
     } else if (iUnitPrice >= 0 && iDiscount >= 0) {
-      const price    = parseFloat(r[iUnitPrice]?.trim() || "0");
-      const discount = parseFloat(r[iDiscount]?.trim()  || "0");
-      net = price - discount;
+      net = parseFloat(r[iUnitPrice]?.trim() || "0") - parseFloat(r[iDiscount]?.trim() || "0");
     } else {
-      // positional fallback: col 15 = per-item net in known TikTok layouts
       net = parseFloat(r[15]?.trim() || "0");
     }
 
-    if (net <= 0) {
-      console.log(`[TikTok skip] row ${i} NET_ZERO net=${net} orderId=${orderId} col15="${r[15]}" iRevenue=${iRevenue}`);
-      cancelled++; // treat zero-net as effectively cancelled
-      continue;
-    }
+    if (net <= 0) { cancelled++; continue; }
 
     const date        = parseThaiDate(r[iPaidTime] ?? "");
     const productName = (r[iProduct]?.trim() || "TikTok Shop").slice(0, 200);
     const variant     = (iVariant >= 0 ? r[iVariant]?.trim() : "") || "";
 
     result.push({
-      lineKey:     lineKey,
-      orderId:     orderId,
+      lineKey,
+      orderId,
       skuLineId:   skuId,
       date,
       amount:      net,

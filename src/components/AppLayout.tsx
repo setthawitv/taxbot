@@ -5,14 +5,14 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import {
-  IconHome, IconIncome, IconExpense, IconTax, IconSettings,
+  IconHome, IconIncome, IconExpense, IconTax, IconSettings, VendeeLogo,
 } from "@/components/icons";
 import type { ComponentType, ReactNode } from "react";
 
 type NavItem = { href: string; Icon: ComponentType<{ className?: string }>; labelTh: string; labelEn: string };
 
 const NAV: NavItem[] = [
-  { href: "/",         Icon: IconHome,    labelTh: "หน้าหลัก", labelEn: "Dashboard" },
+  { href: "/home",     Icon: IconHome,    labelTh: "หน้าหลัก", labelEn: "Dashboard" },
   { href: "/rairab",   Icon: IconIncome,  labelTh: "รายรับ",   labelEn: "Income"    },
   { href: "/raijhai",  Icon: IconExpense, labelTh: "รายจ่าย",  labelEn: "Expense"   },
   { href: "/phasi",    Icon: IconTax,     labelTh: "ภาษี",     labelEn: "Tax"       },
@@ -103,7 +103,7 @@ export default function AppLayout({
   const pathname = usePathname();
   const user = useResolvedUser(externalUserInfo);
 
-  const displayName = user?.businessName || user?.displayName || "TaxBot";
+  const displayName = user?.businessName || user?.displayName || "Vendee Finance";
   const subName = user?.businessName ? user.displayName : "";
 
   return (
@@ -114,10 +114,8 @@ export default function AppLayout({
 
         {/* Brand */}
         <div className="flex items-center gap-2.5 px-5 h-16 border-b border-white/10 flex-shrink-0">
-          <div className="w-8 h-8 rounded-lg bg-[#10B981] flex items-center justify-center text-white font-extrabold text-sm select-none">
-            T
-          </div>
-          <span className="text-white font-bold text-base tracking-tight">TaxBot</span>
+          <VendeeLogo className="w-8 h-8" />
+          <span className="text-white font-bold text-base tracking-tight">Vendee Finance</span>
         </div>
 
         {/* User card */}
@@ -164,7 +162,7 @@ export default function AppLayout({
 
         {/* Footer */}
         <div className="px-4 py-4 border-t border-white/10 flex-shrink-0">
-          <p className="text-white/20 text-[10px] text-center">TaxBot · สำหรับร้านค้าออนไลน์ไทย</p>
+          <p className="text-white/20 text-[10px] text-center">Vendee Finance · สำหรับร้านค้าออนไลน์ไทย</p>
         </div>
       </aside>
 
@@ -175,7 +173,7 @@ export default function AppLayout({
         <header className="lg:hidden sticky top-0 z-30 bg-[#0A192F] flex items-center gap-3 px-4 h-14 flex-shrink-0">
           <div className="w-7 h-7 rounded-md bg-[#10B981] flex items-center justify-center text-white font-extrabold text-xs select-none">T</div>
           <span className="text-white font-bold flex-1 text-sm">
-            {title || NAV.find((n) => n.href === pathname)?.labelTh || "TaxBot"}
+            {title || NAV.find((n) => n.href === pathname)?.labelTh || "Vendee Finance"}
           </span>
           {user?.pictureUrl ? (
             // eslint-disable-next-line @next/next/no-img-element

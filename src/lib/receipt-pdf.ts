@@ -223,7 +223,7 @@ export async function generateReceiptPdf(
   // ── Footer ───────────────────────────────────────────────────────────────────
   page.drawLine({ start: { x: ML - 10, y: 55 }, end: { x: W - MR + 10, y: 55 },
     thickness: 0.5, color: cBorder });
-  const footer = "เอกสารนี้ออกโดยระบบ TaxBot • ใช้แทนใบเสร็จในกรณีที่ไม่มีใบเสร็จต้นฉบับ";
+  const footer = "เอกสารนี้ออกโดยระบบ Vendee Finance • ใช้แทนใบเสร็จในกรณีที่ไม่มีใบเสร็จต้นฉบับ";
   const fw = font.widthOfTextAtSize(footer, 8);
   page.drawText(footer, { x: (W - fw) / 2, y: 43, size: 8, font, color: cGray });
 

@@ -8,7 +8,7 @@ const client = new MessagingApiClient({
   channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN!,
 });
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://taxbot-sage.vercel.app";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.vendeefinance.com";
 
 // ─── Webhook entry ────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
@@ -93,7 +93,7 @@ async function handleText(replyToken: string, lineUserId: string, text: string) 
 
   } else if (lower.includes("สวัสดี") || lower.includes("hello") || lower.includes("hi")) {
     reply =
-      `สวัสดีครับ! 👋\nผมคือ TaxBot ช่วยบันทึกรายรับ-รายจ่ายและสรุปภาษีให้คุณครับ\n\n` +
+      `สวัสดีครับ! 👋\nผมคือ Vendee Finance ช่วยบันทึกรายรับ-รายจ่ายและสรุปภาษีให้คุณครับ\n\n` +
       `📱 เปิดแอป: ${APP_URL}`;
 
   } else {

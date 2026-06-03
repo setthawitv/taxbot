@@ -4,12 +4,13 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import liff from "@line/liff";
 import { initLiff, isInLineClient, getLiffUrl } from "@/lib/liff";
+import { VendeeLogo } from "@/components/icons";
 
 // ─── Slide data ────────────────────────────────────────────────────────────────
 const SLIDES = [
   {
     badge: "หน้า 1 / 4",
-    titleHighlight: "TaxBot มาช่วยจัดการ",
+    titleHighlight: "Vendee Finance มาช่วยจัดการ",
     titleNormal: "รายรับ-รายจ่าย และภาษี แล้วจ้า~",
     description:
       "ส่งสลิปหรือรูปใบเสร็จในไลน์ ผมจะอ่านและบันทึกรายรับ-รายจ่าย คำนวณภาษี และเก็บข้อมูลอัตโนมัติใน Google Sheets ของคุณ",
@@ -32,7 +33,7 @@ const SLIDES = [
     titleHighlight: "จัดหมวดหมู่รายรับ-รายจ่าย",
     titleNormal: "ได้ตามใจ 💙",
     description:
-      "กำหนดกฎ vendor ว่าร้านไหนเป็นรายรับหรือรายจ่าย TaxBot จะจัดหมวดหมู่อัตโนมัติทุกครั้ง ไม่ต้องจำเอง",
+      "กำหนดกฎ vendor ว่าร้านไหนเป็นรายรับหรือรายจ่าย Vendee Finance จะจัดหมวดหมู่อัตโนมัติทุกครั้ง ไม่ต้องจำเอง",
     preview: (
       <div className="bg-gray-50 rounded-2xl p-4 w-full max-w-xs mx-auto text-xs space-y-2">
         <p className="font-semibold text-gray-700 text-sm mb-3">🏷️ กฎ Vendor ของคุณ</p>
@@ -79,7 +80,7 @@ const SLIDES = [
     titleHighlight: "สรุปภาษีอัตโนมัติ",
     titleNormal: "ไม่ต้องคำนวณเอง 🧾",
     description:
-      "TaxBot คำนวณภาษีตามอัตราภาษีเงินได้บุคคลธรรมดา 2568 อัตโนมัติ พร้อมแจ้งเตือนรายเดือนและสรุปที่ต้องยื่น",
+      "Vendee Finance คำนวณภาษีตามอัตราภาษีเงินได้บุคคลธรรมดา 2568 อัตโนมัติ พร้อมแจ้งเตือนรายเดือนและสรุปที่ต้องยื่น",
     preview: (
       <div className="bg-gray-50 rounded-2xl p-4 w-full max-w-xs mx-auto text-xs space-y-2">
         <p className="font-semibold text-gray-700 text-sm mb-3">📊 ประมาณการภาษี 2568</p>
@@ -150,7 +151,7 @@ function AddFriendScreen({ onDone }: { onDone: () => void }) {
         🤖
       </div>
 
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">เพิ่ม TaxBot เป็นเพื่อน</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-2">เพิ่ม Vendee Finance เป็นเพื่อน</h1>
       <p className="text-gray-500 text-sm leading-relaxed mb-8">
         เพิ่มเพื่อนเพื่อรับการแจ้งเตือนภาษี<br />
         และส่งสลิปผ่านแชทได้เลย
@@ -170,7 +171,7 @@ function AddFriendScreen({ onDone }: { onDone: () => void }) {
             className="w-full flex items-center justify-center gap-3 bg-[#06C755] text-white font-bold py-4 rounded-2xl text-base active:scale-95 transition-all shadow-md shadow-green-200 disabled:opacity-50"
           >
             <LineLogo />
-            เพิ่มเพื่อน TaxBot
+            เพิ่มเพื่อน Vendee Finance
           </button>
 
           {/* Confirm button */}
@@ -206,7 +207,7 @@ function IntroPageInner() {
   const router = useRouter();
   const params = useSearchParams();
   // ?to=/settings allows Rich Menu to open any page via LIFF URL (for LIFF context)
-  const redirectTo = params.get("to") ?? "/";
+  const redirectTo = params.get("to") ?? "/home";
   const isLast = slide === SLIDES.length - 1;
   const s = SLIDES[slide];
 
@@ -256,7 +257,7 @@ function IntroPageInner() {
     return (
       <main className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="text-5xl mb-4 animate-pulse">🤖</div>
+          <div className="flex justify-center mb-4 animate-pulse"><VendeeLogo className="w-16 h-16" /></div>
           <p className="text-gray-400 text-sm">กำลังโหลด...</p>
         </div>
       </main>
@@ -267,8 +268,8 @@ function IntroPageInner() {
   if (screen === "not-in-line") {
     return (
       <main className="min-h-screen bg-white flex flex-col items-center justify-center px-8 text-center">
-        <div className="text-6xl mb-6">🤖</div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">TaxBot</h1>
+        <div className="mb-6"><VendeeLogo className="w-20 h-20" /></div>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Vendee Finance</h1>
         <p className="text-gray-500 text-sm mb-8 leading-relaxed">
           แอปนี้ออกแบบมาสำหรับ LINE<br />
           กรุณาเปิดผ่านแอป LINE เพื่อใช้งาน
@@ -348,7 +349,7 @@ export default function IntroPage() {
     <Suspense fallback={
       <main className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="text-5xl mb-4 animate-pulse">🤖</div>
+          <div className="flex justify-center mb-4 animate-pulse"><VendeeLogo className="w-16 h-16" /></div>
           <p className="text-gray-400 text-sm">กำลังโหลด...</p>
         </div>
       </main>

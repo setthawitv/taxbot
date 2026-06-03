@@ -57,7 +57,7 @@ export default function SheetsRedirectPage() {
             <div className="text-5xl mb-4">📋</div>
             <p className="text-gray-800 font-semibold mb-2">ยังไม่มี Google Sheet</p>
             <p className="text-gray-500 text-sm mb-4">ส่งสลิปแรกเพื่อสร้าง Sheet อัตโนมัติครับ</p>
-            <a href="/" className="inline-block bg-gray-800 text-white px-6 py-2.5 rounded-xl text-sm font-semibold">
+            <a href="/home" className="inline-block bg-gray-800 text-white px-6 py-2.5 rounded-xl text-sm font-semibold">
               กลับหน้าหลัก
             </a>
           </>
@@ -66,7 +66,7 @@ export default function SheetsRedirectPage() {
           <>
             <div className="text-5xl mb-4">❌</div>
             <p className="text-gray-600">เกิดข้อผิดพลาด กรุณาลองใหม่</p>
-            <a href="/" className="inline-block mt-4 text-blue-500 text-sm underline">กลับหน้าหลัก</a>
+            <a href="/home" className="inline-block mt-4 text-blue-500 text-sm underline">กลับหน้าหลัก</a>
           </>
         )}
       </div>

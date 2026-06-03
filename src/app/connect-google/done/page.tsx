@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { getSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { VendeeLogo } from "@/components/icons";
 
 function ConnectGoogleDoneInner() {
   const params = useSearchParams();
@@ -81,7 +82,7 @@ function ConnectGoogleDoneInner() {
           </>
         ) : (
           <>
-            <div className="text-5xl mb-4 animate-pulse">💾</div>
+            <div className="flex justify-center mb-4 animate-pulse"><VendeeLogo className="w-16 h-16" /></div>
             <p className="text-gray-600">กำลังบันทึกข้อมูล...</p>
           </>
         )}

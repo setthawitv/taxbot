@@ -55,7 +55,7 @@ export async function createSheet(accessToken: string, businessName: string): Pr
 
   const response = await sheets.spreadsheets.create({
     requestBody: {
-      properties: { title: `TaxBot - ${businessName}` },
+      properties: { title: `Vendee Finance - ${businessName}` },
       sheets: sheetDefs,
     },
   });

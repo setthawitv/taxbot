@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="ascentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="50%" stop-color="#8b5cf6"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" rx="46" fill="url(#ascentGrad)"/>
+  <!-- V whose right stroke shoots upward past the top: "ascending" -->
+  <path d="M48 60 L100 148 L156 36"
+        stroke="white" stroke-width="22"
+        stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Arrowhead at top-right tip -->
+  <path d="M138 44 L156 36 L156 58"
+        stroke="white" stroke-width="14"
+        stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     const chargeSatang   = chargeThb * 100;  // Beam uses satang
 
     const referenceId = `taxbot_${plan}_${lineUserId}_${Date.now()}`;
-    const returnUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://taxbot-sage.vercel.app"}/payment/done`;
+    const returnUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://www.vendeefinance.com"}/payment/done`;
 
     const charge = await createCharge({
       amount:      chargeSatang,

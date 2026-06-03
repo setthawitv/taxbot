@@ -11,7 +11,7 @@ const ibmPlexSansThai = IBM_Plex_Sans_Thai({
 });
 
 export const metadata: Metadata = {
-  title: "TaxBot",
+  title: "Vendee Finance",
   description: "บันทึกรายรับ-รายจ่าย และสรุปภาษี",
 };
 

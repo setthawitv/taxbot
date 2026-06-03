@@ -83,7 +83,8 @@ export async function GET(req: NextRequest) {
   const personalAllowance = 60_000;
 
   // ── Method 1: Standard deduction (หักเหมา 60%, max 600,000 THB) ────────────
-  const standardDeduction = Math.min(totalIncome * 0.6, 600_000);
+  // มาตรา 40(8) หักเหมา 60% ไม่มีเพดาน (กฎปัจจุบัน ตั้งแต่ปี 2563)
+  const standardDeduction = totalIncome * 0.6;
   const totalDeductions1  = standardDeduction + personalAllowance;
   const taxableIncome1    = Math.max(totalIncome - totalDeductions1, 0);
   const { tax: tax1, breakdown: breakdown1 } = calcTax(taxableIncome1);

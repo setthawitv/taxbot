@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { ImageResponse } from "next/og";
 
 const TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN!;
-const APP_URL = process.env.NEXTAUTH_URL ?? "https://taxbot-sage.vercel.app";
+const APP_URL = process.env.NEXTAUTH_URL ?? "https://www.vendeefinance.com";
 // LIFF URL — opens pages WITH LIFF context so liff.openWindow(external) works
 const LIFF_URL = `https://liff.line.me/${process.env.NEXT_PUBLIC_LIFF_ID}`;
 
@@ -83,8 +83,8 @@ async function buildImage(): Promise<ArrayBuffer> {
 const RICH_MENU = {
   size: { width: 2500, height: 1686 },
   selected: true,
-  name: "TaxBot Menu",
-  chatBarText: "เมนู TaxBot",
+  name: "Vendee Finance Menu",
+  chatBarText: "เมนู Vendee Finance",
   areas: SECTIONS.map((s, i) => ({
     bounds: {
       x: i % 2 === 0 ? 0 : 1250,

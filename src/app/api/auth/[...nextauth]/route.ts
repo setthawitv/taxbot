@@ -8,8 +8,11 @@ const handler = NextAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       authorization: {
         params: {
+          // Use `drive.file` only — per-file access to files the app creates.
+          // Works for both Drive API and Sheets API on app-owned files.
+          // Avoids RESTRICTED scope verification (no CASA needed).
           scope:
-            "openid email profile https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive",
+            "openid email profile https://www.googleapis.com/auth/drive.file",
           access_type: "offline",
           prompt: "consent",
         },

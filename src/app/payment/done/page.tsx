@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 export default function PaymentDonePage() {
   const router = useRouter();
   useEffect(() => {
-    setTimeout(() => router.replace("/"), 3000);
+    setTimeout(() => router.replace("/home"), 3000);
   }, [router]);
 
   return (

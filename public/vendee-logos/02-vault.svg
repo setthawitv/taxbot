@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="vaultGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fde047"/>
+      <stop offset="50%" stop-color="#facc15"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" rx="46" fill="url(#vaultGrad)"/>
+  <!-- Tapered V (like spilling coins) -->
+  <path d="M44 44 L100 156 L156 44"
+        stroke="url(#goldGrad)" stroke-width="20"
+        stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Coin at bottom vertex -->
+  <circle cx="100" cy="156" r="14" fill="url(#goldGrad)"/>
+  <circle cx="100" cy="156" r="7" fill="#0f172a" opacity="0.4"/>
+</svg>

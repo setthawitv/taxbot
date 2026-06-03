@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const PUBLIC_PATHS = [
-  "/landing",           // Public marketing landing page
+  "/",                  // Public marketing landing page (root)
+  "/landing",           // Legacy URL — keep for backward compatibility
+  "/privacy",           // Public legal pages
+  "/terms",
   "/features",          // Feature detail pages
   "/intro",             // Feature intro slides (first-time users land here)
   "/onboarding",        // 3-step onboarding wizard
@@ -21,7 +24,9 @@ const PUBLIC_PATHS = [
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+  const isPublic = PUBLIC_PATHS.some((p) =>
+    p === "/" ? pathname === "/" : pathname.startsWith(p)
+  );
   if (isPublic) return NextResponse.next();
 
   const onboarded = request.cookies.get("taxbot_onboarded")?.value;

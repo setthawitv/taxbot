@@ -1,596 +1,754 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useMemo, useState, type ComponentType } from "react";
 import {
-  IconHelp,
-  IconIncome, IconExpense, IconTax,
-  IconGoogleSheets, IconGoogleDrive,
-  IconScan, IconShield, IconCheckCircle, IconWave, IconLightbulb, IconUser, IconRocket,
+  VendeeLogo,
+  IconScan, IconIncome, IconTax, IconGoogleSheets, IconUpload, IconShield,
+  IconSparkle, IconRocket, IconFire, IconCrown,
+  IconCheck, IconX, IconArrowDown, IconArrowRight,
 } from "@/components/icons";
-import AppLayout from "@/components/AppLayout";
-import type { ComponentType } from "react";
+import { calcPIT, calcCIT } from "@/lib/tax-calc";
+import { DEDUCTIONS, GROUP_LABELS, maxAllowed, sumDeductions, type DeductionItem } from "@/lib/deductions";
+import { useEffect } from "react";
 
-// ── Tour steps ────────────────────────────────────────────────────────────────
-type TourStep = {
-  Icon:  ComponentType<{ className?: string }>;
-  tint:  "blue" | "emerald" | "rose" | "purple" | "amber" | "indigo";
-  title: string;
-  desc:  string;
-  cta:   string;
-  tip:   string | null;
-};
+type IconC = ComponentType<{ className?: string }>;
 
-const TOUR_STEPS: TourStep[] = [
-  { Icon: IconWave,         tint: "amber",
-    title: "ยินดีต้อนรับสู่ TaxBot",
-    desc:  "TaxBot ช่วยให้คุณจัดการรายรับ-รายจ่าย และคำนวณภาษีได้ง่าย โดยไม่ต้องมีความรู้บัญชี มาดูแต่ละฟีเจอร์กันเลย",
-    cta:   "เริ่มเลย",  tip: null },
-  { Icon: IconIncome,       tint: "emerald",
-    title: "รายรับ — บันทึกรายได้",
-    desc:  "นำเข้ายอดขายจาก TikTok Shop, Shopee, Lazada ได้โดยอัปโหลดไฟล์ Excel จากแพลตฟอร์ม หรือบันทึกรายรับเองได้ทันที",
-    cta:   "ถัดไป",     tip: "ไปที่ รายรับ → นำเข้า → เลือกไฟล์ Excel จากแพลตฟอร์ม" },
-  { Icon: IconExpense,      tint: "rose",
-    title: "รายจ่าย — บันทึกค่าใช้จ่าย",
-    desc:  "บันทึกค่าใช้จ่ายทุกรายการ — ค่าสินค้า ค่าขนส่ง ค่าโฆษณา หรือสแกนใบเสร็จด้วย AI ให้อ่านและบันทึกอัตโนมัติ",
-    cta:   "ถัดไป",     tip: "กดปุ่ม สแกน แล้วถ่ายรูปใบเสร็จ — AI จะอ่านยอดและบันทึกให้เลย" },
-  { Icon: IconScan,         tint: "purple",
-    title: "สแกนใบเสร็จด้วย AI",
-    desc:  "ถ่ายรูปสลิปโอนเงินหรืออัปโหลดใบเสร็จ — AI จะอ่านยอดเงิน ชื่อร้านค้า วันที่ และบันทึกให้อัตโนมัติ",
-    cta:   "ถัดไป",     tip: "ใช้ได้ทั้งกล้องถ่ายสด และเลือกจากคลังรูปภาพ" },
-  { Icon: IconTax,          tint: "blue",
-    title: "ภาษี — คำนวณอัตโนมัติ",
-    desc:  "ระบบคำนวณภาษีบุคคลธรรมดา/นิติบุคคลให้อัตโนมัติจากรายรับ-รายจ่าย พร้อมแนะนำวิธีหักค่าใช้จ่ายที่ประหยัดภาษีสูงสุด",
-    cta:   "ถัดไป",     tip: "เปรียบเทียบ 2 วิธีคำนวณ — เลือกแบบที่ประหยัดกว่า" },
-  { Icon: IconGoogleSheets, tint: "emerald",
-    title: "Google Sheets — ซิงค์อัตโนมัติ",
-    desc:  "ทุกรายการที่บันทึกจะซิงค์ไป Google Sheets ของคุณอัตโนมัติ แชร์ให้นักบัญชีหรือดาวน์โหลดรายงานได้ทุกเมื่อ",
-    cta:   "ถัดไป",     tip: "ไปที่ ตั้งค่า → เชื่อมต่อ Google เพื่อเปิดใช้งาน" },
-  { Icon: IconShield,       tint: "indigo",
-    title: "แชร์ให้ทีมงาน",
-    desc:  "เพิ่ม Admin ด้วย Google Email เพื่อให้เข้าถึง Dashboard เต็มที่ หรือสร้างลิงก์ Staff ให้พนักงานบันทึกรายจ่ายโดยไม่ต้อง login",
-    cta:   "ถัดไป",     tip: "ไปที่ ตั้งค่า → ส่วน Admin เพื่อเพิ่มผู้ดูแลร่วม" },
-  { Icon: IconCheckCircle,  tint: "emerald",
-    title: "พร้อมเริ่มใช้งานแล้ว",
-    desc:  "คุณรู้จักทุกฟีเจอร์แล้ว เริ่มต้นด้วยการบันทึกรายจ่ายแรก หรือนำเข้าไฟล์ยอดขายจากแพลตฟอร์มได้เลย",
-    cta:   "เริ่มใช้งาน", tip: null },
+const FEATURES: { slug: string; Icon: IconC; title: string; desc: string; color: string; iconColor: string; chipBg: string }[] = [
+  { slug: "scan",           Icon: IconScan,          title: "สแกนใบเสร็จด้วย AI",
+    desc: "ถ่ายรูปสลิปหรืออัปโหลดใบเสร็จ AI อ่านยอด วันที่ ร้านค้า และบันทึกให้อัตโนมัติ",
+    color: "from-purple-500/15 to-purple-600/5 border-purple-500/30",
+    iconColor: "text-purple-300",
+    chipBg: "bg-purple-500/15" },
+  { slug: "income-expense", Icon: IconIncome,        title: "ติดตามรายรับ-รายจ่าย",
+    desc: "ดูยอดเดือนนี้ ทั้งปี กำไร-ขาดทุน พร้อมแยกแพลตฟอร์ม TikTok / Shopee / Lazada",
+    color: "from-emerald-500/15 to-emerald-600/5 border-emerald-500/30",
+    iconColor: "text-emerald-300",
+    chipBg: "bg-emerald-500/15" },
+  { slug: "tax",            Icon: IconTax,           title: "คำนวณภาษีอัตโนมัติ",
+    desc: "ประมาณภาษีเงินได้บุคคลธรรมดา ตามอัตราของไทย พร้อมแนะนำวิธีหักค่าใช้จ่าย",
+    color: "from-blue-500/15 to-blue-600/5 border-blue-500/30",
+    iconColor: "text-blue-300",
+    chipBg: "bg-blue-500/15" },
+  { slug: "sheets",         Icon: IconGoogleSheets,  title: "ซิงค์ Google Sheets",
+    desc: "ทุกรายการบันทึกลง Google Sheets ของคุณอัตโนมัติ ดาวน์โหลดหรือแชร์กับนักบัญชีได้ทันที",
+    color: "from-green-500/15 to-green-600/5 border-green-500/30",
+    iconColor: "text-green-300",
+    chipBg: "bg-green-500/15" },
+  { slug: "import",         Icon: IconUpload,        title: "นำเข้ายอดแพลตฟอร์ม",
+    desc: "อัปโหลดไฟล์ Excel จาก TikTok Shop, Shopee, Lazada — ระบบแยกยอดให้อัตโนมัติ",
+    color: "from-orange-500/15 to-orange-600/5 border-orange-500/30",
+    iconColor: "text-orange-300",
+    chipBg: "bg-orange-500/15" },
+  { slug: "team",           Icon: IconShield,        title: "แชร์ให้ทีมงาน",
+    desc: "เพิ่ม Admin ด้วย Google Email หรือสร้างลิงก์ Staff ให้พนักงานบันทึกรายจ่ายแทนได้",
+    color: "from-rose-500/15 to-rose-600/5 border-rose-500/30",
+    iconColor: "text-rose-300",
+    chipBg: "bg-rose-500/15" },
 ];
 
-const TINT_CLASSES: Record<TourStep["tint"], { bg: string; ring: string; icon: string; btn: string }> = {
-  blue:    { bg: "bg-blue-50",    ring: "ring-blue-100",    icon: "text-blue-600",    btn: "bg-blue-600 hover:bg-blue-700"       },
-  emerald: { bg: "bg-emerald-50", ring: "ring-emerald-100", icon: "text-emerald-600", btn: "bg-emerald-600 hover:bg-emerald-700" },
-  rose:    { bg: "bg-rose-50",    ring: "ring-rose-100",    icon: "text-rose-600",    btn: "bg-rose-600 hover:bg-rose-700"       },
-  purple:  { bg: "bg-purple-50",  ring: "ring-purple-100",  icon: "text-purple-600",  btn: "bg-purple-600 hover:bg-purple-700"   },
-  amber:   { bg: "bg-amber-50",   ring: "ring-amber-100",   icon: "text-amber-600",   btn: "bg-amber-600 hover:bg-amber-700"     },
-  indigo:  { bg: "bg-indigo-50",  ring: "ring-indigo-100",  icon: "text-indigo-600",  btn: "bg-indigo-600 hover:bg-indigo-700"   },
+const PLANS: {
+  name: string; planKey: string | null; price: string; period: string;
+  badge: { Icon: IconC; label: string } | null;
+  color: string; btnClass: string;
+  features: string[]; disabled: number[];
+}[] = [
+  { name: "Free", planKey: null, price: "ฟรี", period: "", badge: null,
+    color: "border-white/10 bg-white/5",
+    btnClass: "bg-white/10 hover:bg-white/20 text-white",
+    features: [
+      "ทดลองใช้ฟรี 7 วัน (ทุกฟีเจอร์)",
+      "รายจ่าย 10 รายการ/เดือน",
+      "รายรับ Manual เท่านั้น",
+      "ไม่รองรับ Excel import",
+      "Google Sheets sync",
+    ],
+    disabled: [2, 3] },
+  { name: "Eco", planKey: "eco", price: "฿100", period: "/เดือน", badge: null,
+    color: "border-blue-500/40 bg-blue-500/5",
+    btnClass: "bg-blue-500 hover:bg-blue-400 text-white",
+    features: [
+      "รายจ่าย 30 รายการ/เดือน",
+      "รายรับ Manual ไม่จำกัด",
+      "นำเข้า Excel 1 ไฟล์/เดือน",
+      "Google Sheets sync",
+      "สแกนใบเสร็จด้วย AI",
+    ],
+    disabled: [] },
+  { name: "Pro", planKey: "pro", price: "฿200", period: "/เดือน",
+    badge: { Icon: IconFire, label: "แนะนำ" },
+    color: "border-emerald-500/60 bg-emerald-500/10 ring-2 ring-emerald-500/30",
+    btnClass: "bg-emerald-500 hover:bg-emerald-400 text-white shadow-lg shadow-emerald-500/25",
+    features: [
+      "รายจ่าย 100 รายการ/เดือน",
+      "รายรับ Manual ไม่จำกัด",
+      "นำเข้า Excel 5 ไฟล์/เดือน",
+      "Google Sheets sync",
+      "สแกนใบเสร็จด้วย AI",
+    ],
+    disabled: [] },
+  { name: "Platinum", planKey: "platinum", price: "฿700", period: "/เดือน",
+    badge: { Icon: IconCrown, label: "ครบทุกอย่าง" },
+    color: "border-amber-500/40 bg-amber-500/5",
+    btnClass: "bg-amber-500 hover:bg-amber-400 text-white",
+    features: [
+      "รายจ่าย 1,200 รายการ/เดือน",
+      "รายรับ Manual ไม่จำกัด",
+      "นำเข้า Excel 12 ไฟล์/เดือน",
+      "Google Sheets sync",
+      "สแกนใบเสร็จด้วย AI",
+    ],
+    disabled: [] },
+];
+
+const STEPS = [
+  { no: "01", title: "เข้าสู่ระบบ",         desc: "สมัครฟรี ไม่ต้องดาวน์โหลดแอป ไม่ต้องจำรหัสผ่านใหม่" },
+  { no: "02", title: "เชื่อม Google Drive", desc: "เชื่อมต่อ Google เพื่อเก็บข้อมูลและซิงค์ Sheets อัตโนมัติ" },
+  { no: "03", title: "เริ่มบันทึกได้เลย",   desc: "สแกนใบเสร็จ บันทึกรายรับ-รายจ่าย ดูรายงาน — ทำได้ทันที" },
+];
+
+// ─── Public Tax Calculator ──────────────────────────────────────────────────
+const fmtInt = (n: number) => n.toLocaleString("th-TH", { maximumFractionDigits: 0 });
+const fmt2   = (n: number) => n.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+// Format for number input display (with thousand separator)
+const formatInput = (n: number) => n > 0 ? n.toLocaleString("en-US", { maximumFractionDigits: 0 }) : "";
+// Parse user input — strip commas and non-digits, then convert
+const parseInput = (s: string) => {
+  const digits = s.replace(/[^\d.]/g, "");
+  return parseFloat(digits) || 0;
 };
 
-function TourModal({ onClose }: { onClose: () => void }) {
-  const [step, setStep] = useState(0);
-  const current = TOUR_STEPS[step];
-  const isLast  = step === TOUR_STEPS.length - 1;
-  const tint    = TINT_CLASSES[current.tint];
-  const Ico     = current.Icon;
-
-  function next() {
-    if (isLast) { onClose(); return; }
-    setStep((s) => s + 1);
-  }
+// Dark-themed deduction row for landing page
+function DeductionRowDark({
+  item, value, onChange, income,
+}: {
+  item: DeductionItem;
+  value: number;
+  onChange: (v: number) => void;
+  income: number;
+}) {
+  const max  = maxAllowed(item, income);
+  const used = Math.min(value, max);
+  const pct  = max > 0 ? Math.min(100, (used / max) * 100) : 0;
 
   return (
-    <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
-      <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-gray-100">
-
-        {/* Progress bar */}
-        <div className="h-1 bg-gray-100">
-          <div
-            className={`h-full transition-all duration-300 ${tint.btn.split(" ")[0]}`}
-            style={{ width: `${((step + 1) / TOUR_STEPS.length) * 100}%` }}
-          />
+    <div className="border border-white/10 rounded-xl p-3 bg-white/5">
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-white">{item.label}</p>
+          {item.desc && <p className="text-xs text-gray-400 mt-0.5 leading-tight">{item.desc}</p>}
         </div>
+        <span className="text-xs text-gray-400 flex-shrink-0 font-medium whitespace-nowrap">
+          สูงสุด ฿{fmtInt(max)}
+        </span>
+      </div>
 
-        <div className="p-6 space-y-5">
-          {/* Step counter */}
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-400 font-medium tracking-wide">
-              {String(step + 1).padStart(2, "0")} / {String(TOUR_STEPS.length).padStart(2, "0")}
-            </span>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-sm font-medium transition-colors">
-              ข้าม
+      <div className="flex items-center bg-gray-900/50 rounded-lg border border-white/10 focus-within:border-blue-400">
+        <span className="text-gray-500 px-2 text-sm">฿</span>
+        <input type="text" inputMode="decimal"
+          value={formatInput(value)}
+          onChange={(e) => onChange(Math.min(max, Math.max(0, parseInput(e.target.value))))}
+          placeholder="0"
+          className="flex-1 bg-transparent py-2 px-1 text-sm text-white outline-none placeholder-gray-600" />
+        <button type="button" onClick={() => onChange(max)}
+          className="text-xs font-semibold text-blue-400 hover:text-blue-300 px-2 py-1">
+          Max
+        </button>
+      </div>
+
+      <div className="mt-2 h-1 bg-white/5 rounded-full overflow-hidden">
+        <div className={`h-full rounded-full transition-all ${pct >= 100 ? "bg-emerald-500" : "bg-blue-500"}`}
+          style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+type IncomeMode = "salary" | "business" | "both";
+
+function PublicTaxCalculator() {
+  const [taxpayer, setTaxpayer]   = useState<"individual" | "corporate">("individual");
+  const [incomeMode, setIncomeMode] = useState<IncomeMode>("business");
+  const [isSME,    setIsSME]      = useState(true);
+  const [income,   setIncome]     = useState(600_000);
+  const [salary,   setSalary]     = useState(0);
+  const [method,   setMethod]     = useState<"flat60" | "actual">("flat60");
+  const [expense,  setExpense]    = useState(0);
+  const [deductions, setDeductions] = useState<Record<string, number>>({ personal: 60_000 });
+  const [showDeductions, setShowDeductions] = useState(false);
+
+  // Persist to localStorage so user can come back
+  useEffect(() => {
+    const saved = localStorage.getItem("taxbot_landing_calc");
+    if (saved) {
+      try {
+        const d = JSON.parse(saved);
+        if (typeof d.income === "number")  setIncome(d.income);
+        if (typeof d.salary === "number")  setSalary(d.salary);
+        if (typeof d.expense === "number") setExpense(d.expense);
+        if (d.method === "flat60" || d.method === "actual") setMethod(d.method);
+        if (d.taxpayer === "individual" || d.taxpayer === "corporate") setTaxpayer(d.taxpayer);
+        if (d.incomeMode === "salary" || d.incomeMode === "business" || d.incomeMode === "both") setIncomeMode(d.incomeMode);
+        if (typeof d.isSME === "boolean") setIsSME(d.isSME);
+        if (d.deductions) setDeductions({ personal: 60_000, ...d.deductions });
+      } catch {}
+    }
+  }, []);
+  useEffect(() => {
+    localStorage.setItem("taxbot_landing_calc", JSON.stringify({
+      income, salary, expense, method, taxpayer, incomeMode, isSME, deductions,
+    }));
+  }, [income, salary, expense, method, taxpayer, incomeMode, isSME, deductions]);
+
+  const result = useMemo(() => {
+    if (taxpayer === "corporate") {
+      const profit = Math.max(0, income - expense);
+      const { tax, breakdown } = calcCIT(profit, isSME);
+      return { kind: "corporate" as const, profit, tax, breakdown };
+    }
+    // Individual — exclude business income if salary-only mode
+    const effectiveIncome = incomeMode === "salary" ? 0 : income;
+    const effectiveSalary = incomeMode === "business" ? 0 : salary;
+    const grand = effectiveIncome + effectiveSalary;
+
+    const { totalNonDonation, totalDonation } = sumDeductions(deductions, grand);
+    const totalDeductions = totalNonDonation + totalDonation;
+
+    // มาตรา 40(8) หักเหมา 60% ไม่มีเพดาน (กฎปัจจุบัน ตั้งแต่ปี 2563)
+    const businessDed = effectiveIncome === 0
+      ? 0
+      : method === "flat60"
+        ? effectiveIncome * 0.6
+        : expense;
+    const salaryDed = Math.min(effectiveSalary * 0.5, 100_000);
+    const taxable = Math.max(0, grand - businessDed - salaryDed - totalDeductions);
+    const { tax, breakdown } = calcPIT(taxable);
+    return {
+      kind: "individual" as const,
+      grand, businessDed, salaryDed, deduct: totalDeductions,
+      effectiveIncome, effectiveSalary,
+      taxable, tax, breakdown,
+    };
+  }, [taxpayer, isSME, income, salary, expense, method, deductions, incomeMode]);
+
+  const hasInput = (incomeMode !== "salary" && income > 0) || (incomeMode !== "business" && salary > 0) || Object.values(deductions).some((v) => v > 0 && v !== 60_000);
+
+  return (
+    <section id="calculator" className="px-6 py-20 max-w-5xl mx-auto">
+      <div className="text-center mb-10">
+        <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/30 text-blue-300 text-xs font-semibold px-4 py-1.5 rounded-full mb-4">
+          <IconTax className="w-3.5 h-3.5" /> ลองคำนวณเลย · ไม่ต้องสมัคร
+        </div>
+        <h2 className="text-3xl sm:text-4xl font-bold mb-3">คำนวณภาษีฟรี · ใช้ได้ทันที</h2>
+        <p className="text-gray-400 text-base">กรอกรายได้ → ดูภาษีโดยประมาณตามอัตรากรมสรรพากร</p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 items-start">
+
+        {/* LEFT — Inputs */}
+        <div className="lg:col-span-3 bg-white/5 border border-white/10 rounded-2xl p-6 space-y-5">
+
+          {/* Taxpayer toggle */}
+          <div className="bg-white/5 rounded-xl p-1 flex">
+            <button onClick={() => setTaxpayer("individual")}
+              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
+                taxpayer === "individual" ? "bg-blue-500 text-white" : "text-gray-400 hover:text-white"
+              }`}>
+              บุคคลธรรมดา
+            </button>
+            <button onClick={() => setTaxpayer("corporate")}
+              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
+                taxpayer === "corporate" ? "bg-blue-500 text-white" : "text-gray-400 hover:text-white"
+              }`}>
+              นิติบุคคล
             </button>
           </div>
 
-          {/* Content */}
-          <div className="text-center space-y-4 py-2">
-            <div className={`mx-auto w-16 h-16 rounded-2xl flex items-center justify-center ${tint.bg} ring-1 ${tint.ring}`}>
-              <Ico className={`w-8 h-8 ${tint.icon}`} />
-            </div>
-            <h2 className="text-xl font-bold text-gray-900 tracking-tight">{current.title}</h2>
-            <p className="text-gray-500 text-sm leading-relaxed max-w-sm mx-auto">{current.desc}</p>
+          {/* Individual — income mode + inputs */}
+          {taxpayer === "individual" && (
+            <>
+              <div>
+                <label className="text-sm font-medium text-gray-300 mb-1.5 block">แหล่งรายได้</label>
+                <div className="bg-white/5 rounded-xl p-1 grid grid-cols-3 gap-1">
+                  <button onClick={() => setIncomeMode("salary")}
+                    className={`py-2 rounded-lg text-xs font-semibold transition-all ${
+                      incomeMode === "salary" ? "bg-blue-500 text-white" : "text-gray-400 hover:text-white"
+                    }`}>
+                    พนักงานเงินเดือน
+                  </button>
+                  <button onClick={() => setIncomeMode("business")}
+                    className={`py-2 rounded-lg text-xs font-semibold transition-all ${
+                      incomeMode === "business" ? "bg-blue-500 text-white" : "text-gray-400 hover:text-white"
+                    }`}>
+                    ขายของ / ธุรกิจ
+                  </button>
+                  <button onClick={() => setIncomeMode("both")}
+                    className={`py-2 rounded-lg text-xs font-semibold transition-all ${
+                      incomeMode === "both" ? "bg-blue-500 text-white" : "text-gray-400 hover:text-white"
+                    }`}>
+                    ทั้งคู่
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
+                  {incomeMode === "salary"   && "เงินเดือน / ค่าจ้าง · หักค่าใช้จ่ายเหมา 50% ไม่เกิน 100,000 บาท/ปี อัตโนมัติ"}
+                  {incomeMode === "business" && "รายได้จากขายของออนไลน์ / ธุรกิจ · เลือกหักเหมา 60% หรือหักตามจริงได้"}
+                  {incomeMode === "both"     && "มีทั้งเงินเดือนประจำและรายได้เสริมจากการขายของ"}
+                </p>
+              </div>
+
+              {/* Salary income — shown for salary or both */}
+              {(incomeMode === "salary" || incomeMode === "both") && (
+                <div>
+                  <label className="text-sm font-medium text-gray-300 mb-1.5 block">
+                    เงินเดือน / ค่าจ้างต่อปี
+                    <span className="text-gray-500 text-xs ml-1.5">(เงินเดือน × 12 + โบนัส)</span>
+                  </label>
+                  <div className="flex items-center bg-gray-900/50 rounded-xl border border-white/10 focus-within:border-blue-400">
+                    <span className="text-gray-500 px-3">฿</span>
+                    <input type="text" inputMode="decimal"
+                      value={formatInput(salary)}
+                      onChange={(e) => setSalary(Math.max(0, parseInput(e.target.value)))}
+                      placeholder={incomeMode === "salary" ? "360,000" : "0"}
+                      className="flex-1 bg-transparent py-3 pr-3 text-base text-white outline-none placeholder-gray-600" />
+                  </div>
+                </div>
+              )}
+
+              {/* Business income — shown for business or both */}
+              {(incomeMode === "business" || incomeMode === "both") && (
+                <>
+                  <div>
+                    <label className="text-sm font-medium text-gray-300 mb-1.5 block">
+                      รายได้จากขายของ / ธุรกิจต่อปี
+                    </label>
+                    <div className="flex items-center bg-gray-900/50 rounded-xl border border-white/10 focus-within:border-blue-400">
+                      <span className="text-gray-500 px-3">฿</span>
+                      <input type="text" inputMode="decimal"
+                        value={formatInput(income)}
+                        onChange={(e) => setIncome(Math.max(0, parseInput(e.target.value)))}
+                        placeholder="600,000"
+                        className="flex-1 bg-transparent py-3 pr-3 text-base text-white outline-none placeholder-gray-600" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-300 mb-1.5 block">วิธีหักค่าใช้จ่าย (ธุรกิจ)</label>
+                    <div className="bg-white/5 rounded-xl p-1 flex">
+                      <button onClick={() => setMethod("flat60")}
+                        className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${
+                          method === "flat60" ? "bg-emerald-500 text-white" : "text-gray-400 hover:text-white"
+                        }`}>
+                        หักเหมา 60% (แนะนำ)
+                      </button>
+                      <button onClick={() => setMethod("actual")}
+                        className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${
+                          method === "actual" ? "bg-emerald-500 text-white" : "text-gray-400 hover:text-white"
+                        }`}>
+                        หักตามจริง
+                      </button>
+                    </div>
+                  </div>
+                  {method === "actual" && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-300 mb-1.5 block">ค่าใช้จ่ายจริงต่อปี</label>
+                      <div className="flex items-center bg-gray-900/50 rounded-xl border border-white/10 focus-within:border-blue-400">
+                        <span className="text-gray-500 px-3">฿</span>
+                        <input type="text" inputMode="decimal"
+                          value={formatInput(expense)}
+                          onChange={(e) => setExpense(Math.max(0, parseInput(e.target.value)))}
+                          placeholder="0"
+                          className="flex-1 bg-transparent py-3 pr-3 text-base text-white outline-none placeholder-gray-600" />
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* ── Deductions panel ──────────────────────────────────── */}
+              <div className="border border-white/10 rounded-xl bg-white/5">
+                <button onClick={() => setShowDeductions((v) => !v)}
+                  className="w-full flex items-center justify-between text-left p-4">
+                  <div>
+                    <p className="font-semibold text-white text-sm">ค่าลดหย่อนภาษี</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      รวมลดหย่อนแล้ว ฿{fmt2(result.kind === "individual" ? result.deduct : 60_000)}
+                    </p>
+                  </div>
+                  <span className="text-blue-400 text-xl">{showDeductions ? "−" : "+"}</span>
+                </button>
+
+                {showDeductions && (
+                  <div className="px-4 pb-4 space-y-5 border-t border-white/10 pt-4">
+                    {(["personal", "insurance", "donation", "stimulus"] as const).map((groupKey) => {
+                      // hide locked personal (auto-applied 60k)
+                      const items = DEDUCTIONS.filter((d) => d.group === groupKey && d.id !== "personal");
+                      if (items.length === 0) return null;
+                      return (
+                        <div key={groupKey}>
+                          <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">
+                            {GROUP_LABELS[groupKey]}
+                          </p>
+                          <div className="space-y-2">
+                            {items.map((item) => (
+                              <DeductionRowDark
+                                key={item.id}
+                                item={item}
+                                value={deductions[item.id] ?? 0}
+                                onChange={(v) => setDeductions((p) => ({ ...p, [item.id]: v }))}
+                                income={(incomeMode === "salary" ? 0 : income) + (incomeMode === "business" ? 0 : salary)}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 text-xs text-emerald-300 leading-relaxed">
+                      <IconCheck className="w-3.5 h-3.5 inline mr-1" /> หักให้อัตโนมัติแล้ว: ค่าลดหย่อนส่วนตัว 60,000 บาท
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* Corporate — income + SME + expenses */}
+          {taxpayer === "corporate" && (
+            <>
+              <div>
+                <label className="text-sm font-medium text-gray-300 mb-1.5 block">รายได้บริษัทต่อปี</label>
+                <div className="flex items-center bg-gray-900/50 rounded-xl border border-white/10 focus-within:border-blue-400">
+                  <span className="text-gray-500 px-3">฿</span>
+                  <input type="text" inputMode="decimal"
+                    value={formatInput(income)}
+                    onChange={(e) => setIncome(Math.max(0, parseInput(e.target.value)))}
+                    placeholder="600,000"
+                    className="flex-1 bg-transparent py-3 pr-3 text-base text-white outline-none placeholder-gray-600" />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-300 mb-1.5 block">ค่าใช้จ่ายธุรกิจต่อปี</label>
+                <div className="flex items-center bg-gray-900/50 rounded-xl border border-white/10 focus-within:border-blue-400">
+                  <span className="text-gray-500 px-3">฿</span>
+                  <input type="text" inputMode="decimal"
+                    value={formatInput(expense)}
+                    onChange={(e) => setExpense(Math.max(0, parseInput(e.target.value)))}
+                    placeholder="0"
+                    className="flex-1 bg-transparent py-3 pr-3 text-base text-white outline-none placeholder-gray-600" />
+                </div>
+              </div>
+              <label className="flex items-start gap-3 cursor-pointer bg-white/5 rounded-xl p-3 border border-white/10">
+                <input type="checkbox" checked={isSME} onChange={(e) => setIsSME(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 accent-blue-500" />
+                <div>
+                  <p className="text-sm font-medium text-white">เป็น SME</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    ทุน ≤ 5M + รายได้ ≤ 30M · ≤300k → 0% · 300k–3M → 15% · &gt;3M → 20%
+                  </p>
+                </div>
+              </label>
+            </>
+          )}
+        </div>
+
+        {/* RIGHT — Result */}
+        <div className="lg:col-span-2 bg-gradient-to-br from-blue-500/10 to-emerald-500/10 border border-blue-500/30 rounded-2xl p-6 space-y-4 lg:sticky lg:top-4">
+          <p className="text-xs text-blue-300 font-semibold uppercase tracking-wide">ภาษีโดยประมาณ</p>
+          <p className="text-4xl font-extrabold text-white">฿{fmt2(result.tax)}</p>
+          {result.tax === 0 && (
+            <p className="text-xs text-emerald-300">รายได้สุทธิไม่ถึงเกณฑ์เสียภาษี</p>
+          )}
+
+          <div className="border-t border-white/10 pt-4 space-y-2 text-sm">
+            {result.kind === "individual" ? (
+              <>
+                {result.effectiveSalary > 0 && (
+                  <div className="flex justify-between text-gray-300">
+                    <span>เงินเดือน 40(1)</span><span>฿{fmt2(result.effectiveSalary)}</span>
+                  </div>
+                )}
+                {result.effectiveIncome > 0 && (
+                  <div className="flex justify-between text-gray-300">
+                    <span>รายได้ธุรกิจ 40(8)</span><span>฿{fmt2(result.effectiveIncome)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-gray-300 font-semibold border-t border-white/5 pt-2">
+                  <span>รายได้รวม</span><span>฿{fmt2(result.grand)}</span>
+                </div>
+                {result.businessDed > 0 && (
+                  <div className="flex justify-between text-emerald-300">
+                    <span>หักค่าใช้จ่ายธุรกิจ</span><span>-฿{fmt2(result.businessDed)}</span>
+                  </div>
+                )}
+                {result.salaryDed > 0 && (
+                  <div className="flex justify-between text-emerald-300">
+                    <span>หักเหมา 50% (เงินเดือน)</span><span>-฿{fmt2(result.salaryDed)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-emerald-300">
+                  <span>ค่าลดหย่อน</span><span>-฿{fmt2(result.deduct)}</span>
+                </div>
+                <div className="flex justify-between text-white font-semibold border-t border-white/10 pt-2">
+                  <span>เงินได้สุทธิ</span><span>฿{fmt2(result.taxable)}</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex justify-between text-gray-300">
+                  <span>รายได้</span><span>฿{fmt2(income)}</span>
+                </div>
+                <div className="flex justify-between text-emerald-300">
+                  <span>หักค่าใช้จ่ายจริง</span><span>-฿{fmt2(expense)}</span>
+                </div>
+                <div className="flex justify-between text-white font-semibold border-t border-white/10 pt-2">
+                  <span>กำไรสุทธิ</span><span>฿{fmt2(result.profit)}</span>
+                </div>
+              </>
+            )}
           </div>
 
-          {/* Tip box */}
-          {current.tip && (
-            <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 flex items-start gap-2.5">
-              <IconLightbulb className={`w-4 h-4 ${tint.icon} flex-shrink-0 mt-0.5`} />
-              <p className="text-gray-600 text-xs leading-relaxed">{current.tip}</p>
+          {result.breakdown.length > 0 && (
+            <div className="border-t border-white/10 pt-3 space-y-1.5">
+              <p className="text-xs text-gray-400 mb-1">คำนวณแต่ละขั้น</p>
+              {result.breakdown.map((b, i) => (
+                <div key={i} className="flex justify-between text-xs">
+                  <span className="text-gray-400">{(b.rate * 100).toFixed(0)}% × ฿{fmt2(b.amount)}</span>
+                  <span className="text-blue-300 font-semibold">฿{fmt2(b.tax)}</span>
+                </div>
+              ))}
             </div>
           )}
 
-          {/* Dots */}
-          <div className="flex justify-center gap-1.5 pt-1">
-            {TOUR_STEPS.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setStep(i)}
-                aria-label={`Step ${i + 1}`}
-                className={`rounded-full transition-all ${
-                  i === step
-                    ? `w-6 h-1.5 ${tint.btn.split(" ")[0]}`
-                    : "w-1.5 h-1.5 bg-gray-200 hover:bg-gray-300"
-                }`}
-              />
-            ))}
-          </div>
+          {/* Save data CTA */}
+          {hasInput && (
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-xs text-amber-200 leading-relaxed">
+              💾 <strong>สมัครฟรี</strong> เพื่อย้ายข้อมูลที่กรอกไว้ (ลดหย่อน + เงินเดือน) ไปบัญชีของคุณอัตโนมัติ
+            </div>
+          )}
 
-          {/* Buttons */}
-          <div className="flex gap-2">
-            {step > 0 && (
-              <button
-                onClick={() => setStep((s) => s - 1)}
-                className="px-4 py-3 rounded-xl text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
-              >
-                ย้อนกลับ
-              </button>
-            )}
-            <button
-              onClick={next}
-              className={`flex-1 inline-flex items-center justify-center gap-1.5 py-3 rounded-xl text-sm font-semibold text-white transition-colors ${tint.btn}`}
-            >
-              {current.cta}
-              {isLast ? <IconRocket className="w-4 h-4" /> : <span className="text-base leading-none">→</span>}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-const CURRENT_YEAR  = new Date().getFullYear();
-const CURRENT_MONTH = new Date().getMonth() + 1;
-
-const MONTH_TH = ["","ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
-
-const fmtInt = (n: number) => n.toLocaleString("th-TH", { maximumFractionDigits: 0 });
-const fmt    = (n: number) => n.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-type UserInfo = {
-  displayName:    string;
-  pictureUrl:     string;
-  businessName:   string;
-  googleConnected: boolean;
-  role?:          "owner" | "admin";
-};
-
-type Stats = {
-  monthIncome:   number;
-  yearIncome:    number;
-  monthExpense:  number;
-  yearExpense:   number;
-  estimatedTax:  number;
-};
-
-type Links = {
-  sheetUrl: string | null;
-  driveUrl: string | null;
-};
-
-
-function StatCard({
-  label, value, sub, color, loading,
-}: {
-  label: string; value: string; sub?: string;
-  color: "emerald" | "blue" | "rose" | "amber";
-  loading: boolean;
-}) {
-  const colors = {
-    emerald: { border: "border-emerald-100", text: "text-emerald-600", bg: "bg-emerald-50" },
-    blue:    { border: "border-blue-100",    text: "text-blue-600",    bg: "bg-blue-50"    },
-    rose:    { border: "border-rose-100",    text: "text-rose-600",    bg: "bg-rose-50"    },
-    amber:   { border: "border-amber-100",   text: "text-amber-600",   bg: "bg-amber-50"   },
-  }[color];
-
-  return (
-    <div className={`rounded-2xl border ${colors.border} ${colors.bg} p-4`}>
-      <p className="text-xs text-gray-400 mb-1 truncate">{label}</p>
-      {loading ? (
-        <div className="h-6 bg-white/70 rounded animate-pulse w-3/4" />
-      ) : (
-        <p className={`text-lg font-bold ${colors.text} leading-tight`}>{value}</p>
-      )}
-      {sub && !loading && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
-    </div>
-  );
-}
-
-// ── Simple SVG Pie Chart ──────────────────────────────────────────────────────
-function PieChart({ income, expense }: { income: number; expense: number }) {
-  const total = income + expense;
-  if (total === 0) {
-    return (
-      <div className="flex flex-col items-center gap-2">
-        <svg viewBox="0 0 80 80" className="w-40 h-40">
-          <circle cx="40" cy="40" r="32" fill="none" stroke="#e5e7eb" strokeWidth="14" />
-        </svg>
-        <p className="text-xs text-gray-400">ยังไม่มีข้อมูล</p>
-      </div>
-    );
-  }
-  const r       = 32;
-  const cx      = 40;
-  const cy      = 40;
-  const tau     = 2 * Math.PI;
-
-  function slice(startFrac: number, endFrac: number, color: string) {
-    const s = startFrac * tau - Math.PI / 2;
-    const e = endFrac   * tau - Math.PI / 2;
-    const large = endFrac - startFrac > 0.5 ? 1 : 0;
-    const x1 = cx + r * Math.cos(s);
-    const y1 = cy + r * Math.sin(s);
-    const x2 = cx + r * Math.cos(e);
-    const y2 = cy + r * Math.sin(e);
-    return (
-      <path
-        d={`M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} Z`}
-        fill={color}
-      />
-    );
-  }
-
-  const incFrac = income / total;
-  const expFrac = expense / total;
-
-  return (
-    <svg viewBox="0 0 80 80" className="w-40 h-40 drop-shadow-sm">
-      {slice(0, incFrac, "#10B981")}
-      {slice(incFrac, 1, "#F43F5E")}
-      <circle cx={cx} cy={cy} r={18} fill="white" />
-    </svg>
-  );
-}
-
-export default function Home() {
-  const [lineUserId,   setLineUserId]   = useState("");
-  const [authReady,    setAuthReady]    = useState(false);
-  const [userInfo,     setUserInfo]     = useState<UserInfo | null>(null);
-  const [stats,        setStats]        = useState<Stats | null>(null);
-  const [links,        setLinks]        = useState<Links>({ sheetUrl: null, driveUrl: null });
-  const [loadingStats, setLoadingStats] = useState(true);
-  const [showTour,     setShowTour]     = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState(CURRENT_MONTH);
-
-  const { data: session, status: sessionStatus } = useSession();
-
-  // Auto-show tour once for new users
-  useEffect(() => {
-    const seen = localStorage.getItem("taxbot_tour_done");
-    if (!seen) setShowTour(true);
-  }, []);
-
-  function closeTour() {
-    setShowTour(false);
-    localStorage.setItem("taxbot_tour_done", "1");
-  }
-
-  // ── Resolve user ──────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (sessionStatus === "loading") return;
-    async function resolveUser() {
-      const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
-      if (liffId) {
-        try {
-          const { default: liff } = await import("@line/liff");
-          await liff.init({ liffId });
-          // If opened in LINE browser but not via LIFF URL → redirect to LIFF URL for auth
-          if (!liff.isLoggedIn() && !liff.isInClient() && /Line\//i.test(navigator.userAgent)) {
-            window.location.replace(`https://liff.line.me/${liffId}`);
-            return;
-          }
-          if (liff.isLoggedIn()) {
-            const p = await liff.getProfile();
-            setLineUserId(p.userId);
-            setUserInfo({ displayName: p.displayName, pictureUrl: p.pictureUrl ?? "", businessName: "", googleConnected: false });
-            // Save latest LINE profile to DB in background
-            fetch("/api/user/profile", {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ lineUserId: p.userId, displayName: p.displayName, pictureUrl: p.pictureUrl }),
-            }).catch(() => {});
-            setAuthReady(true);
-            return;
-          }
-          // Inside LINE app but not logged in → force LIFF login
-          if (liff.isInClient()) {
-            liff.login();
-            return;
-          }
-        } catch { /* not in LINE */ }
-      }
-      if (session?.user?.email) {
-        try {
-          const res = await fetch("/api/user/by-email");
-          if (res.ok) {
-            const d = await res.json();
-            if (d.lineUserId) {
-              setLineUserId(d.lineUserId);
-              setUserInfo({
-                displayName:    session.user.name ?? session.user.email ?? "",
-                pictureUrl:     session.user.image ?? "",
-                businessName:   "",
-                googleConnected: true,
-                role:           d.role ?? "owner",
-              });
-            }
-          }
-        } catch { /* ignore */ }
-      }
-      setAuthReady(true);
-    }
-    resolveUser();
-  }, [sessionStatus, session]);
-
-  // ── Fetch all dashboard data ──────────────────────────────────────────────
-  useEffect(() => {
-    if (!authReady || !lineUserId) { if (authReady) setLoadingStats(false); return; }
-    setLoadingStats(true);
-    const uid = lineUserId;
-    const yr  = CURRENT_YEAR;
-    const mo  = selectedMonth;
-
-    Promise.all([
-      fetch(`/api/income/summary?lineUserId=${uid}&year=${yr}&month=${mo}`).then((r) => r.json()),
-      fetch(`/api/income/summary?lineUserId=${uid}&year=${yr}`).then((r) => r.json()),
-      fetch(`/api/expense/summary?lineUserId=${uid}&year=${yr}&month=${mo}`).then((r) => r.json()),
-      fetch(`/api/expense/summary?lineUserId=${uid}&year=${yr}`).then((r) => r.json()),
-      fetch(`/api/tax/summary?lineUserId=${uid}&year=${yr}`).then((r) => r.json()),
-      fetch(`/api/user/status?lineUserId=${uid}`).then((r) => r.json()),
-      fetch(`/api/user/links?lid=${uid}`).then((r) => r.json()),
-    ]).then(([moIncome, yrIncome, moExpense, yrExpense, tax, status, lnks]) => {
-      const recommended = tax.recommended ?? 1;
-      const taxAmt = recommended === 1 ? (tax.method1?.estimatedTax ?? 0) : (tax.method2?.estimatedTax ?? 0);
-      setStats({
-        monthIncome:  moIncome.total  ?? 0,
-        yearIncome:   yrIncome.total  ?? 0,
-        monthExpense: moExpense.total ?? 0,
-        yearExpense:  yrExpense.total ?? 0,
-        estimatedTax: taxAmt,
-      });
-      // For admins: keep their own Google name/picture, only update businessName
-      // For owners: prefer LINE display_name + picture from DB
-      setUserInfo((prev) => {
-        if (!prev) return null;
-        if (prev.role === "admin") {
-          return {
-            ...prev,
-            businessName: status?.profile?.businessName || prev.businessName,
-          };
-        }
-        return {
-          ...prev,
-          displayName:  status?.displayName  || prev.displayName,
-          pictureUrl:   status?.pictureUrl   || prev.pictureUrl,
-          businessName: status?.profile?.businessName || prev.businessName,
-        };
-      });
-      setLinks({ sheetUrl: lnks.sheet_url ?? null, driveUrl: lnks.drive_url ?? null });
-    }).finally(() => setLoadingStats(false));
-  }, [authReady, lineUserId, selectedMonth]);
-
-  function openExternal(url: string | null, fallback: string) {
-    // Always open in new tab — use URL if ready, otherwise fallback page
-    window.open(url ?? fallback, "_blank", "noopener,noreferrer");
-  }
-
-  const netMonth = (stats?.monthIncome ?? 0) - (stats?.monthExpense ?? 0);
-  const netYear  = (stats?.yearIncome  ?? 0) - (stats?.yearExpense  ?? 0);
-
-  const layoutUserInfo = userInfo
-    ? { displayName: userInfo.displayName, pictureUrl: userInfo.pictureUrl, businessName: userInfo.businessName }
-    : null;
-
-  return (
-    <AppLayout userInfo={layoutUserInfo} title="หน้าหลัก">
-      <div className="px-4 lg:px-6 py-6 max-w-5xl mx-auto space-y-6">
-
-
-        {/* ── Big stat cards (year) ─────────────────────────────────────────── */}
-        <div>
-          <p className="text-xs font-semibold text-[#4A5568] uppercase tracking-widest mb-3">
-            ภาพรวมทั้งปี {CURRENT_YEAR}
+          <Link href="/onboarding?from=calc"
+            className="w-full text-center inline-flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold bg-emerald-500 hover:bg-emerald-400 text-white transition-colors">
+            <IconRocket className="w-4 h-4" /> {hasInput ? "สมัครฟรี · เก็บข้อมูลให้" : "สมัครฟรี · ใช้ครบทุกฟีเจอร์"}
+          </Link>
+          <p className="text-[11px] text-gray-500 text-center leading-relaxed">
+            * ตัวเลขโดยประมาณตามอัตรากรมสรรพากร
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-
-            {/* Income */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-                  <IconIncome className="w-4 h-4 text-emerald-600" />
-                </div>
-                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">รายรับรวม</span>
-              </div>
-              {loadingStats ? (
-                <div className="h-8 bg-gray-100 rounded animate-pulse w-3/4 mb-1" />
-              ) : (
-                <p className="text-2xl font-bold text-[#0A192F]">฿{fmtInt(stats?.yearIncome ?? 0)}</p>
-              )}
-              <p className="text-xs text-gray-400 mt-1">Income · {CURRENT_YEAR}</p>
-            </div>
-
-            {/* Expense */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center">
-                  <IconExpense className="w-4 h-4 text-rose-600" />
-                </div>
-                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">รายจ่ายรวม</span>
-              </div>
-              {loadingStats ? (
-                <div className="h-8 bg-gray-100 rounded animate-pulse w-3/4 mb-1" />
-              ) : (
-                <p className="text-2xl font-bold text-[#0A192F]">฿{fmtInt(stats?.yearExpense ?? 0)}</p>
-              )}
-              <p className="text-xs text-gray-400 mt-1">Expense · {CURRENT_YEAR}</p>
-            </div>
-
-            {/* Net */}
-            <div className={`rounded-2xl border p-5 shadow-sm ${netYear >= 0 ? "bg-[#0A192F] border-[#0A192F]" : "bg-white border-amber-100"}`}>
-              <div className="flex items-center gap-2 mb-3">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${netYear >= 0 ? "bg-white/10" : "bg-amber-50"}`}>
-                  <IconTax className={`w-4 h-4 ${netYear >= 0 ? "text-[#10B981]" : "text-amber-500"}`} />
-                </div>
-                <span className={`text-xs font-semibold uppercase tracking-wide ${netYear >= 0 ? "text-white/50" : "text-gray-400"}`}>กำไรสุทธิ</span>
-              </div>
-              {loadingStats ? (
-                <div className={`h-8 rounded animate-pulse w-3/4 mb-1 ${netYear >= 0 ? "bg-white/10" : "bg-gray-100"}`} />
-              ) : (
-                <p className={`text-2xl font-bold ${netYear >= 0 ? "text-white" : "text-amber-600"}`}>
-                  {netYear < 0 ? "-" : ""}฿{fmtInt(Math.abs(netYear))}
-                </p>
-              )}
-              <p className={`text-xs mt-1 ${netYear >= 0 ? "text-white/40" : "text-amber-400"}`}>
-                {netYear < 0 ? "ขาดทุน" : "Net Profit"} · {CURRENT_YEAR}
-              </p>
-            </div>
-
-          </div>
         </div>
-
-        {/* ── Month stats + Tax ─────────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-
-          {/* Month stats */}
-          <div className="lg:col-span-3 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            {/* Card header with inline month dropdown */}
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-xs font-semibold text-[#4A5568] uppercase tracking-widest">เดือน</p>
-              <div className="flex items-center gap-2">
-                <select
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                  className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm bg-white text-[#0A192F] font-medium focus:outline-none focus:ring-2 focus:ring-[#0A192F]/20 cursor-pointer"
-                >
-                  {MONTH_TH.slice(1).map((label, i) => (
-                    <option key={i + 1} value={i + 1}>{label} {CURRENT_YEAR}</option>
-                  ))}
-                </select>
-                {selectedMonth !== CURRENT_MONTH && (
-                  <button
-                    onClick={() => setSelectedMonth(CURRENT_MONTH)}
-                    className="text-xs text-[#4A5568] hover:text-[#0A192F] underline underline-offset-2 transition-colors whitespace-nowrap"
-                  >
-                    เดือนนี้
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-0">
-              {/* Pie chart — 50% */}
-              <div className="w-1/2 flex items-center justify-center">
-                {loadingStats ? (
-                  <div className="w-36 h-36 rounded-full bg-gray-100 animate-pulse" />
-                ) : (
-                  <PieChart income={stats?.monthIncome ?? 0} expense={stats?.monthExpense ?? 0} />
-                )}
-              </div>
-              {/* Numbers — 50% */}
-              <div className="w-1/2 flex flex-col justify-center gap-4 pl-4 border-l border-gray-100">
-                <div>
-                  <p className="text-xs text-gray-400 mb-1">รายรับ</p>
-                  {loadingStats ? <div className="h-6 bg-gray-100 rounded animate-pulse" /> : (
-                    <p className="text-xl font-bold text-emerald-600">฿{fmtInt(stats?.monthIncome ?? 0)}</p>
-                  )}
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400 mb-1">รายจ่าย</p>
-                  {loadingStats ? <div className="h-6 bg-gray-100 rounded animate-pulse" /> : (
-                    <p className="text-xl font-bold text-rose-500">฿{fmtInt(stats?.monthExpense ?? 0)}</p>
-                  )}
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400 mb-1">กำไร</p>
-                  {loadingStats ? <div className="h-6 bg-gray-100 rounded animate-pulse" /> : (
-                    <p className={`text-xl font-bold ${netMonth >= 0 ? "text-blue-600" : "text-amber-500"}`}>
-                      {netMonth < 0 ? "-" : ""}฿{fmtInt(Math.abs(netMonth))}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Quick links */}
-            <div className="mt-5 pt-4 border-t border-gray-100 grid grid-cols-2 gap-3">
-              <button onClick={() => openExternal(links.sheetUrl, "/sheets")}
-                className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-green-200 hover:bg-green-50 transition-colors text-left">
-                <IconGoogleSheets className="w-6 h-6 flex-shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold text-gray-700 truncate">Google Sheets</p>
-                  <p className="text-[10px] text-gray-400 truncate">{links.sheetUrl ? "เปิด ↗" : "ยังไม่มี"}</p>
-                </div>
-              </button>
-              <button onClick={() => openExternal(links.driveUrl, "/drive")}
-                className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-yellow-200 hover:bg-yellow-50 transition-colors text-left">
-                <IconGoogleDrive className="w-6 h-6 flex-shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold text-gray-700 truncate">Google Drive</p>
-                  <p className="text-[10px] text-gray-400 truncate">{links.driveUrl ? "เปิด ↗" : "ยังไม่มี"}</p>
-                </div>
-              </button>
-            </div>
-          </div>
-
-          {/* Tax card */}
-          <div className="lg:col-span-2 bg-[#0A192F] rounded-2xl p-5 shadow-sm flex flex-col justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
-                  <IconTax className="w-4 h-4 text-[#10B981]" />
-                </div>
-                <span className="text-white/50 text-xs font-semibold uppercase tracking-wide">ภาษีโดยประมาณ</span>
-              </div>
-              {loadingStats ? (
-                <div className="h-10 bg-white/10 rounded animate-pulse w-2/3 mb-2" />
-              ) : (
-                <p className="text-3xl font-bold text-white">฿{fmt(stats?.estimatedTax ?? 0)}</p>
-              )}
-              {!loadingStats && (stats?.estimatedTax ?? 0) === 0 && (
-                <p className="text-white/30 text-xs mt-1">ยังไม่ถึงเกณฑ์เสียภาษี</p>
-              )}
-              <p className="text-white/30 text-xs mt-1">ปี {CURRENT_YEAR}</p>
-            </div>
-            <Link href="/phasi"
-              className="mt-6 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#10B981] hover:bg-[#0ea572] transition-colors text-white text-sm font-semibold">
-              ดูรายละเอียด →
-            </Link>
-          </div>
-
-        </div>
-
-        {/* ── Help button ───────────────────────────────────────────────────── */}
-        <div className="flex justify-end">
-          <button
-            onClick={() => setShowTour(true)}
-            className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <IconHelp className="w-4 h-4" /> วิธีใช้งาน
-          </button>
-        </div>
-
       </div>
+    </section>
+  );
+}
 
-      {showTour && <TourModal onClose={closeTour} />}
-    </AppLayout>
+export default function LandingPage() {
+  return (
+    <main className="min-h-screen bg-gray-950 text-white">
+
+      {/* ── Navbar ─────────────────────────────────────────────────────────── */}
+      <nav className="flex items-center justify-between px-6 py-4 max-w-6xl mx-auto">
+        <div className="flex items-center gap-2.5">
+          <VendeeLogo className="w-8 h-8" />
+          <span className="font-bold text-lg tracking-tight">Vendee Finance</span>
+        </div>
+        <Link
+          href="/onboarding"
+          className="text-sm font-semibold text-gray-300 hover:text-white transition-colors inline-flex items-center gap-1"
+        >
+          เข้าสู่ระบบ <IconArrowRight className="w-4 h-4" />
+        </Link>
+      </nav>
+
+      {/* ── Hero ───────────────────────────────────────────────────────────── */}
+      <section className="px-6 pt-16 pb-20 max-w-4xl mx-auto text-center">
+        <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold px-4 py-1.5 rounded-full mb-8">
+          <IconSparkle className="w-3.5 h-3.5" /> สำหรับร้านค้าออนไลน์และ SME ไทย
+        </div>
+
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight mb-6">
+          บัญชีและภาษี{" "}
+          <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+            ไม่ยากอีกต่อไป
+          </span>
+        </h1>
+
+        <p className="text-gray-400 text-lg sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
+          แค่ถ่ายรูปใบเสร็จ Vendee Finance จัดการทุกอย่างให้ — บันทึกรายรับรายจ่าย
+          คำนวณภาษี ซิงค์ Google Sheets โดยไม่ต้องมีความรู้บัญชีเลย
+        </p>
+
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <Link
+            href="/onboarding"
+            className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-base font-bold bg-emerald-500 hover:bg-emerald-400 text-white transition-colors shadow-lg shadow-emerald-500/25"
+          >
+            <IconRocket className="w-5 h-5" /> เริ่มต้นใช้งานฟรี
+          </Link>
+          <a
+            href="#calculator"
+            className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-base font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 transition-colors"
+          >
+            <IconTax className="w-4 h-4" /> ลองคำนวณภาษีฟรี
+          </a>
+        </div>
+
+        {/* Stats row */}
+        <div className="flex flex-wrap justify-center gap-8 mt-14">
+          {[
+            { value: "ฟรี 100%",      label: "ไม่มีค่าใช้จ่าย" },
+            { value: "< 30 วิ",        label: "บันทึกต่อรายการ" },
+            { value: "3 แพลตฟอร์ม",   label: "รองรับ TikTok, Shopee, Lazada" },
+          ].map((s) => (
+            <div key={s.label} className="text-center">
+              <p className="text-2xl font-bold text-white">{s.value}</p>
+              <p className="text-gray-500 text-sm mt-1">{s.label}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Features ───────────────────────────────────────────────────────── */}
+      <section id="features" className="px-6 py-20 max-w-6xl mx-auto">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl sm:text-4xl font-bold mb-3">ทุกอย่างที่ร้านค้าออนไลน์ต้องการ</h2>
+          <p className="text-gray-400 text-base">ครบในที่เดียว ใช้งานง่าย ไม่ต้องมีนักบัญชี</p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {FEATURES.map((f) => {
+            const Ic = f.Icon;
+            return (
+              <Link
+                key={f.slug}
+                href={`/features/${f.slug}`}
+                className={`bg-gradient-to-br ${f.color} border rounded-2xl p-6 group hover:scale-[1.02] transition-transform duration-200 block`}
+              >
+                <div className={`inline-flex items-center justify-center w-12 h-12 rounded-xl ${f.chipBg} ${f.iconColor} mb-4`}>
+                  <Ic className="w-6 h-6" />
+                </div>
+                <h3 className="text-white font-bold text-base mb-2">{f.title}</h3>
+                <p className="text-gray-400 text-sm leading-relaxed">{f.desc}</p>
+                <p className="text-xs text-gray-500 mt-3 group-hover:text-gray-300 transition-colors inline-flex items-center gap-1">
+                  อ่านเพิ่มเติม <IconArrowRight className="w-3.5 h-3.5" />
+                </p>
+              </Link>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ── Public Tax Calculator ─────────────────────────────────────────── */}
+      <PublicTaxCalculator />
+
+      {/* ── Pricing ────────────────────────────────────────────────────────── */}
+      <section id="pricing" className="px-6 py-20 max-w-6xl mx-auto">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl sm:text-4xl font-bold mb-3">ราคาที่เหมาะกับทุกขนาดธุรกิจ</h2>
+          <p className="text-gray-400 text-base">ทดลองใช้ฟรี 7 วัน · ไม่ต้องผูกบัตรเครดิต</p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+          {PLANS.map((plan) => {
+            const Badge = plan.badge?.Icon;
+            return (
+              <div key={plan.name} className={`relative border rounded-2xl p-6 flex flex-col gap-4 ${plan.color}`}>
+                {plan.badge && Badge && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs font-bold px-3 py-1 rounded-full bg-emerald-500 text-white shadow inline-flex items-center gap-1">
+                    <Badge className="w-3.5 h-3.5" /> {plan.badge.label}
+                  </div>
+                )}
+
+                <div>
+                  <p className="text-gray-400 text-sm font-semibold uppercase tracking-wide mb-1">{plan.name}</p>
+                  <div className="flex items-end gap-1">
+                    <span className="text-4xl font-extrabold text-white">{plan.price}</span>
+                    <span className="text-gray-400 text-sm pb-1">{plan.period}</span>
+                  </div>
+                </div>
+
+                <ul className="space-y-2.5 flex-1">
+                  {plan.features.map((f, i) => {
+                    const isOff = plan.disabled.includes(i);
+                    return (
+                      <li key={i} className={`flex items-start gap-2 text-sm ${isOff ? "text-gray-600 line-through" : "text-gray-300"}`}>
+                        <span className={`mt-0.5 flex-shrink-0 ${isOff ? "text-gray-600" : "text-emerald-400"}`}>
+                          {isOff ? <IconX className="w-4 h-4" /> : <IconCheck className="w-4 h-4" />}
+                        </span>
+                        {f}
+                      </li>
+                    );
+                  })}
+                </ul>
+
+                <Link
+                  href={plan.planKey ? `/settings?upgrade=${plan.planKey}` : "/onboarding"}
+                  className={`w-full text-center py-3 rounded-xl text-sm font-bold transition-colors ${plan.btnClass}`}
+                >
+                  {plan.name === "Free" ? "เริ่มทดลองใช้ฟรี" : "เลือกแพ็กเกจนี้"}
+                </Link>
+              </div>
+            );
+          })}
+        </div>
+
+        <p className="text-center text-gray-600 text-xs mt-6">
+          * ทุกแพ็กเกจเริ่มต้นด้วยช่วงทดลอง 7 วันเต็ม (ทุกฟีเจอร์)
+        </p>
+      </section>
+
+      {/* ── How it works ───────────────────────────────────────────────────── */}
+      <section className="px-6 py-20 max-w-4xl mx-auto">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl sm:text-4xl font-bold mb-3">เริ่มต้นใน 3 ขั้นตอน</h2>
+          <p className="text-gray-400 text-base">ตั้งค่าครั้งเดียว ใช้ได้ทันที</p>
+        </div>
+
+        <div className="flex flex-col gap-4">
+          {STEPS.map((s, i) => (
+            <div key={s.no} className="flex items-start gap-5 bg-white/5 border border-white/10 rounded-2xl p-6">
+              <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-[#0A192F] flex items-center justify-center text-[#10B981] font-bold text-lg">
+                {s.no}
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-white text-lg mb-1">{s.title}</h3>
+                <p className="text-gray-400 text-sm leading-relaxed">{s.desc}</p>
+              </div>
+              {i < STEPS.length - 1 && (
+                <div className="hidden sm:flex items-center text-gray-600">
+                  <IconArrowDown className="w-5 h-5" />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Final CTA ──────────────────────────────────────────────────────── */}
+      <section className="px-6 py-20">
+        <div className="max-w-2xl mx-auto bg-gradient-to-br from-emerald-500/20 to-cyan-500/10 border border-emerald-500/30 rounded-3xl p-10 text-center">
+          <div className="flex justify-center mb-4">
+            <VendeeLogo className="w-14 h-14" />
+          </div>
+          <h2 className="text-3xl font-bold mb-3">พร้อมเริ่มต้นแล้วหรือยัง?</h2>
+          <p className="text-gray-400 mb-8 leading-relaxed">
+            ไม่ต้องดาวน์โหลดแอป ไม่ต้องสมัครใหม่ — เปิดเว็บแล้วเริ่มได้เลย
+          </p>
+          <Link
+            href="/onboarding"
+            className="inline-flex items-center justify-center gap-2 px-10 py-4 rounded-2xl text-base font-bold bg-emerald-500 hover:bg-emerald-400 text-white transition-colors shadow-lg shadow-emerald-500/25"
+          >
+            <IconRocket className="w-5 h-5" /> เริ่มต้นใช้งานฟรี
+          </Link>
+        </div>
+      </section>
+
+      {/* ── Footer ─────────────────────────────────────────────────────────── */}
+      <footer className="border-t border-white/10 px-6 py-8 text-center text-gray-600 text-sm space-y-2">
+        <div className="flex justify-center gap-5 text-xs">
+          <Link href="/privacy" className="hover:text-gray-300 transition-colors">Privacy Policy</Link>
+          <Link href="/terms" className="hover:text-gray-300 transition-colors">Terms of Service</Link>
+          <a href="mailto:admin@vendeefinance.com" className="hover:text-gray-300 transition-colors">Contact</a>
+        </div>
+        <p>© {new Date().getFullYear()} Vendee Finance · สร้างสำหรับร้านค้าออนไลน์ไทย</p>
+      </footer>
+
+    </main>
   );
 }
