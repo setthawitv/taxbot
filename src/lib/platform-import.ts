@@ -21,6 +21,10 @@ export type ParseResult = {
   skipped:   number;   // cancelled + returned (for backward compat)
   total:     number;   // sum of amount
   platform:  "tiktok" | "shopee" | "lazada";
+  // TikTok report sheet only
+  periodStart?: string;  // YYYY-MM-DD
+  periodEnd?:   string;  // YYYY-MM-DD
+  orderCount?:  number;  // successful order count from detail sheet
 };
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -51,14 +55,13 @@ function parseISODate(raw: string): string {
 //
 // B) Order Report — English headers: Order ID, Order Status, SKU ID, Seller Revenue, ...
 //    Income = per-item Seller Revenue
-export function parseTikTok(rows: string[][]): ParseResult {
+export function parseTikTok(rows: string[][], detailRows?: string[][]): ParseResult {
   const header = rows[0].map((h) => String(h ?? "").trim());
 
-  // Detect Income Report by Thai header signature
   // รายงาน sheet: all headers are empty strings (summary layout)
   const isReportSheet = header.every((h) => h === "") && rows.length > 5;
   if (isReportSheet) {
-    return parseTikTokReportSheet(rows);
+    return parseTikTokReportSheet(rows, detailRows);
   }
 
   // รายละเอียดคำสั่งซื้อ sheet with Thai headers
@@ -138,7 +141,7 @@ function parseTikTokIncomeReport(rows: string[][], header: string[]): ParseResul
 //   รายได้ = ยอดรวมค่าสินค้าหลังหักส่วนลดจากผู้ขาย
 //           + ยอดรวมเงินคืนหลังหักส่วนลดจากร้านค้า  (negative)
 //           + ค่าธรรมเนียมการจัดส่งของลูกค้า
-function parseTikTokReportSheet(rows: string[][]): ParseResult {
+function parseTikTokReportSheet(rows: string[][], detailRows?: string[][]): ParseResult {
   // Build label → value map (value is always col 5)
   const valMap = new Map<string, number>();
   let periodStr = "";
@@ -163,27 +166,47 @@ function parseTikTokReportSheet(rows: string[][]): ParseResult {
     return { rows: [], cancelled: 0, returned: 0, skipped: 0, total: 0, platform: "tiktok" };
   }
 
-  // Parse end date from "2025/10/01-2025/12/01"
-  const endDateRaw = periodStr.split("-").pop() ?? "";
-  const date = parseThaiDate(endDateRaw) || new Date().toISOString().slice(0, 10);
+  // Parse period dates from "2025/10/01-2025/12/01"
+  const [startRaw, endRaw] = periodStr.split("-");
+  const periodStart = parseThaiDate(startRaw?.trim() ?? "");
+  const periodEnd   = parseThaiDate(endRaw?.trim() ?? "");
   const lineKey = `tiktok_report_${periodStr.replace(/\//g, "").replace("-", "_")}`;
+
+  // Count orders from detail sheet (รายละเอียดคำสั่งซื้อ)
+  let orderCount = 0;
+  let returnCount = 0;
+  let cancelCount = 0;
+  if (detailRows && detailRows.length > 1) {
+    const dHeader = detailRows[0].map((h) => String(h ?? "").trim());
+    const iType = dHeader.findIndex((h) => h.includes("ประเภทธุรกรรม"));
+    for (let i = 1; i < detailRows.length; i++) {
+      const txType = String(detailRows[i][iType] ?? "").trim();
+      if (!txType) continue;
+      if (txType.includes("คืน") || txType.includes("Refund") || txType.includes("Return")) returnCount++;
+      else if (txType.includes("ยกเลิก") || txType.includes("Cancel")) cancelCount++;
+      else orderCount++;
+    }
+  }
 
   return {
     rows: [{
       lineKey,
       orderId:     lineKey,
       skuLineId:   "",
-      date,
+      date:        periodEnd || new Date().toISOString().slice(0, 10),
       amount:      income,
       platform:    "tiktok",
       productName: `TikTok Shop รายงาน ${periodStr}`,
       variant:     "",
     }],
-    cancelled: 0,
-    returned:  0,
-    skipped:   0,
-    total:     income,
-    platform:  "tiktok",
+    cancelled:   cancelCount,
+    returned:    returnCount,
+    skipped:     cancelCount + returnCount,
+    total:       income,
+    platform:    "tiktok",
+    periodStart,
+    periodEnd,
+    orderCount:  orderCount || undefined,
   };
 }
 
@@ -537,9 +560,10 @@ export function parseLazada(rows: string[][]): ParseResult {
 // ─── dispatcher ───────────────────────────────────────────────────────────────
 export function parseFile(
   platform: "tiktok" | "shopee" | "lazada",
-  rows: string[][]
+  rows: string[][],
+  extraRows?: string[][]  // TikTok: รายละเอียดคำสั่งซื้อ rows for order counting
 ): ParseResult {
-  if (platform === "tiktok")  return parseTikTok(rows);
+  if (platform === "tiktok")  return parseTikTok(rows, extraRows);
   if (platform === "shopee")  return parseShopee(rows);
   return parseLazada(rows);
 }

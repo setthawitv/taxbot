@@ -14,16 +14,17 @@ type PreviewRow = {
 };
 
 type PreviewData = {
-  count:         number;
-  newCount:      number;
-  newTotal:      number;
-  existingCount: number;
-  cancelled:     number;
-  returned:      number;
-  skipped:       number;
-  total:         number;
-  rows:          PreviewRow[];
-  platform:      Platform;
+  count:          number;
+  newCount:       number;
+  newTotal:       number;
+  existingCount:  number;
+  cancelled:      number;
+  returned:       number;
+  skipped:        number;
+  total:          number;
+  rows:           PreviewRow[];
+  platform:       Platform;
+  overlapWarning?: boolean;
 };
 
 const PLATFORMS: { id: Platform; label: string; emoji: string; color: string; accept: string }[] = [
@@ -361,6 +362,19 @@ export default function ImportPage() {
               </p>
             )}
           </div>
+
+          {preview.overlapWarning && (
+            <div className="mb-3 bg-amber-50 border border-amber-300 rounded-xl p-4 text-sm">
+              <p className="font-semibold text-amber-800 mb-1">⚠️ ช่วงวันที่คาบเกี่ยวกับไฟล์เก่า</p>
+              <p className="text-amber-700 leading-relaxed">
+                มีไฟล์รายงาน TikTok ที่นำเข้าไปแล้วซึ่งช่วงวันที่ทับซ้อนกัน
+                ถ้าบันทึกไฟล์นี้เพิ่ม <strong>ยอดรายรับจะนับซ้ำ</strong> ทำให้ตัวเลขเพี้ยน
+              </p>
+              <p className="text-amber-600 text-xs mt-2">
+                แนะนำ: ดาวน์โหลดไฟล์ใหม่ที่ครอบคลุมช่วงเวลาที่ไม่ทับกัน หรือลบรายการเก่าก่อนนำเข้าใหม่
+              </p>
+            </div>
+          )}
 
           {error && (
             <div className="mb-3 bg-red-50 border border-red-200 rounded-xl p-3 text-red-600 text-sm">

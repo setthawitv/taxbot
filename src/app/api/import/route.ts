@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
     const buffer  = await file.arrayBuffer();
     const name    = file.name.toLowerCase();
     let rows: string[][] = [];
+    let tiktokDetailRows: string[][] | undefined;
 
     if (name.endsWith(".csv")) {
       const text   = new TextDecoder("utf-8").decode(buffer);
@@ -40,10 +41,18 @@ export async function POST(req: NextRequest) {
         );
         if (incomeSheet) sheetName = incomeSheet;
       }
-      // TikTok Income Report — prefer "รายงาน" sheet (summary) over "รายละเอียดคำสั่งซื้อ"
+      // TikTok Income Report — prefer "รายงาน" sheet; also read detail sheet for order counts
       if (platform === "tiktok") {
         const reportSheet = wb.SheetNames.find((n) => n === "รายงาน");
-        if (reportSheet) sheetName = reportSheet;
+        if (reportSheet) {
+          sheetName = reportSheet;
+          const detailSheet = wb.SheetNames.find((n) => n === "รายละเอียดคำสั่งซื้อ");
+          if (detailSheet) {
+            tiktokDetailRows = XLSX.utils.sheet_to_json<string[]>(
+              wb.Sheets[detailSheet], { header: 1, defval: "" }
+            ) as string[][];
+          }
+        }
       }
 
       const ws = wb.Sheets[sheetName];
@@ -60,12 +69,13 @@ export async function POST(req: NextRequest) {
     console.log("[import] headers:", rows[0]);
 
     // ── Parse into normalised rows ────────────────────────────────────────────
-    const parsed = parseFile(platform as "tiktok" | "shopee" | "lazada", rows);
+    const parsed = parseFile(platform as "tiktok" | "shopee" | "lazada", rows, tiktokDetailRows);
 
     if (preview) {
       // ── Check which line_keys already exist in DB ───────────────────────────
       let existingKeys  = new Set<string>();
       const lineKeys    = parsed.rows.map((r) => r.lineKey);
+      let overlapWarning = false;
 
       if (lineUserId !== "preview" && lineKeys.length > 0) {
         const { data: user } = await supabaseAdmin
@@ -82,6 +92,33 @@ export async function POST(req: NextRequest) {
             .in("line_key", lineKeys);
 
           existingKeys = new Set((existing ?? []).map((e) => e.line_key));
+
+          // Overlap detection for TikTok report-style imports
+          if (platform === "tiktok" && parsed.periodStart && parsed.periodEnd) {
+            const newStart = parsed.periodStart;
+            const newEnd   = parsed.periodEnd;
+            const { data: existingReports } = await supabaseAdmin
+              .from("platform_orders")
+              .select("line_key")
+              .eq("user_id", user.id)
+              .eq("platform", "tiktok")
+              .like("line_key", "tiktok_report_%");
+
+            if (existingReports && existingReports.length > 0) {
+              for (const r of existingReports) {
+                // line_key format: tiktok_report_YYYYMMDD_YYYYMMDD
+                const parts = r.line_key.replace("tiktok_report_", "").split("_");
+                if (parts.length < 2) continue;
+                const exStart = `${parts[0].slice(0,4)}-${parts[0].slice(4,6)}-${parts[0].slice(6,8)}`;
+                const exEnd   = `${parts[1].slice(0,4)}-${parts[1].slice(4,6)}-${parts[1].slice(6,8)}`;
+                // Overlap: new range starts before existing ends AND new range ends after existing starts
+                if (newStart <= exEnd && newEnd >= exStart) {
+                  overlapWarning = true;
+                  break;
+                }
+              }
+            }
+          }
         }
       }
 
@@ -101,7 +138,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         ok:            true,
         preview:       true,
-        count:         parsed.rows.length,   // total successful in file
+        count:         parsed.orderCount ?? parsed.rows.length,
         newCount,                            // not yet in DB
         newTotal,                            // amount of new rows only
         existingCount,                       // already imported before
@@ -109,6 +146,7 @@ export async function POST(req: NextRequest) {
         returned:      parsed.returned,
         skipped:       parsed.skipped,
         total:         parsed.total,         // total amount in file (all)
+        overlapWarning,
         rows:          previewRows,
         platform,
       });
