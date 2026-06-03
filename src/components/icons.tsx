@@ -247,23 +247,28 @@ export const IconArrowRight = ({ className = "w-5 h-5" }: IconProps) => (
   </svg>
 );
 
-// ─── TaxBot wordmark logo ────────────────────────────────────────────────────
-export const TaxBotLogo = ({ className = "w-8 h-8" }: IconProps) => (
-  <svg className={className} viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+// ─── Vendee Finance Logo (Pulse — bar chart "V") ─────────────────────────────
+export const VendeeLogo = ({ className = "w-8 h-8" }: IconProps) => (
+  <svg className={className} viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
     <defs>
-      <linearGradient id="tbLogoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#10b981"/>
-        <stop offset="100%" stopColor="#06b6d4"/>
+      <linearGradient id="vendeeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%"   stopColor="#10b981"/>
+        <stop offset="100%" stopColor="#0ea5e9"/>
       </linearGradient>
     </defs>
-    <rect x="2" y="2" width="36" height="36" rx="10" fill="url(#tbLogoGrad)"/>
-    {/* Stylized "T" + bar chart */}
-    <rect x="11" y="11" width="18" height="3.2" rx="1.2" fill="white"/>
-    <rect x="18.4" y="11" width="3.2" height="14" rx="1.2" fill="white"/>
-    <rect x="11"   y="22" width="3" height="6" rx="0.8" fill="white" opacity="0.85"/>
-    <rect x="26"   y="19" width="3" height="9" rx="0.8" fill="white" opacity="0.85"/>
+    <g fill="url(#vendeeGrad)">
+      <rect x="44"  y="60" width="14" height="48" rx="4"/>
+      <rect x="64"  y="74" width="14" height="52" rx="4"/>
+      <rect x="84"  y="92" width="14" height="56" rx="4"/>
+      <rect x="104" y="80" width="14" height="48" rx="4"/>
+      <rect x="124" y="64" width="14" height="44" rx="4"/>
+      <rect x="144" y="48" width="14" height="40" rx="4"/>
+    </g>
   </svg>
 );
+
+// Backward-compat alias (will remove after all imports migrate)
+export const TaxBotLogo = VendeeLogo;
 
 export const IconCalendar = ({ className = "w-5 h-5" }: IconProps) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
