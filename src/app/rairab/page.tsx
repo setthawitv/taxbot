@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import ThaiDateInput from "@/components/ThaiDateInput";
 import { useSession } from "next-auth/react";
 import {
   IconIncome, IconScan, IconPlus, IconPencil, IconUpload,
@@ -562,8 +563,7 @@ export default function RaiRab() {
                   </div>
                   <div>
                     <label className="text-xs text-gray-500 mb-1 block">วันที่ *</label>
-                    <input value={addDate} onChange={(e) => setAddDate(e.target.value)}
-                      type="date" required
+                    <ThaiDateInput value={addDate} onChange={setAddDate} required
                       className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200" />
                   </div>
                 </div>

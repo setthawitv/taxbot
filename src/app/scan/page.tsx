@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, Suspense } from "react";
+import ThaiDateInput from "@/components/ThaiDateInput";
 import { useSession } from "next-auth/react";
 
 type OcrReceipt = {
@@ -289,10 +290,9 @@ function ScanPageInner() {
               {/* Date */}
               <div>
                 <label className="text-gray-400 text-xs mb-1 block">วันที่</label>
-                <input
-                  type="date"
+                <ThaiDateInput
                   value={ocr.date}
-                  onChange={(e) => setOcr({ ...ocr, date: e.target.value })}
+                  onChange={(v) => setOcr({ ...ocr, date: v })}
                   className="w-full bg-gray-700 text-white rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>

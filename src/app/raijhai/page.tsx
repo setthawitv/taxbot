@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import ThaiDateInput from "@/components/ThaiDateInput";
 import { useSession } from "next-auth/react";
 import { IconExpense, IconScan, IconPlus, IconInbox } from "@/components/icons";
 import AppLayout from "@/components/AppLayout";
@@ -372,8 +373,7 @@ export default function RaiJhai() {
                   </div>
                   <div>
                     <label className="text-xs text-gray-500 mb-1 block">วันที่</label>
-                    <input value={date} onChange={(e) => setDate(e.target.value)}
-                      type="date"
+                    <ThaiDateInput value={date} onChange={setDate}
                       className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-200" />
                   </div>
                 </div>
