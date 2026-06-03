@@ -14,6 +14,13 @@ export type ImportedRow = {
   variant:     string;  // size/colour variant
 };
 
+export type PreviewItem = {
+  orderId:     string;
+  date:        string;
+  amount:      number;
+  description: string;
+};
+
 export type ParseResult = {
   rows:      ImportedRow[];
   cancelled: number;   // cancelled orders
@@ -21,10 +28,11 @@ export type ParseResult = {
   skipped:   number;   // cancelled + returned (for backward compat)
   total:     number;   // sum of amount
   platform:  "tiktok" | "shopee" | "lazada";
-  // TikTok report sheet only
-  periodStart?: string;  // YYYY-MM-DD
-  periodEnd?:   string;  // YYYY-MM-DD
-  orderCount?:  number;  // successful order count from detail sheet
+  // summary-mode only (TikTok report / Shopee summary)
+  periodStart?:  string;        // YYYY-MM-DD
+  periodEnd?:    string;        // YYYY-MM-DD
+  orderCount?:   number;        // successful order count from detail sheet
+  previewItems?: PreviewItem[]; // individual rows for preview display
 };
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -172,19 +180,35 @@ function parseTikTokReportSheet(rows: string[][], detailRows?: string[][]): Pars
   const periodEnd   = parseThaiDate(endRaw?.trim() ?? "");
   const lineKey = `tiktok_report_${periodStr.replace(/\//g, "").replace("-", "_")}`;
 
-  // Count orders from detail sheet (รายละเอียดคำสั่งซื้อ)
+  // Count + preview rows from detail sheet (รายละเอียดคำสั่งซื้อ)
   let orderCount = 0;
   let returnCount = 0;
   let cancelCount = 0;
+  const previewItems: PreviewItem[] = [];
+
   if (detailRows && detailRows.length > 1) {
     const dHeader = detailRows[0].map((h) => String(h ?? "").trim());
-    const iType = dHeader.findIndex((h) => h.includes("ประเภทธุรกรรม"));
+    const iType    = dHeader.findIndex((h) => h.includes("ประเภทธุรกรรม"));
+    const iOrderId = dHeader.findIndex((h) => h.includes("หมายเลขคำสั่งซื้อ"));
+    const iDate    = dHeader.findIndex((h) => h.includes("เวลาที่ชำระคำสั่งซื้อ"));
+    const iIncome  = dHeader.findIndex((h) => h === "รายได้รวม");
+
     for (let i = 1; i < detailRows.length; i++) {
-      const txType = String(detailRows[i][iType] ?? "").trim();
+      const r = detailRows[i];
+      const txType = String(r[iType] ?? "").trim();
       if (!txType) continue;
-      if (txType.includes("คืน") || txType.includes("Refund") || txType.includes("Return")) returnCount++;
-      else if (txType.includes("ยกเลิก") || txType.includes("Cancel")) cancelCount++;
-      else orderCount++;
+      if (txType.includes("คืน") || txType.includes("Refund") || txType.includes("Return")) { returnCount++; continue; }
+      if (txType.includes("ยกเลิก") || txType.includes("Cancel")) { cancelCount++; continue; }
+      orderCount++;
+      const amt = parseFloat(String(iIncome >= 0 ? r[iIncome] : "0").replace(/,/g, "") || "0");
+      if (previewItems.length < 10) {
+        previewItems.push({
+          orderId:     String(r[iOrderId] ?? "").trim(),
+          date:        parseThaiDate(String(iDate >= 0 ? r[iDate] : "").trim()),
+          amount:      amt,
+          description: "TikTok Shop",
+        });
+      }
     }
   }
 
@@ -199,14 +223,15 @@ function parseTikTokReportSheet(rows: string[][], detailRows?: string[][]): Pars
       productName: `TikTok Shop รายงาน ${periodStr}`,
       variant:     "",
     }],
-    cancelled:   cancelCount,
-    returned:    returnCount,
-    skipped:     cancelCount + returnCount,
-    total:       income,
-    platform:    "tiktok",
+    cancelled:    cancelCount,
+    returned:     returnCount,
+    skipped:      cancelCount + returnCount,
+    total:        income,
+    platform:     "tiktok",
     periodStart,
     periodEnd,
-    orderCount:  orderCount || undefined,
+    orderCount:   orderCount || undefined,
+    previewItems: previewItems.length > 0 ? previewItems : undefined,
   };
 }
 
@@ -489,6 +514,96 @@ export function parseShopee(rows: string[][]): ParseResult {
     skipped:   cancelled + returned,
     total:     result.reduce((s, r) => s + r.amount, 0),
     platform:  "shopee",
+  };
+}
+
+// ── Shopee Summary Report ─────────────────────────────────────────────────────
+// File has 3 sheets: Summary (totals), Income (individual orders), Service Fee Details
+// Income formula: "1. รายได้ทั้งหมด" + "ค่าจัดส่งที่ชำระโดยผู้ซื้อ" (from Summary sheet)
+// Individual rows: from Income sheet for preview display
+export function parseShopeeSummaryReport(summaryRows: string[][], incomeRows: string[][]): ParseResult {
+  // Build map: label → value for Summary sheet
+  // Summary structure: col0 or col1 = label, col2 or col3 = value
+  let productIncome = 0;
+  let customerShipping = 0;
+  let startDate = "";
+  let endDate   = "";
+
+  for (const row of summaryRows) {
+    const c0 = String(row[0] ?? "").trim();
+    const c1 = String(row[1] ?? "").trim();
+    const v2 = parseFloat(String(row[2] ?? "").toString().replace(/,/g, "") || "0");
+    const v3 = parseFloat(String(row[3] ?? "").toString().replace(/,/g, "") || "0");
+
+    if (c0 === "จาก") { startDate = String(row[1] ?? "").trim(); continue; }
+    if (c0 === "ถึง")  { endDate   = String(row[1] ?? "").trim(); continue; }
+    if (c0.includes("1. รายได้ทั้งหมด")) { productIncome = v3; continue; }
+    if (c1 === "ค่าจัดส่งที่ชำระโดยผู้ซื้อ") { customerShipping = v2; continue; }
+  }
+
+  const income = Math.round((productIncome + customerShipping) * 100) / 100;
+  console.log("[Shopee summary] productIncome:", productIncome, "shipping:", customerShipping, "income:", income);
+
+  if (income <= 0) {
+    return { rows: [], cancelled: 0, returned: 0, skipped: 0, total: 0, platform: "shopee" };
+  }
+
+  const periodStart = startDate ? parseISODate(startDate) : "";
+  const periodEnd   = endDate   ? parseISODate(endDate)   : "";
+  const periodStr   = `${startDate}_${endDate}`.replace(/-/g, "");
+  const lineKey     = `shopee_summary_${periodStr}`;
+
+  // Count + preview rows from Income sheet
+  // Income headers at row 5, data from row 6
+  let orderCount  = 0;
+  let returnCount = 0;
+  const previewItems: PreviewItem[] = [];
+
+  if (incomeRows.length > 6) {
+    const h = incomeRows[5].map((c) => String(c ?? "").trim());
+    const iOrderId = h.indexOf("หมายเลขคำสั่งซื้อ");          // col 1
+    const iReturn  = h.indexOf("รหัสคืนสินค้า");               // col 2 — empty = order, non-empty = return
+    const iDate    = h.indexOf("วันที่โอนชำระเงินสำเร็จ");     // col 10
+    const iPayout  = h.findIndex((c) => c.includes("จำนวนเงินทั้งหมดที่โอนแล้ว")); // col 36
+
+    for (let i = 6; i < incomeRows.length; i++) {
+      const r = incomeRows[i];
+      if (!r[iOrderId]) continue;
+      const isReturn = String(r[iReturn] ?? "").trim() !== "";
+      if (isReturn) { returnCount++; continue; }
+      orderCount++;
+      const payout = parseFloat(String(iPayout >= 0 ? r[iPayout] : "0").toString().replace(/,/g, "") || "0");
+      if (previewItems.length < 10) {
+        previewItems.push({
+          orderId:     String(r[iOrderId] ?? "").trim(),
+          date:        parseISODate(String(iDate >= 0 ? r[iDate] : "").trim()),
+          amount:      payout,
+          description: "Shopee",
+        });
+      }
+    }
+  }
+
+  return {
+    rows: [{
+      lineKey,
+      orderId:     lineKey,
+      skuLineId:   "",
+      date:        periodEnd || new Date().toISOString().slice(0, 10),
+      amount:      income,
+      platform:    "shopee",
+      productName: `Shopee รายงาน ${startDate} - ${endDate}`,
+      variant:     "",
+    }],
+    cancelled:    0,
+    returned:     returnCount,
+    skipped:      returnCount,
+    total:        income,
+    platform:     "shopee",
+    periodStart,
+    periodEnd,
+    orderCount:   orderCount || undefined,
+    previewItems: previewItems.length > 0 ? previewItems : undefined,
   };
 }
 

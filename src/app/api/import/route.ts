@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { supabaseAdmin } from "@/lib/supabase";
-import { parseFile } from "@/lib/platform-import";
+import { parseFile, parseShopeeSummaryReport } from "@/lib/platform-import";
 
 export const runtime = "nodejs";
 
@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
     const name    = file.name.toLowerCase();
     let rows: string[][] = [];
     let tiktokDetailRows: string[][] | undefined;
+    let shopeeSummaryParsed: ReturnType<typeof parseShopeeSummaryReport> | undefined;
 
     if (name.endsWith(".csv")) {
       const text   = new TextDecoder("utf-8").decode(buffer);
@@ -35,12 +36,27 @@ export async function POST(req: NextRequest) {
       const wb = XLSX.read(buffer, { type: "array" });
 
       let sheetName = wb.SheetNames[0];
+
       if (platform === "shopee") {
-        const incomeSheet = wb.SheetNames.find(
-          (n) => n === "Income" || n.toLowerCase() === "income"
-        );
-        if (incomeSheet) sheetName = incomeSheet;
+        const summarySheet = wb.SheetNames.find((n) => n === "Summary");
+        if (summarySheet) {
+          // Shopee Summary Report — compute total from Summary, individual rows from Income
+          const incomeSheetName = wb.SheetNames.find((n) => n === "Income") ?? wb.SheetNames[0];
+          const summaryRows = XLSX.utils.sheet_to_json<string[]>(
+            wb.Sheets[summarySheet], { header: 1, defval: "" }
+          ) as string[][];
+          const incomeRowsRaw = XLSX.utils.sheet_to_json<string[]>(
+            wb.Sheets[incomeSheetName], { header: 1, defval: "" }
+          ) as string[][];
+          shopeeSummaryParsed = parseShopeeSummaryReport(summaryRows, incomeRowsRaw);
+        } else {
+          const incomeSheet = wb.SheetNames.find(
+            (n) => n === "Income" || n.toLowerCase() === "income"
+          );
+          if (incomeSheet) sheetName = incomeSheet;
+        }
       }
+
       // TikTok Income Report — prefer "รายงาน" sheet; also read detail sheet for order counts
       if (platform === "tiktok") {
         const reportSheet = wb.SheetNames.find((n) => n === "รายงาน");
@@ -61,15 +77,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "รองรับเฉพาะไฟล์ .csv, .xlsx, .xls" }, { status: 400 });
     }
 
-    if (rows.length < 2) {
+    if (!shopeeSummaryParsed && rows.length < 2) {
       return NextResponse.json({ error: "ไฟล์ว่างหรือไม่มีข้อมูล" }, { status: 400 });
     }
 
-    // Debug: log header row so we can see actual column names
-    console.log("[import] headers:", rows[0]);
-
     // ── Parse into normalised rows ────────────────────────────────────────────
-    const parsed = parseFile(platform as "tiktok" | "shopee" | "lazada", rows, tiktokDetailRows);
+    const parsed = shopeeSummaryParsed
+      ?? parseFile(platform as "tiktok" | "shopee" | "lazada", rows, tiktokDetailRows);
+    console.log("[import] platform:", platform, "rows:", parsed.rows.length, "total:", parsed.total);
 
     if (preview) {
       // ── Check which line_keys already exist in DB ───────────────────────────
@@ -93,25 +108,26 @@ export async function POST(req: NextRequest) {
 
           existingKeys = new Set((existing ?? []).map((e) => e.line_key));
 
-          // Overlap detection for TikTok report-style imports
-          if (platform === "tiktok" && parsed.periodStart && parsed.periodEnd) {
-            const newStart = parsed.periodStart;
-            const newEnd   = parsed.periodEnd;
+          // Overlap detection for summary-style imports (TikTok & Shopee)
+          if (parsed.periodStart && parsed.periodEnd) {
+            const newStart  = parsed.periodStart;
+            const newEnd    = parsed.periodEnd;
+            const prefix    = platform === "tiktok" ? "tiktok_report_%" : "shopee_summary_%";
             const { data: existingReports } = await supabaseAdmin
               .from("platform_orders")
               .select("line_key")
               .eq("user_id", user.id)
-              .eq("platform", "tiktok")
-              .like("line_key", "tiktok_report_%");
+              .eq("platform", platform)
+              .like("line_key", prefix);
 
             if (existingReports && existingReports.length > 0) {
               for (const r of existingReports) {
-                // line_key format: tiktok_report_YYYYMMDD_YYYYMMDD
-                const parts = r.line_key.replace("tiktok_report_", "").split("_");
+                // line_key ends with _YYYYMMDD_YYYYMMDD (or _YYYYMMDDYYYYMMDD for Shopee)
+                const raw    = r.line_key.replace(/^(tiktok_report_|shopee_summary_)/, "");
+                const parts  = raw.split("_");
                 if (parts.length < 2) continue;
                 const exStart = `${parts[0].slice(0,4)}-${parts[0].slice(4,6)}-${parts[0].slice(6,8)}`;
                 const exEnd   = `${parts[1].slice(0,4)}-${parts[1].slice(4,6)}-${parts[1].slice(6,8)}`;
-                // Overlap: new range starts before existing ends AND new range ends after existing starts
                 if (newStart <= exEnd && newEnd >= exStart) {
                   overlapWarning = true;
                   break;
@@ -127,13 +143,15 @@ export async function POST(req: NextRequest) {
       const existingCount = parsed.rows.length - newCount;
       const newTotal    = newRows.reduce((s, r) => s + r.amount, 0);
 
-      // Normalise to the shape the UI expects — show raw orderId (not lineKey) in preview
-      const previewRows = parsed.rows.slice(0, 5).map((r) => ({
-        orderId:     r.orderId,
-        date:        r.date,
-        amount:      r.amount,
-        description: r.variant ? `${r.productName} (${r.variant})` : r.productName,
-      }));
+      // For summary-mode imports: show individual orders in preview, not the aggregate row
+      const previewRows = parsed.previewItems
+        ? parsed.previewItems.slice(0, 5)
+        : parsed.rows.slice(0, 5).map((r) => ({
+            orderId:     r.orderId,
+            date:        r.date,
+            amount:      r.amount,
+            description: r.variant ? `${r.productName} (${r.variant})` : r.productName,
+          }));
 
       return NextResponse.json({
         ok:            true,
