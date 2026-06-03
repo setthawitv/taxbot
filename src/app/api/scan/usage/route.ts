@@ -22,17 +22,19 @@ export async function GET(req: NextRequest) {
 
   if (!user) return NextResponse.json({ count: 0 });
 
-  // Count transactions created from slip scan this month
-  const from = `${year}-${String(month).padStart(2, "0")}-01`;
-  const to   = new Date(year, month, 0).toISOString().slice(0, 10); // last day of month
+  // Count by created_at (when the scan happened), NOT transaction_date (date on the slip)
+  // This ensures quota reflects actual scans this month, not slip dates
+  const from = `${year}-${String(month).padStart(2, "0")}-01T00:00:00.000Z`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const to   = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}T23:59:59.999Z`;
 
   const { count } = await supabaseAdmin
     .from("transactions")
     .select("id", { count: "exact", head: true })
     .eq("user_id", user.id)
     .eq("source", "slip_photo")
-    .gte("transaction_date", from)
-    .lte("transaction_date", to);
+    .gte("created_at", from)
+    .lte("created_at", to);
 
   return NextResponse.json({ count: count ?? 0 });
 }
