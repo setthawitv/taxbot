@@ -48,7 +48,7 @@ const PLATFORM_OPTIONS: { id: Platform; label: string; emoji: string; color: str
 const MONTHS = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 const CURRENT_YEAR  = new Date().getFullYear();
 const CURRENT_MONTH = new Date().getMonth() + 1;
-const YEARS = [CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2];
+const YEARS = Array.from({ length: 6 }, (_, i) => CURRENT_YEAR - i);
 
 const PLATFORM_COLORS: Record<string, string> = {
   tiktok: "#1f2937",
@@ -386,11 +386,11 @@ export default function RaiRab() {
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-4">
-          <Link href="/" className="text-emerald-600 text-sm">← กลับ</Link>
+          <Link href="/home" className="text-emerald-600 text-sm">← กลับ</Link>
         </div>
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 flex items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
+            <div className="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
               <IconIncome />
             </div>
             <div>
@@ -398,21 +398,21 @@ export default function RaiRab() {
               <p className="text-emerald-500 text-sm">Income Dashboard</p>
             </div>
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
             <button onClick={() => { setShowScan(true); setScanPreview(null); setScanError(""); }}
-              className="flex items-center gap-1.5 bg-purple-500 text-white text-xs font-semibold px-3 py-2 rounded-xl active:scale-95 transition-all">
+              className="flex items-center justify-center gap-1.5 bg-purple-500 text-white text-xs font-semibold px-3 py-2 rounded-xl active:scale-95 transition-all">
               <IconScan className="w-4 h-4" /> สแกน
             </button>
             <button onClick={() => { setShowAdd((v) => !v); setShowAdjust(false); setAddMsg(null); }}
-              className="flex items-center gap-1.5 bg-emerald-500 text-white text-xs font-semibold px-3 py-2 rounded-xl active:scale-95 transition-all">
+              className="flex items-center justify-center gap-1.5 bg-emerald-500 text-white text-xs font-semibold px-3 py-2 rounded-xl active:scale-95 transition-all">
               <IconPlus className="w-4 h-4" /> เพิ่ม
             </button>
             <button onClick={() => { setShowAdjust((v) => !v); setShowAdd(false); setAdjMsg(null); }}
-              className="flex items-center gap-1.5 bg-white border border-emerald-300 text-emerald-600 text-xs font-semibold px-3 py-2 rounded-xl active:scale-95 transition-all">
+              className="flex items-center justify-center gap-1.5 bg-white border border-emerald-300 text-emerald-600 text-xs font-semibold px-3 py-2 rounded-xl active:scale-95 transition-all">
               <IconPencil className="w-4 h-4" /> ปรับยอด
             </button>
             <Link href="/rairab/import"
-              className="flex items-center gap-1.5 bg-white border border-emerald-300 text-emerald-600 text-xs font-semibold px-3 py-2 rounded-xl active:scale-95 transition-all">
+              className="flex items-center justify-center gap-1.5 bg-white border border-emerald-300 text-emerald-600 text-xs font-semibold px-3 py-2 rounded-xl active:scale-95 transition-all">
               <IconUpload className="w-4 h-4" /> นำเข้า
             </Link>
           </div>
@@ -424,16 +424,25 @@ export default function RaiRab() {
           {/* LEFT — Charts, filters, summary (2 cols) */}
           <div className="lg:col-span-2 space-y-4 mb-6 lg:mb-0">
 
-            {/* Year selector */}
+            {/* Year + Month dropdowns */}
             <div className="flex gap-2">
-              {YEARS.map((y) => (
-                <button key={y} onClick={() => setYear(y)}
-                  className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${
-                    year === y ? "bg-emerald-500 text-white shadow-sm" : "bg-white text-gray-500 border border-emerald-100"
-                  }`}>
-                  {y}
-                </button>
-              ))}
+              <select
+                value={year}
+                onChange={(e) => { setYear(Number(e.target.value)); setMonth(0); }}
+                className="flex-1 bg-white border border-emerald-200 rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+              >
+                {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
+              </select>
+              <select
+                value={month}
+                onChange={(e) => setMonth(Number(e.target.value))}
+                className="flex-[2] bg-white border border-emerald-200 rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+              >
+                <option value={0}>ทุกเดือน</option>
+                {MONTHS.map((label, i) => (
+                  <option key={i} value={i + 1}>{label}</option>
+                ))}
+              </select>
             </div>
 
             {/* Platform filter */}
