@@ -157,8 +157,13 @@ export async function POST(req: NextRequest) {
     const vendor      = String(body.vendor ?? "").trim();
     const description = String(body.description ?? "").trim();
     const date        = String(body.date ?? new Date().toISOString().slice(0, 10));
-    const category    = String(body.expenseCategory ?? body.incomeCategory ?? "อื่นๆ").trim();
-    const imageBase64 = typeof body.imageBase64 === "string" ? body.imageBase64 : null;
+    const category       = String(body.expenseCategory ?? body.incomeCategory ?? "อื่นๆ").trim();
+    const imageBase64    = typeof body.imageBase64 === "string" ? body.imageBase64 : null;
+    const source         = typeof body.source        === "string" ? body.source        : "manual";
+    const vatAmount      = Number(body.vatAmount      ?? 0);
+    const withholdingTax = Number(body.withholdingTax ?? 0);
+    const invoiceNo      = typeof body.invoiceNo      === "string" ? body.invoiceNo      : "";
+    const taxId          = typeof body.taxId          === "string" ? body.taxId          : "";
 
     if (!lineUserId && !staffCode)
       return NextResponse.json({ error: "Missing lineUserId or staffCode" }, { status: 400 });
@@ -212,6 +217,11 @@ export async function POST(req: NextRequest) {
         vendor,
         description:      description || vendor,
         transaction_date: date,
+        source,
+        ...(vatAmount      ? { vat_amount:       vatAmount      } : {}),
+        ...(withholdingTax ? { withholding_tax:  withholdingTax } : {}),
+        ...(invoiceNo      ? { invoice_no:        invoiceNo      } : {}),
+        ...(taxId          ? { tax_id:            taxId          } : {}),
         ...(staffCode ? { staff_code: staffCode, staff_name: staffName ?? "Staff" } : {}),
       })
       .select("id")
@@ -264,12 +274,13 @@ export async function POST(req: NextRequest) {
         sheetError = "no_sheet_id";
       }
 
-      // Upload to Google Drive
-      if (user.drive_folder_id) {
+      // Upload to Google Drive — EXPENSE ONLY (income doesn't need Drive artifacts)
+      if (txType === "income") {
+        driveSynced = true; // mark as "complete" — nothing to upload
+      } else if (user.drive_folder_id) {
         try {
           const bizName   = user.business_name || "ธุรกิจของฉัน";
           const receiptNo = tx.id.slice(0, 8).toUpperCase();
-          const pdfBuffer = await generateReceiptPdf(receiptData, bizName, receiptNo);
           const { folderId, accountingFolderId } = await ensureReceiptFolder(
             gToken,
             user.drive_folder_id,
@@ -279,20 +290,18 @@ export async function POST(req: NextRequest) {
           const safeVendor = vendor.replace(/[/\\:*?"<>|]/g, "").trim().slice(0, 40);
           const baseName   = `${date}_${safeVendor}_${receiptNo}`;
 
-          // รวมหลักฐาน: store original receipt image if available, otherwise PDF
+          // รวมหลักฐาน: store ORIGINAL receipt image (no PDF generated here)
           if (imageBase64) {
-            // imageBase64 is a data URL: "data:image/jpeg;base64,..."
             const [meta, b64] = imageBase64.split(",");
             const mime = meta.match(/:(.*?);/)?.[1] ?? "image/jpeg";
             const ext  = mime.split("/")[1]?.split("+")[0] ?? "jpg";
             const imgBuffer = Buffer.from(b64, "base64");
             await uploadFileToDrive(gToken, folderId, `${baseName}.${ext}`, imgBuffer, mime);
-          } else {
-            // No image — fall back to PDF in รวมหลักฐาน too
-            await uploadFileToDrive(gToken, folderId, `${baseName}.pdf`, pdfBuffer, "application/pdf");
           }
+          // (if no image was scanned — รวมหลักฐาน stays empty for this entry)
 
-          // สำนักงานบัญชี: always store PDF
+          // สำหรับสำนักงานบัญชี: ALWAYS generate + upload PDF
+          const pdfBuffer = await generateReceiptPdf(receiptData, bizName, receiptNo);
           await uploadFileToDrive(gToken, accountingFolderId, `${baseName}.pdf`, pdfBuffer, "application/pdf");
 
           driveSynced = true;
