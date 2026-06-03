@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { initLiff, getLiffProfile, isInLineClient, getLiffUrl } from "@/lib/liff";
+import { initLiff, getLiffProfile, isInLineClient } from "@/lib/liff";
+import { VendeeLogo } from "@/components/icons";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type LiffProfile = { userId: string; displayName: string; pictureUrl?: string };
@@ -205,9 +206,11 @@ function Step2({
 function Step3({
   googleEmail, connected, polling, googleOnly,
   onConnect, onFinish, onBack,
+  saving, saveError,
 }: {
   googleEmail: string | null; connected: boolean; polling: boolean; googleOnly?: boolean;
   onConnect: () => void; onFinish: () => void; onBack: () => void;
+  saving: boolean; saveError: string;
 }) {
   return (
     <div className="flex flex-col gap-5">
@@ -260,16 +263,33 @@ function Step3({
         </p>
       )}
 
+      {saveError && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
+          {saveError}
+        </div>
+      )}
+
       <div className="flex items-center gap-3 mt-2">
-        <button onClick={onBack} className="text-sm font-medium text-blue-600 flex-shrink-0">
+        <button onClick={onBack} disabled={saving}
+          className="text-sm font-medium text-blue-600 flex-shrink-0 disabled:opacity-40">
           ย้อนกลับ
         </button>
         <button
           onClick={onFinish}
-          disabled={!connected}
-          className="flex-1 bg-[#0A192F] text-white font-semibold py-3.5 rounded-2xl hover:bg-[#0d2240] active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          disabled={!connected || saving}
+          className="flex-1 inline-flex items-center justify-center gap-2 bg-[#0A192F] text-white font-semibold py-3.5 rounded-2xl hover:bg-[#0d2240] active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          เริ่มใช้งาน TaxBot →
+          {saving ? (
+            <>
+              <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25"/>
+                <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+              </svg>
+              กำลังตั้งค่าบัญชี...
+            </>
+          ) : (
+            <>เริ่มใช้งาน Vendee Finance →</>
+          )}
         </button>
       </div>
     </div>
@@ -299,6 +319,8 @@ export default function OnboardingPage() {
   // Step 3
   const [googleEmail, setGoogleEmail] = useState<string | null>(null);
   const [googleConnected, setGoogleConnected] = useState(false);
+  const [saving,          setSaving]          = useState(false);
+  const [saveError,       setSaveError]       = useState("");
   const [pollingGoogle, setPollingGoogle] = useState(false);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -317,7 +339,7 @@ export default function OnboardingPage() {
               const status = await statusRes.json();
               if (status.onboarded) {
                 document.cookie = "taxbot_onboarded=1; path=/; max-age=31536000";
-                router.replace("/");
+                router.replace("/home");
                 return;
               }
             }
@@ -353,7 +375,7 @@ export default function OnboardingPage() {
         if (status.onboarded) {
           // User has registered before — restore cookie and go to dashboard
           document.cookie = "taxbot_onboarded=1; path=/; max-age=31536000";
-          router.replace("/");
+          router.replace("/home");
           return;
         }
 
@@ -420,13 +442,17 @@ export default function OnboardingPage() {
   }
 
   async function finish() {
+    if (saving) return;       // prevent double-click
+    setSaving(true);
+    setSaveError("");
+
     // For Google-only users (no LINE), generate a synthetic user ID from email
     const lineUserId = liffProfile?.userId
       ?? (googleEmail ? `google_${googleEmail.toLowerCase().replace(/[@.+]/g, "_")}` : null);
 
     try {
       const s = session as typeof session & { accessToken?: string; refreshToken?: string };
-      await fetch("/api/user/save", {
+      const res = await fetch("/api/user/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -442,11 +468,18 @@ export default function OnboardingPage() {
           googleRefreshToken: s?.refreshToken ?? null,
         }),
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        console.error("[onboarding] /api/user/save failed:", res.status, data);
+        // Show error but still proceed — user can fix in settings later
+        setSaveError(data.error || `บันทึกไม่สำเร็จ (${res.status}) — ระบบจะพาเข้าหน้าหลักให้`);
+      }
     } catch (err) {
       console.error("Failed to save user:", err);
+      setSaveError("เครือข่ายขัดข้อง — ระบบจะพาเข้าหน้าหลักให้");
     }
     document.cookie = "taxbot_onboarded=1; path=/; max-age=31536000";
-    router.push("/");
+    router.push("/home");
   }
 
   // ── Checking onboarding status (LINE or browser Google check) ──────────────
@@ -454,7 +487,7 @@ export default function OnboardingPage() {
     return (
       <main className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="text-5xl mb-4 animate-pulse">🤖</div>
+          <div className="flex justify-center mb-4 animate-pulse"><VendeeLogo className="w-16 h-16" /></div>
           <p className="text-gray-400 text-sm">กำลังโหลด...</p>
         </div>
       </main>
@@ -465,33 +498,14 @@ export default function OnboardingPage() {
   if (notInLine && !googleConnected) {
     return (
       <main className="min-h-screen bg-white flex flex-col items-center justify-center px-8 text-center">
-        <div className="text-6xl mb-4">🤖</div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">TaxBot</h1>
+        <div className="mb-4"><VendeeLogo className="w-20 h-20" /></div>
+        <h1 className="text-2xl font-bold text-gray-900 mb-1">Vendee Finance</h1>
         <p className="text-gray-400 text-sm mb-8">เข้าสู่ระบบเพื่อเริ่มใช้งาน</p>
 
         <div className="w-full max-w-xs flex flex-col gap-3">
-          {/* LINE */}
-          <a
-            href={getLiffUrl()}
-            className="w-full flex items-center justify-center gap-3 bg-[#06C755] text-white font-bold py-4 rounded-2xl text-base active:scale-95 transition-all shadow-md shadow-green-100"
-          >
-            <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white flex-shrink-0">
-              <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.494.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/>
-            </svg>
-            เข้าสู่ระบบด้วย LINE
-          </a>
-
-          {/* Divider */}
-          <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-gray-200" />
-            <span className="text-xs text-gray-400">หรือ</span>
-            <div className="flex-1 h-px bg-gray-200" />
-          </div>
-
-          {/* Google */}
           <button
             onClick={() => signIn("google", { callbackUrl: "/onboarding" })}
-            className="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-200 text-gray-700 font-semibold py-3.5 rounded-2xl text-sm active:scale-95 transition-all hover:border-gray-400"
+            className="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-200 text-gray-700 font-semibold py-4 rounded-2xl text-sm active:scale-95 transition-all hover:border-gray-400 shadow-sm"
           >
             <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -501,10 +515,6 @@ export default function OnboardingPage() {
             </svg>
             เข้าสู่ระบบด้วย Google
           </button>
-
-          <p className="text-xs text-gray-400 mt-1">
-            Google จะ sync กับบัญชี LINE ของคุณอัตโนมัติ
-          </p>
         </div>
       </main>
     );
@@ -515,7 +525,7 @@ export default function OnboardingPage() {
       {/* Header */}
       <div className="text-center mb-6">
         <div className="text-4xl mb-2">🤖</div>
-        <h1 className="text-xl font-bold text-gray-800">ยินดีต้อนรับสู่ TaxBot</h1>
+        <h1 className="text-xl font-bold text-gray-800">ยินดีต้อนรับสู่ Vendee Finance</h1>
         <p className="text-gray-400 text-sm mt-1">เริ่มใช้งานฟรีได้ทันที! เพียง 3 ขั้นตอนง่าย ๆ</p>
       </div>
 
@@ -543,6 +553,7 @@ export default function OnboardingPage() {
           googleEmail={googleEmail} connected={googleConnected} polling={pollingGoogle}
           onConnect={connectGoogle} onFinish={finish} onBack={() => setStep(2)}
           googleOnly={notInLine}
+          saving={saving} saveError={saveError}
         />
       )}
     </main>
