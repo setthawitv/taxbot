@@ -33,13 +33,17 @@ export async function POST(req: NextRequest) {
     } else if (name.endsWith(".xlsx") || name.endsWith(".xls")) {
       const wb = XLSX.read(buffer, { type: "array" });
 
-      // Shopee Income Report has multiple sheets — use "Income" sheet if present
       let sheetName = wb.SheetNames[0];
       if (platform === "shopee") {
         const incomeSheet = wb.SheetNames.find(
           (n) => n === "Income" || n.toLowerCase() === "income"
         );
         if (incomeSheet) sheetName = incomeSheet;
+      }
+      // TikTok Income Report — prefer "รายงาน" sheet (summary) over "รายละเอียดคำสั่งซื้อ"
+      if (platform === "tiktok") {
+        const reportSheet = wb.SheetNames.find((n) => n === "รายงาน");
+        if (reportSheet) sheetName = reportSheet;
       }
 
       const ws = wb.Sheets[sheetName];

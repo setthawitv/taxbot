@@ -55,8 +55,14 @@ export function parseTikTok(rows: string[][]): ParseResult {
   const header = rows[0].map((h) => String(h ?? "").trim());
 
   // Detect Income Report by Thai header signature
-  const isIncomeReport = header.some((h) => h.includes("หมายเลขคำสั่งซื้อ/การปรับ") || h === "รายได้รวม");
+  // รายงาน sheet: all headers are empty strings (summary layout)
+  const isReportSheet = header.every((h) => h === "") && rows.length > 5;
+  if (isReportSheet) {
+    return parseTikTokReportSheet(rows);
+  }
 
+  // รายละเอียดคำสั่งซื้อ sheet with Thai headers
+  const isIncomeReport = header.some((h) => h.includes("หมายเลขคำสั่งซื้อ/การปรับ") || h === "รายได้รวม");
   if (isIncomeReport) {
     return parseTikTokIncomeReport(rows, header);
   }
@@ -122,6 +128,61 @@ function parseTikTokIncomeReport(rows: string[][], header: string[]): ParseResul
     returned,
     skipped:   cancelled + returned,
     total:     result.reduce((s, r) => s + r.amount, 0),
+    platform:  "tiktok",
+  };
+}
+
+// ── Format C: TikTok รายงาน sheet (period summary) ───────────────────────────
+// Layout: label in cols 1-4, value always in col 5
+// Formula (per TikTok tax guidance):
+//   รายได้ = ยอดรวมค่าสินค้าหลังหักส่วนลดจากผู้ขาย
+//           + ยอดรวมเงินคืนหลังหักส่วนลดจากร้านค้า  (negative)
+//           + ค่าธรรมเนียมการจัดส่งของลูกค้า
+function parseTikTokReportSheet(rows: string[][]): ParseResult {
+  // Build label → value map (value is always col 5)
+  const valMap = new Map<string, number>();
+  let periodStr = "";
+
+  for (const row of rows) {
+    const label = row.slice(1, 5).map((c) => String(c ?? "").trim()).find((c) => c !== "") ?? "";
+    const rawVal = String(row[5] ?? "").trim();
+    if (label === "ช่วงเวลา") { periodStr = rawVal; continue; }
+    if (label && rawVal !== "") {
+      valMap.set(label, parseFloat(rawVal.replace(/,/g, "") || "0"));
+    }
+  }
+
+  const productNet = valMap.get("ยอดรวมค่าสินค้าหลังหักส่วนลดจากผู้ขาย") ?? 0;
+  const refund     = valMap.get("ยอดรวมเงินคืนหลังหักส่วนลดจากร้านค้า")   ?? 0; // negative
+  const shipping   = valMap.get("ค่าธรรมเนียมการจัดส่งของลูกค้า")           ?? 0;
+  const income     = Math.round((productNet + refund + shipping) * 100) / 100;
+
+  console.log("[TikTok report] productNet:", productNet, "refund:", refund, "shipping:", shipping, "income:", income);
+
+  if (income <= 0) {
+    return { rows: [], cancelled: 0, returned: 0, skipped: 0, total: 0, platform: "tiktok" };
+  }
+
+  // Parse end date from "2025/10/01-2025/12/01"
+  const endDateRaw = periodStr.split("-").pop() ?? "";
+  const date = parseThaiDate(endDateRaw) || new Date().toISOString().slice(0, 10);
+  const lineKey = `tiktok_report_${periodStr.replace(/\//g, "").replace("-", "_")}`;
+
+  return {
+    rows: [{
+      lineKey,
+      orderId:     lineKey,
+      skuLineId:   "",
+      date,
+      amount:      income,
+      platform:    "tiktok",
+      productName: `TikTok Shop รายงาน ${periodStr}`,
+      variant:     "",
+    }],
+    cancelled: 0,
+    returned:  0,
+    skipped:   0,
+    total:     income,
     platform:  "tiktok",
   };
 }
