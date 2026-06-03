@@ -419,26 +419,22 @@ export default function Home() {
 
         {/* ── Big stat cards (year) ─────────────────────────────────────────── */}
         <div>
-          <div className="flex items-center justify-between mb-3">
+          <div className="w-full flex items-center justify-between mb-3">
             <p className="text-xs font-semibold text-[#4A5568] uppercase tracking-widest">ภาพรวมทั้งปี</p>
-            <div className="flex items-center gap-2">
-              <select
-                value={selectedYear}
-                onChange={(e) => { setSelectedYear(Number(e.target.value)); setSelectedMonth(CURRENT_MONTH); }}
-                className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm bg-white text-[#0A192F] font-medium focus:outline-none focus:ring-2 focus:ring-[#0A192F]/20 cursor-pointer"
-              >
-                {Array.from({ length: 4 }, (_, i) => CURRENT_YEAR - i).map((y) => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-              {selectedYear !== CURRENT_YEAR && (
+            <div className="flex items-center gap-1.5">
+              {Array.from({ length: 4 }, (_, i) => CURRENT_YEAR - i).map((y) => (
                 <button
-                  onClick={() => { setSelectedYear(CURRENT_YEAR); setSelectedMonth(CURRENT_MONTH); }}
-                  className="text-xs text-[#4A5568] hover:text-[#0A192F] underline underline-offset-2 transition-colors whitespace-nowrap"
+                  key={y}
+                  onClick={() => { setSelectedYear(y); setSelectedMonth(CURRENT_MONTH); }}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
+                    selectedYear === y
+                      ? "bg-[#0A192F] text-white border-[#0A192F]"
+                      : "bg-white text-gray-500 border-gray-200 hover:border-gray-400"
+                  }`}
                 >
-                  ปีนี้
+                  {y}
                 </button>
-              )}
+              ))}
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
