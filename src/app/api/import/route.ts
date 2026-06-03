@@ -153,18 +153,20 @@ export async function POST(req: NextRequest) {
             description: r.variant ? `${r.productName} (${r.variant})` : r.productName,
           }));
 
+      const isSummary = !!parsed.periodStart;
       return NextResponse.json({
         ok:            true,
         preview:       true,
         count:         parsed.orderCount ?? parsed.rows.length,
-        newCount,                            // not yet in DB
-        newTotal,                            // amount of new rows only
-        existingCount,                       // already imported before
+        newCount,
+        newTotal,
+        existingCount,
         cancelled:     parsed.cancelled,
         returned:      parsed.returned,
         skipped:       parsed.skipped,
-        total:         parsed.total,         // total amount in file (all)
+        total:         parsed.total,
         overlapWarning,
+        isSummary,
         rows:          previewRows,
         platform,
       });

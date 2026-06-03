@@ -25,6 +25,7 @@ type PreviewData = {
   rows:           PreviewRow[];
   platform:       Platform;
   overlapWarning?: boolean;
+  isSummary?:     boolean;
 };
 
 const PLATFORMS: { id: Platform; label: string; emoji: string; color: string; accept: string }[] = [
@@ -327,17 +328,19 @@ export default function ImportPage() {
                 <p className="text-xs opacity-75">ยกเลิก</p>
               </div>
             </div>
-            {/* Import dedup status */}
-            <div className="grid grid-cols-2 gap-2 text-center border-t border-white/20 pt-3">
-              <div className="bg-white/15 rounded-xl py-2">
-                <p className="text-lg font-bold">{preview.newCount}</p>
-                <p className="text-xs opacity-80">✨ ใหม่</p>
+            {/* Import dedup status — hidden for summary-mode (Shopee/TikTok reports) */}
+            {!preview.isSummary && (
+              <div className="grid grid-cols-2 gap-2 text-center border-t border-white/20 pt-3">
+                <div className="bg-white/15 rounded-xl py-2">
+                  <p className="text-lg font-bold">{preview.newCount}</p>
+                  <p className="text-xs opacity-80">✨ ใหม่</p>
+                </div>
+                <div className="bg-white/10 rounded-xl py-2">
+                  <p className="text-lg font-bold">{preview.existingCount}</p>
+                  <p className="text-xs opacity-70">มีในระบบแล้ว</p>
+                </div>
               </div>
-              <div className="bg-white/10 rounded-xl py-2">
-                <p className="text-lg font-bold">{preview.existingCount}</p>
-                <p className="text-xs opacity-70">มีในระบบแล้ว</p>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Preview rows */}
