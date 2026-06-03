@@ -141,7 +141,11 @@ FIELDS:
 - type: "expense"
 - amount: total paid (number)
 - vendor: recipient name (string)
-- date: "YYYY-MM-DD"  (use ${today} if not visible)
+- date: Gregorian "YYYY-MM-DD". Year conversion rules:
+  * "DD MMM YY" format: 2-digit year 20-30 = AD 20YY. "24 May 26" → 2026-05-24. "3 Jun 26" → 2026-06-03.
+  * 2-digit year 60-69 = Thai BE last 2 digits → AD = (2500+YY)-543. "67" → BE2567 → AD2024.
+  * 4-digit year ≥ 2500 = Thai BE → subtract 543. 4-digit year < 2500 = AD as-is.
+  * Use ${today} if date not visible.
 - description: short Thai description (never empty; use vendor name if nothing else)
 - docType: "สลิปโอนเงิน" | "ใบเสร็จรับเงิน" | "ใบกำกับภาษี" | "อื่นๆ"
 - expenseCategory: "บุคลากร & ค่าจ้าง" | "สินค้า" | "บริการ" | "ค่าขนส่ง" | "ค่าเช่า" | "อื่นๆ"
