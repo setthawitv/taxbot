@@ -48,6 +48,10 @@ function SettingsPageInner() {
   const [savingBusinessName,  setSavingBusinessName]  = useState(false);
   const [businessNameSaved,   setBusinessNameSaved]   = useState(false);
 
+  // Scan quota
+  const [scanUsed,      setScanUsed]      = useState<number>(0);
+  const [scanLoading,   setScanLoading]   = useState(false);
+
   // Payment / upgrade
   const [currentPlan,   setCurrentPlan]   = useState<string>("trial");
   const [showUpgrade,   setShowUpgrade]   = useState(false);
@@ -103,6 +107,8 @@ function SettingsPageInner() {
               setBusinessName(biz);
               setBusinessNameDraft(biz);
               setCurrentPlan(data.profile?.plan ?? "trial");
+              const now = new Date();
+              fetchScanUsage(profile.userId, now.getFullYear(), now.getMonth() + 1);
             }
             return;
           }
@@ -128,6 +134,9 @@ function SettingsPageInner() {
                 setBusinessName(biz);
                 setBusinessNameDraft(biz);
                 setCurrentPlan(statusData.profile?.plan ?? "trial");
+              // Fetch scan usage for current month
+              const now = new Date();
+              fetchScanUsage(d.lineUserId, now.getFullYear(), now.getMonth() + 1);
               }
             }
           }
@@ -148,6 +157,24 @@ function SettingsPageInner() {
       }
     });
   }, [sessionStatus, session, searchParams]);
+
+  // Scan quota limits per plan
+  const SCAN_LIMIT: Record<string, number | null> = {
+    trial: 8, free: 8, eco: 30, pro: 100, platinum: null, // null = unlimited
+  };
+  const scanLimit = SCAN_LIMIT[currentPlan] ?? 8;
+
+  async function fetchScanUsage(uid: string, year: number, month: number) {
+    setScanLoading(true);
+    try {
+      const res = await fetch(`/api/scan/usage?lineUserId=${uid}&year=${year}&month=${month}`);
+      if (res.ok) {
+        const d = await res.json();
+        setScanUsed(d.count ?? 0);
+      }
+    } catch { /* ignore */ }
+    finally { setScanLoading(false); }
+  }
 
   async function saveBusinessName(e: React.FormEvent) {
     e.preventDefault();
@@ -252,9 +279,9 @@ function SettingsPageInner() {
 
   function sendAdminEmail(adminEmailAddr: string, code: string) {
     const link = adminJoinLink(code);
-    const subject = encodeURIComponent("เชิญเป็น Admin TaxBot");
+    const subject = encodeURIComponent("เชิญเป็น Admin Vendee Finance");
     const body = encodeURIComponent(
-      `สวัสดี!\n\nคุณได้รับเชิญให้เป็น Admin บัญชี TaxBot\nกรุณาคลิกลิงก์ด้านล่างเพื่อยืนยันการเข้าร่วม:\n\n${link}\n\nหมายเหตุ: กรุณาลงชื่อด้วยบัญชี Google ของอีเมลนี้`
+      `สวัสดี!\n\nคุณได้รับเชิญให้เป็น Admin บัญชี Vendee Finance\nกรุณาคลิกลิงก์ด้านล่างเพื่อยืนยันการเข้าร่วม:\n\n${link}\n\nหมายเหตุ: กรุณาลงชื่อด้วยบัญชี Google ของอีเมลนี้`
     );
     window.location.href = `mailto:${adminEmailAddr}?subject=${subject}&body=${body}`;
   }
@@ -304,7 +331,7 @@ function SettingsPageInner() {
       }
     } catch { /* ignore */ }
     // Sign out from NextAuth (Google session)
-    await signOut({ callbackUrl: "/landing" });
+    await signOut({ callbackUrl: "/" });
   }
 
   // Countdown ticker
@@ -406,7 +433,7 @@ function SettingsPageInner() {
     <main className="min-h-screen bg-[#F8FAFC]">
       <div className="max-w-4xl mx-auto px-4 lg:px-6 py-6">
         <div className="flex items-center gap-3 mb-4">
-          <Link href="/" className="text-gray-500 text-sm">← กลับ</Link>
+          <Link href="/home" className="text-gray-500 text-sm">← กลับ</Link>
         </div>
 
         <div className="flex items-center gap-3 mb-6">
@@ -479,6 +506,56 @@ function SettingsPageInner() {
                   </button>
                 )}
               </div>
+            </div>
+
+            {/* Scan quota */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-5">
+              <h2 className="font-semibold text-gray-700 mb-1">เครดิตการใช้งาน</h2>
+              <p className="text-xs text-gray-400 mb-4">รีเซ็ตทุกต้นเดือน</p>
+
+              <div className="space-y-3">
+                {/* Row */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-sm text-gray-600">สแกนใบเสร็จอัตโนมัติ</span>
+                    <span className="text-sm font-semibold text-gray-800">
+                      {scanLoading ? "..." : scanLimit === null ? `${scanUsed} / ∞` : `${scanUsed} / ${scanLimit}`}
+                    </span>
+                  </div>
+                  {scanLimit !== null ? (
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          scanUsed >= scanLimit ? "bg-rose-400" :
+                          scanUsed / scanLimit > 0.7 ? "bg-amber-400" : "bg-emerald-400"
+                        }`}
+                        style={{ width: `${Math.min((scanUsed / scanLimit) * 100, 100)}%` }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-2 bg-emerald-100 rounded-full">
+                      <div className="h-full w-full bg-emerald-400 rounded-full opacity-40" />
+                    </div>
+                  )}
+                  {scanLimit !== null && scanUsed >= scanLimit && (
+                    <p className="text-xs text-rose-500 mt-1">โควต้าเต็มแล้ว — อัปเกรดเพื่อสแกนเพิ่ม</p>
+                  )}
+                </div>
+              </div>
+
+              {currentPlan !== "platinum" && (
+                <button
+                  onClick={() => {
+                    const currentRank = PLAN_RANK[currentPlan] ?? 0;
+                    const next = PLAN_OPTIONS.find((p) => p.rank > currentRank);
+                    if (next) setSelectedPlan(next.key);
+                    setShowUpgrade(true);
+                  }}
+                  className="mt-4 w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold border border-violet-200 text-violet-600 hover:bg-violet-50 transition-colors"
+                >
+                  <IconSparkle className="w-4 h-4" /> เพิ่มโควต้าด้วยการอัปเกรด
+                </button>
+              )}
             </div>
 
             {/* Google connection */}
