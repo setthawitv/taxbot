@@ -45,6 +45,11 @@ export async function POST(req: NextRequest) {
     return "";
   }
 
+  function platformKey(name: string, variant: string) {
+    const n = name.trim(); const v = variant.trim();
+    return n && v ? `${n} | ${v}` : n;
+  }
+
   type ProductRow = {
     user_id: string; is_active: boolean; sku: string | null; parent_sku: string | null;
     name: string; category: string | null; unit: string;
@@ -67,10 +72,10 @@ export async function POST(req: NextRequest) {
     barcode:     col(row, "Barcode") || null,
     attr1_type:  col(row, "ประเภทคุณสมบัติ") || null,
     attr1_val:   col(row, "Variant", "ตัวเลือก", "คุณสมบัติ") || null,
-    // platform mapping helpers (not persisted in products table)
-    _tiktok:     col(row, "ชื่อบน TikTok", "TikTok"),
-    _shopee:     col(row, "ชื่อบน Shopee", "Shopee"),
-    _lazada:     col(row, "ชื่อบน Lazada", "Lazada"),
+    // platform mapping helpers — combine name + variant per platform into "name | variant"
+    _tiktok: platformKey(col(row, "ชื่อบน TikTok", "TikTok"), col(row, "Variant TikTok", "ตัวเลือก TikTok")),
+    _shopee: platformKey(col(row, "ชื่อบน Shopee", "Shopee"), col(row, "Variant Shopee", "ตัวเลือก Shopee")),
+    _lazada: platformKey(col(row, "ชื่อบน Lazada", "Lazada"), col(row, "Variant Lazada", "ตัวเลือก Lazada")),
   })).filter((p) => p.name);
 
   if (previewOnly) {

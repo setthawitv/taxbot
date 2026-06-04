@@ -512,13 +512,13 @@ export default function StockPage() {
   function downloadTemplate() {
     const wb = XLSX.utils.book_new();
     const headers = [
-      ["ข้อมูลทั่วไป","","","","ข้อมูลการซื้อ","ข้อมูลการขาย","ยอดยกมา","ตัวเลือก","Platform Mapping","",""],
-      ["รหัสสินค้า","ชื่อสินค้า*","หมวดหมู่","หน่วยสินค้า (ตัวอย่าง: ชิ้น, ตัว)","ราคาต่อหน่วย","ราคาขาย","จำนวนหน่วย","Variant","ชื่อบน TikTok","ชื่อบน Shopee","ชื่อบน Lazada"],
-      ["P0001","เสื้อยืด","เสื้อผ้า","ตัว","150","350","10","สีขาว ไซส์ M","เสื้อยืด คอกลม สีขาว M","เสื้อยืด สีขาว M",""],
-      ["P0002","เสื้อยืด","เสื้อผ้า","ตัว","150","350","8","สีดำ ไซส์ L","เสื้อยืด คอกลม สีดำ L","เสื้อยืด สีดำ L",""],
+      ["ข้อมูลทั่วไป","","","","ข้อมูลการซื้อ","ข้อมูลการขาย","ยอดยกมา","ตัวเลือก","TikTok","","Shopee","","Lazada",""],
+      ["รหัสสินค้า","ชื่อสินค้า*","หมวดหมู่","หน่วยสินค้า (ตัวอย่าง: ชิ้น, ตัว)","ราคาต่อหน่วย","ราคาขาย","จำนวนหน่วย","Variant","ชื่อบน TikTok","Variant TikTok","ชื่อบน Shopee","Variant Shopee","ชื่อบน Lazada","Variant Lazada"],
+      ["P0001","เสื้อยืด","เสื้อผ้า","ตัว","150","350","10","สีขาว ไซส์ M","เสื้อยืด คอกลม","สีขาว ไซส์ M","เสื้อยืด","สีขาว M","",""],
+      ["P0002","เสื้อยืด","เสื้อผ้า","ตัว","150","350","8","สีดำ ไซส์ L","เสื้อยืด คอกลม","สีดำ ไซส์ L","เสื้อยืด","สีดำ L","",""],
     ];
     const ws = XLSX.utils.aoa_to_sheet(headers);
-    ws["!cols"] = [{wch:12},{wch:20},{wch:12},{wch:18},{wch:12},{wch:10},{wch:10},{wch:18},{wch:28},{wch:28},{wch:28}];
+    ws["!cols"] = [{wch:12},{wch:20},{wch:12},{wch:18},{wch:12},{wch:10},{wch:10},{wch:18},{wch:22},{wch:18},{wch:22},{wch:18},{wch:22},{wch:18}];
     XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
     XLSX.writeFile(wb, "product_import_template.xlsx");
   }
@@ -728,17 +728,17 @@ export default function StockPage() {
                             {p.product_platform_names!.map((m) => {
                               const pl = PLATFORM_LABELS[m.platform] ?? { label: m.platform, color: "bg-gray-100 text-gray-600" };
                               return (
-                                <span key={m.id} className="inline-flex items-center gap-1 text-[11px] border border-gray-200 rounded-full px-2 py-0.5">
+                                <span key={m.id} className="inline-flex items-center gap-1 text-[11px] border border-gray-200 rounded-lg px-2 py-1">
                                   <span className={`font-semibold px-1.5 py-0.5 rounded-full ${pl.color}`}>{pl.label}</span>
                                   <span className="text-gray-400">→</span>
-                                  <span className="text-gray-600 max-w-[160px] truncate">
+                                  <span className="text-gray-700 font-medium max-w-[140px] truncate">
                                     {m.platform_name.split(" | ")[0]}
-                                    {m.platform_name.includes(" | ") && (
-                                      <span className="ml-1 text-violet-600 font-medium">
-                                        [{m.platform_name.split(" | ")[1]}]
-                                      </span>
-                                    )}
                                   </span>
+                                  {m.platform_name.includes(" | ") && (
+                                    <span className="text-violet-600 font-semibold bg-violet-50 px-1.5 py-0.5 rounded-full max-w-[100px] truncate">
+                                      {m.platform_name.split(" | ")[1]}
+                                    </span>
+                                  )}
                                 </span>
                               );
                             })}
