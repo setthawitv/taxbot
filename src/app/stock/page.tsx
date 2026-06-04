@@ -722,23 +722,22 @@ export default function StockPage() {
                           {p.category && <span className="mr-2">{p.category}</span>}
                           {p.unit && <span className="text-gray-300">· {p.unit}</span>}
                         </p>
-                        {/* Platform mappings */}
+                        {/* Platform mappings — one per platform, latest wins */}
                         {(p.product_platform_names?.length ?? 0) > 0 && (
                           <div className="flex flex-wrap gap-1.5 mt-1.5">
-                            {p.product_platform_names!.map((m) => {
+                            {Object.values(
+                              p.product_platform_names!.reduce<Record<string, PlatformMapping>>((acc, m) => {
+                                acc[m.platform] = m; return acc;
+                              }, {})
+                            ).map((m) => {
                               const pl = PLATFORM_LABELS[m.platform] ?? { label: m.platform, color: "bg-gray-100 text-gray-600" };
+                              const [name, variant] = m.platform_name.split(" | ");
                               return (
-                                <span key={m.id} className="inline-flex items-center gap-1 text-[11px] border border-gray-200 rounded-lg px-2 py-1">
+                                <span key={m.platform} className="inline-flex items-center gap-1 text-[11px] border border-gray-200 rounded-lg px-2 py-1">
                                   <span className={`font-semibold px-1.5 py-0.5 rounded-full ${pl.color}`}>{pl.label}</span>
                                   <span className="text-gray-400">→</span>
-                                  <span className="text-gray-700 font-medium max-w-[140px] truncate">
-                                    {m.platform_name.split(" | ")[0]}
-                                  </span>
-                                  {m.platform_name.includes(" | ") && (
-                                    <span className="text-violet-600 font-semibold bg-violet-50 px-1.5 py-0.5 rounded-full max-w-[100px] truncate">
-                                      {m.platform_name.split(" | ")[1]}
-                                    </span>
-                                  )}
+                                  <span className="text-gray-700 font-medium max-w-[120px] truncate">{name}</span>
+                                  {variant && <span className="text-violet-600 font-semibold">{variant}</span>}
                                 </span>
                               );
                             })}
