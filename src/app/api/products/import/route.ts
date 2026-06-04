@@ -94,7 +94,8 @@ export async function POST(req: NextRequest) {
     }
 
     if (existing) {
-      await supabaseAdmin.from("products").update(productData).eq("id", existing.id);
+      const { error: upErr } = await supabaseAdmin.from("products").update(productData).eq("id", existing.id);
+      if (upErr) { console.error("[import] update error:", upErr.message); continue; }
       productId = existing.id;
       const diff = productData.stock_qty - (existing.stock_qty ?? 0);
       if (diff !== 0) {
@@ -105,8 +106,9 @@ export async function POST(req: NextRequest) {
         });
       }
     } else {
-      const { data: newP } = await supabaseAdmin
+      const { data: newP, error: insErr } = await supabaseAdmin
         .from("products").insert(productData).select("id").single();
+      if (insErr) { console.error("[import] insert error:", insErr.message); continue; }
       productId = newP?.id ?? null;
       if (newP && productData.stock_qty > 0) {
         movements.push({
