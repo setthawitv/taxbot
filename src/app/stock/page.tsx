@@ -780,7 +780,7 @@ export default function StockPage() {
               </tbody>
             </table>
           )}
-        </div>
+        </div>}
       </div>
 
       {(showAdd || editProd) && (
