@@ -5,15 +5,136 @@ import { useSession } from "next-auth/react";
 import AppLayout from "@/components/AppLayout";
 import * as XLSX from "xlsx";
 
+type PlatformMapping = { id: string; platform: string; platform_name: string };
+
 type Product = {
   id: string; sku: string | null; name: string; category: string | null;
   unit: string; cost_price: number; sell_price: number; stock_qty: number;
   low_stock_at: number; attr1_type: string | null; attr1_val: string | null;
   attr2_type: string | null; attr2_val: string | null;
+  product_platform_names?: PlatformMapping[];
+};
+
+const PLATFORM_LABELS: Record<string, { label: string; color: string }> = {
+  shopee:  { label: "Shopee",  color: "bg-orange-100 text-orange-700" },
+  tiktok:  { label: "TikTok",  color: "bg-pink-100 text-pink-700"     },
+  lazada:  { label: "Lazada",  color: "bg-blue-100 text-blue-700"     },
+  manual:  { label: "Manual",  color: "bg-gray-100 text-gray-600"     },
 };
 
 const fmt = (n: number) => n.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 const fmtB = (n: number) => "฿" + n.toLocaleString("th-TH", { minimumFractionDigits: 0 });
+
+// ── Platform Mapping Modal ────────────────────────────────────────────────────
+function MappingModal({ product, lineUserId, onClose, onSaved }: {
+  product: Product;
+  lineUserId: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [mappings, setMappings] = useState<PlatformMapping[]>(product.product_platform_names ?? []);
+  const [platform, setPlatform] = useState("shopee");
+  const [name,     setName]     = useState("");
+  const [saving,   setSaving]   = useState(false);
+
+  async function addMapping() {
+    if (!name.trim()) return;
+    setSaving(true);
+    await fetch("/api/stock/mapping", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lineUserId, productId: product.id, platform, platformName: name.trim() }),
+    });
+    const res = await fetch(`/api/products?lineUserId=${lineUserId}`);
+    const d   = await res.json();
+    const updated = (d.products ?? []).find((p: Product) => p.id === product.id);
+    setMappings(updated?.product_platform_names ?? []);
+    setName(""); setSaving(false); onSaved();
+  }
+
+  async function deleteMapping(id: string) {
+    await fetch("/api/stock/mapping", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, lineUserId }),
+    });
+    setMappings((m) => m.filter((x) => x.id !== id));
+    onSaved();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-4">
+      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+        <div className="p-5 border-b border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-bold text-gray-800">Platform Mapping</h3>
+              <p className="text-sm text-gray-400 mt-0.5">{product.name}{product.attr1_val ? ` · ${product.attr1_val}` : ""}</p>
+            </div>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-2xl leading-none">×</button>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {/* Existing mappings */}
+          {mappings.length > 0 ? (
+            <div className="space-y-2">
+              {mappings.map((m) => {
+                const pl = PLATFORM_LABELS[m.platform] ?? { label: m.platform, color: "bg-gray-100 text-gray-600" };
+                return (
+                  <div key={m.id} className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2.5">
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${pl.color}`}>
+                      {pl.label}
+                    </span>
+                    <span className="text-gray-400 text-sm flex-shrink-0">→</span>
+                    <span className="text-sm text-gray-700 flex-1 truncate">{m.platform_name}</span>
+                    <button onClick={() => deleteMapping(m.id)}
+                      className="text-gray-300 hover:text-red-400 text-lg leading-none flex-shrink-0">×</button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 text-center py-2">ยังไม่มี mapping</p>
+          )}
+
+          {/* Add new */}
+          <div className="border-t border-gray-100 pt-4">
+            <p className="text-xs font-semibold text-gray-500 uppercase mb-3">เพิ่ม Mapping ใหม่</p>
+            <div className="flex gap-2 items-end">
+              <div className="w-28 flex-shrink-0">
+                <label className="text-xs text-gray-500 mb-1 block">Platform</label>
+                <select value={platform} onChange={(e) => setPlatform(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-2 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gray-300">
+                  <option value="shopee">Shopee</option>
+                  <option value="tiktok">TikTok</option>
+                  <option value="lazada">Lazada</option>
+                  <option value="manual">Manual</option>
+                </select>
+              </div>
+              <div className="flex-1">
+                <label className="text-xs text-gray-500 mb-1 block">ชื่อบน Platform</label>
+                <input value={name} onChange={(e) => setName(e.target.value)}
+                  placeholder="ชื่อที่แสดงใน Excel ของ platform"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300" />
+              </div>
+              <button onClick={addMapping} disabled={!name.trim() || saving}
+                className="px-3 py-2 rounded-xl text-sm font-semibold bg-[#0A192F] text-white disabled:opacity-40 flex-shrink-0">
+                + เพิ่ม
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-5 pb-5">
+          <button onClick={onClose} className="w-full py-2.5 rounded-xl text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200">
+            เสร็จสิ้น
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ── Add / Edit modal ─────────────────────────────────────────────────────────
 function ProductModal({ product, onClose, onSave }: {
@@ -235,6 +356,7 @@ export default function StockPage() {
   const [showAdd,   setShowAdd]   = useState(false);
   const [editProd,  setEditProd]  = useState<Product | null>(null);
   const [adjustProd,setAdjustProd]= useState<Product | null>(null);
+  const [mappingProd,setMappingProd]= useState<Product | null>(null);
   const [importing, setImporting] = useState(false);
   const [importMsg, setImportMsg] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -429,6 +551,21 @@ export default function StockPage() {
                           {p.category && <span className="mr-2">{p.category}</span>}
                           {p.unit && <span className="text-gray-300">· {p.unit}</span>}
                         </p>
+                        {/* Platform mappings */}
+                        {(p.product_platform_names?.length ?? 0) > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-1.5">
+                            {p.product_platform_names!.map((m) => {
+                              const pl = PLATFORM_LABELS[m.platform] ?? { label: m.platform, color: "bg-gray-100 text-gray-600" };
+                              return (
+                                <span key={m.id} className="inline-flex items-center gap-1 text-[11px] border border-gray-200 rounded-full px-2 py-0.5">
+                                  <span className={`font-semibold px-1.5 py-0.5 rounded-full ${pl.color}`}>{pl.label}</span>
+                                  <span className="text-gray-400">→</span>
+                                  <span className="text-gray-600 max-w-[120px] truncate">{m.platform_name}</span>
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right text-gray-600">{fmtB(p.cost_price)}</td>
                       <td className="px-4 py-3 text-right text-gray-600">{fmtB(p.sell_price)}</td>
@@ -444,6 +581,10 @@ export default function StockPage() {
                           <button onClick={() => setAdjustProd(p)}
                             className="px-2.5 py-1 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors">
                             ปรับสต็อก
+                          </button>
+                          <button onClick={() => setMappingProd(p)}
+                            className="px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors">
+                            🔗 Map
                           </button>
                           <button onClick={() => setEditProd(p)}
                             className="px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">
@@ -469,6 +610,10 @@ export default function StockPage() {
       )}
       {adjustProd && (
         <AdjustModal product={adjustProd} onClose={() => setAdjustProd(null)} onSave={handleAdjust} />
+      )}
+      {mappingProd && (
+        <MappingModal product={mappingProd} lineUserId={lineUserId}
+          onClose={() => setMappingProd(null)} onSaved={loadProducts} />
       )}
     </AppLayout>
   );

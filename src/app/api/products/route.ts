@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabaseAdmin
     .from("products")
-    .select("*")
+    .select("*, product_platform_names(id, platform, platform_name)")
     .eq("user_id", userId)
     .eq("is_active", true)
     .order("name");
