@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
     stock_qty:   parseInt(col(row, "จำนวนหน่วย", "ยอดยกมา")) || 0,
     barcode:     col(row, "Barcode") || null,
     attr1_type:  col(row, "ประเภทคุณสมบัติ") || null,
-    attr1_val:   col(row, "Variant", "ตัวเลือก", "คุณสมบัติ") || null,
+    attr1_val:   null,
     // platform mapping helpers — combine name + variant per platform into "name | variant"
     _tiktok: platformKey(col(row, "ชื่อบน TikTok", "TikTok"), col(row, "Variant TikTok", "ตัวเลือก TikTok")),
     _shopee: platformKey(col(row, "ชื่อบน Shopee", "Shopee"), col(row, "Variant Shopee", "ตัวเลือก Shopee")),
