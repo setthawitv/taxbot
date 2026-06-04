@@ -47,8 +47,8 @@ export default function ImportPage() {
   // Stock mapping modal
   const [showMappingModal, setShowMappingModal] = useState(false);
   const [unmatchedData,    setUnmatchedData]    = useState<{
-    unmatched: {platformName:string; qty:number}[];
-    matched:   {platformName:string; productId:string; productName:string; qty:number}[];
+    unmatched: {key:string; platformName:string; variant:string; sellerSku:string; qty:number}[];
+    matched:   {key:string; platformName:string; variant:string; productId:string; productName:string; attrVal:string; qty:number; matchMethod:string}[];
     platform:  string; batchId: string;
   } | null>(null);
   const [productOptions,   setProductOptions]   = useState<{id:string; name:string; sku:string|null}[]>([]);

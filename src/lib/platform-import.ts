@@ -131,6 +131,7 @@ function parseTikTokIncomeReport(rows: string[][], header: string[]): ParseResul
       platform:    "tiktok",
       productName: "TikTok Shop",
       variant:     "",
+      sellerSku:   "",
     });
   }
 
@@ -223,6 +224,7 @@ function parseTikTokReportSheet(rows: string[][], detailRows?: string[][]): Pars
       platform:    "tiktok",
       productName: `TikTok Shop รายงาน ${periodStr}`,
       variant:     "",
+      sellerSku:   "",
     }],
     cancelled:    cancelCount,
     returned:     returnCount,
@@ -424,6 +426,7 @@ export function parseShopee(rows: string[][]): ParseResult {
         platform:    "shopee",
         productName: "Shopee",
         variant:     "",
+        sellerSku:   "",
       });
     }
 
@@ -602,6 +605,7 @@ export function parseShopeeSummaryReport(summaryRows: string[][], incomeRows: st
       platform:    "shopee",
       productName: `Shopee รายงาน ${startDate} - ${endDate}`,
       variant:     "",
+      sellerSku:   "",
     }],
     cancelled:    0,
     returned:     returnCount,
@@ -667,6 +671,7 @@ export function parseLazada(rows: string[][]): ParseResult {
       platform:    "lazada",
       productName: desc.slice(0, 200),
       variant:     "",
+      sellerSku:   "",
     });
   }
 
