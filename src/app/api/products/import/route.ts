@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
   }
 
   type ProductRow = {
-    user_id: string; sku: string | null; parent_sku: string | null;
+    user_id: string; is_active: boolean; sku: string | null; parent_sku: string | null;
     name: string; category: string | null; unit: string;
     cost_price: number; sell_price: number; stock_qty: number;
     barcode: string | null; attr1_type: string | null; attr1_val: string | null;
@@ -55,6 +55,7 @@ export async function POST(req: NextRequest) {
 
   const products: ProductRow[] = dataRows.map((row) => ({
     user_id:     user.id,
+    is_active:   true,
     sku:         col(row, "รหัสสินค้า") || null,
     parent_sku:  col(row, "รหัสสินค้าหลัก") || null,
     name:        col(row, "ชื่อสินค้า"),
