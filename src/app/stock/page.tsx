@@ -97,19 +97,54 @@ function ProductModal({ product, onClose, onSave }: {
           </div>
         </div>
 
-        {/* Attributes */}
-        <div className="border-t border-gray-100 pt-3">
-          <p className="text-xs text-gray-500 mb-2">คุณสมบัติ (เช่น Size, Color) — ไม่บังคับ</p>
-          <div className="grid grid-cols-2 gap-2">
-            <input value={form.attr1_type} onChange={(e) => set("attr1_type", e.target.value)} placeholder="ประเภท เช่น Size"
-              className="border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-gray-300" />
-            <input value={form.attr1_val} onChange={(e) => set("attr1_val", e.target.value)} placeholder="ค่า เช่น M"
-              className="border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-gray-300" />
-            <input value={form.attr2_type} onChange={(e) => set("attr2_type", e.target.value)} placeholder="ประเภท เช่น Color"
-              className="border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-gray-300" />
-            <input value={form.attr2_val} onChange={(e) => set("attr2_val", e.target.value)} placeholder="ค่า เช่น ดำ"
-              className="border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-gray-300" />
+        {/* Variants */}
+        <div className="border-t border-gray-100 pt-3 space-y-3">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">ตัวเลือกสินค้า (Variant) — ไม่บังคับ</p>
+          <p className="text-xs text-gray-400 -mt-2">ใส่ชื่อสินค้าหลักใน "ชื่อสินค้า" ด้านบน ไม่ต้องรวม Size/Color</p>
+
+          <div className="flex items-center gap-2">
+            <div className="w-24 flex-shrink-0">
+              <label className="text-xs text-gray-500 mb-1 block">ประเภท 1</label>
+              <input value={form.attr1_type} onChange={(e) => set("attr1_type", e.target.value)} placeholder="Size"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300" />
+            </div>
+            <div className="flex-1">
+              <label className="text-xs text-gray-500 mb-1 block">ค่า</label>
+              <input value={form.attr1_val} onChange={(e) => set("attr1_val", e.target.value)} placeholder="เช่น S, M, L, XL"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300" />
+            </div>
           </div>
+
+          <div className="flex items-center gap-2">
+            <div className="w-24 flex-shrink-0">
+              <label className="text-xs text-gray-500 mb-1 block">ประเภท 2</label>
+              <input value={form.attr2_type} onChange={(e) => set("attr2_type", e.target.value)} placeholder="Color"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300" />
+            </div>
+            <div className="flex-1">
+              <label className="text-xs text-gray-500 mb-1 block">ค่า</label>
+              <input value={form.attr2_val} onChange={(e) => set("attr2_val", e.target.value)} placeholder="เช่น ดำ, ขาว, แดง"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300" />
+            </div>
+          </div>
+
+          {/* Preview badge */}
+          {(form.attr1_val || form.attr2_val) && (
+            <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2">
+              <span className="text-xs text-gray-400">ตัวอย่าง:</span>
+              <span className="text-sm font-medium text-gray-700">{form.name || "ชื่อสินค้า"}</span>
+              {form.attr1_val && (
+                <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                  {form.attr1_type || "Size"}: {form.attr1_val}
+                </span>
+              )}
+              {form.attr2_val && (
+                <span className="text-xs font-semibold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+                  {form.attr2_type || "Color"}: {form.attr2_val}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2 pt-2">
@@ -376,12 +411,23 @@ export default function StockPage() {
                   return (
                     <tr key={p.id} className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${i % 2 === 0 ? "" : "bg-gray-50/30"}`}>
                       <td className="px-4 py-3">
-                        <p className="font-medium text-gray-800">{p.name}</p>
-                        <p className="text-xs text-gray-400">
-                          {p.sku && <span className="mr-2">{p.sku}</span>}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-medium text-gray-800">{p.name}</p>
+                          {p.attr1_val && (
+                            <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full whitespace-nowrap">
+                              {p.attr1_val}
+                            </span>
+                          )}
+                          {p.attr2_val && (
+                            <span className="text-xs font-semibold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full whitespace-nowrap">
+                              {p.attr2_val}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {p.sku && <span className="mr-2 font-mono">{p.sku}</span>}
                           {p.category && <span className="mr-2">{p.category}</span>}
-                          {p.attr1_type && <span>{p.attr1_type}: {p.attr1_val}</span>}
-                          {p.attr2_type && <span className="ml-2">{p.attr2_type}: {p.attr2_val}</span>}
+                          {p.unit && <span className="text-gray-300">· {p.unit}</span>}
                         </p>
                       </td>
                       <td className="px-4 py-3 text-right text-gray-600">{fmtB(p.cost_price)}</td>
