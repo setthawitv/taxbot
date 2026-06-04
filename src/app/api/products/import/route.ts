@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
       for (const entry of platformEntries) {
         await supabaseAdmin.from("product_platform_names").upsert(
           { user_id: user.id, product_id: productId, platform: entry.platform, platform_name: entry.platform_name },
-          { onConflict: "user_id,product_id,platform", ignoreDuplicates: false }
+          { onConflict: "user_id,platform,platform_name", ignoreDuplicates: false }
         );
         mappingsSaved++;
       }
