@@ -80,16 +80,26 @@ function MappingModal({ product, lineUserId, onClose, onSaved }: {
           {mappings.length > 0 ? (
             <div className="space-y-2">
               {mappings.map((m) => {
-                const pl = PLATFORM_LABELS[m.platform] ?? { label: m.platform, color: "bg-gray-100 text-gray-600" };
+                const pl    = PLATFORM_LABELS[m.platform] ?? { label: m.platform, color: "bg-gray-100 text-gray-600" };
+                const parts = m.platform_name.split(" | ");
+                const dispName = parts[0];
+                const dispVar  = parts[1] ?? "";
                 return (
-                  <div key={m.id} className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2.5">
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${pl.color}`}>
-                      {pl.label}
-                    </span>
-                    <span className="text-gray-400 text-sm flex-shrink-0">→</span>
-                    <span className="text-sm text-gray-700 flex-1 truncate">{m.platform_name}</span>
-                    <button onClick={() => deleteMapping(m.id)}
-                      className="text-gray-300 hover:text-red-400 text-lg leading-none flex-shrink-0">×</button>
+                  <div key={m.id} className="bg-gray-50 rounded-xl px-3 py-2.5 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${pl.color}`}>
+                        {pl.label}
+                      </span>
+                      <span className="text-gray-400 text-sm flex-shrink-0">→</span>
+                      <span className="text-sm text-gray-700 flex-1 truncate font-medium">{dispName}</span>
+                      <button onClick={() => deleteMapping(m.id)}
+                        className="text-gray-300 hover:text-red-400 text-lg leading-none flex-shrink-0">×</button>
+                    </div>
+                    {dispVar && (
+                      <p className="text-xs text-gray-400 pl-16">
+                        ตัวเลือก: <span className="font-semibold text-violet-600">{dispVar}</span>
+                      </p>
+                    )}
                   </div>
                 );
               })}
@@ -560,7 +570,14 @@ export default function StockPage() {
                                 <span key={m.id} className="inline-flex items-center gap-1 text-[11px] border border-gray-200 rounded-full px-2 py-0.5">
                                   <span className={`font-semibold px-1.5 py-0.5 rounded-full ${pl.color}`}>{pl.label}</span>
                                   <span className="text-gray-400">→</span>
-                                  <span className="text-gray-600 max-w-[120px] truncate">{m.platform_name}</span>
+                                  <span className="text-gray-600 max-w-[160px] truncate">
+                                    {m.platform_name.split(" | ")[0]}
+                                    {m.platform_name.includes(" | ") && (
+                                      <span className="ml-1 text-violet-600 font-medium">
+                                        [{m.platform_name.split(" | ")[1]}]
+                                      </span>
+                                    )}
+                                  </span>
                                 </span>
                               );
                             })}

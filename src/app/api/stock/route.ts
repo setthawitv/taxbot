@@ -45,12 +45,17 @@ export async function POST(req: NextRequest) {
 
     let deducted = 0;
     for (const m of mappings) {
+      // composite key = platformName | variant  (or just platformName if no variant)
+      const compositeKey = m.variant?.trim()
+        ? `${m.platformName.trim()} | ${m.variant.trim()}`
+        : m.platformName.trim();
+
       // Save mapping for future auto-match
       await supabaseAdmin.from("product_platform_names").upsert({
         user_id:       userId,
         product_id:    m.productId,
         platform:      m.platform,
-        platform_name: m.platformName,
+        platform_name: compositeKey,
       }, { onConflict: "user_id,platform,platform_name" });
 
       // Get current stock

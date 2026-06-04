@@ -489,14 +489,21 @@ export default function ImportPage() {
 
             <div className="overflow-y-auto flex-1 p-5 space-y-4">
               {unmatchedData.unmatched.map((u) => (
-                <div key={u.platformName} className="bg-gray-50 rounded-xl p-3">
-                  <p className="text-sm font-medium text-gray-700 mb-1">
-                    &ldquo;{u.platformName}&rdquo;
-                    <span className="ml-2 text-xs text-gray-400">ขาย {u.qty} ชิ้น</span>
-                  </p>
+                <div key={u.key ?? u.platformName} className="bg-gray-50 rounded-xl p-3">
+                  <div className="mb-1.5">
+                    <p className="text-sm font-medium text-gray-700 truncate">{u.platformName}</p>
+                    {u.variant && (
+                      <p className="text-xs mt-0.5">
+                        <span className="text-gray-400">ตัวเลือก: </span>
+                        <span className="font-semibold text-violet-600">{u.variant}</span>
+                        <span className="ml-2 text-gray-400">· ขาย {u.qty} ชิ้น</span>
+                      </p>
+                    )}
+                    {!u.variant && <span className="text-xs text-gray-400">ขาย {u.qty} ชิ้น</span>}
+                  </div>
                   <select
-                    value={mappingSelections[u.platformName] ?? ""}
-                    onChange={(e) => setMappingSelections((s) => ({ ...s, [u.platformName]: e.target.value }))}
+                    value={mappingSelections[u.key ?? u.platformName] ?? ""}
+                    onChange={(e) => setMappingSelections((s) => ({ ...s, [u.key ?? u.platformName]: e.target.value }))}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-300"
                     onClick={async () => {
                       if (productOptions.length === 0 && lineUserId) {
@@ -536,9 +543,15 @@ export default function ImportPage() {
                 onClick={async () => {
                   const mappings = Object.entries(mappingSelections)
                     .filter(([, pid]) => pid)
-                    .map(([name, pid]) => {
-                      const qty = unmatchedData.unmatched.find((u) => u.platformName === name)?.qty ?? 1;
-                      return { platform: unmatchedData.platform, platformName: name, productId: pid, qty };
+                    .map(([key, pid]) => {
+                      const u = unmatchedData.unmatched.find((x) => (x.key ?? x.platformName) === key);
+                      return {
+                        platform:     unmatchedData.platform,
+                        platformName: u?.platformName ?? key,
+                        variant:      u?.variant ?? "",
+                        productId:    pid,
+                        qty:          u?.qty ?? 1,
+                      };
                     });
                   if (mappings.length > 0) {
                     await fetch("/api/stock", { method: "POST", headers: { "Content-Type": "application/json" },
