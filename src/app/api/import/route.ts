@@ -195,7 +195,8 @@ export async function POST(req: NextRequest) {
       sku_line_id:  r.skuLineId || null,
       line_key:     r.lineKey,
       product_name: r.productName,
-      variant:      r.variant || null,
+      variant:      r.variant      || null,
+      seller_sku:   r.sellerSku    || null,
       amount:       r.amount,
       order_date:   r.date,
     }));

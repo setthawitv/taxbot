@@ -12,6 +12,7 @@ export type ImportedRow = {
   platform:    "tiktok" | "shopee" | "lazada";
   productName: string;
   variant:     string;  // size/colour variant
+  sellerSku:   string;  // Seller SKU from TikTok / SKU reference from Shopee
 };
 
 export type PreviewItem = {
@@ -253,11 +254,12 @@ function parseTikTokOrderReport(rows: string[][], header: string[]): ParseResult
   const iUnitPrice = idxAny("SKU Unit Original Price", "Original Price", "Unit Price", "Price", "ราคาต่อหน่วย");
   const iDiscount  = idxAny("TikTok Shop Discount", "Seller Discount", "Platform Discount", "Discount", "ส่วนลด");
   const iPaidTime = idx("Paid Time");
-  const iProduct  = idx("Product Name");
-  const iVariant  = idxAny("Variation", "SKU Variation", "Variation Name", "SKU Name");
+  const iProduct    = idx("Product Name");
+  const iVariant    = idxAny("Variation", "SKU Variation", "Variation Name", "SKU Name");
+  const iSellerSku  = idxAny("Seller SKU", "Seller Sku", "SellerSKU", "SKU Reference", "Seller Product ID");
 
   console.log("[TikTok order] column map:", {
-    iOrderId, iStatus, iSkuId, iRevenue, iUnitPrice, iDiscount, iPaidTime, iProduct, iVariant,
+    iOrderId, iStatus, iSkuId, iRevenue, iUnitPrice, iDiscount, iPaidTime, iProduct, iVariant, iSellerSku,
     totalCols: header.length,
   });
 
@@ -297,6 +299,7 @@ function parseTikTokOrderReport(rows: string[][], header: string[]): ParseResult
     const date        = parseThaiDate(r[iPaidTime] ?? "");
     const productName = (r[iProduct]?.trim() || "TikTok Shop").slice(0, 200);
     const variant     = (iVariant >= 0 ? r[iVariant]?.trim() : "") || "";
+    const sellerSku   = (iSellerSku >= 0 ? r[iSellerSku]?.trim() : "") || "";
 
     result.push({
       lineKey,
@@ -307,6 +310,7 @@ function parseTikTokOrderReport(rows: string[][], header: string[]): ParseResult
       platform:    "tiktok",
       productName,
       variant:     variant.slice(0, 100),
+      sellerSku:   sellerSku.slice(0, 50),
     });
   }
 
@@ -495,6 +499,9 @@ export function parseShopee(rows: string[][]): ParseResult {
     const productName = ((iProduct >= 0 ? r[iProduct] : "")?.trim() || "Shopee").slice(0, 200);
     const variant     = ((iVariant >= 0 ? r[iVariant] : "")?.trim() || "").slice(0, 100);
 
+    // Shopee SKU Reference = col 18 "เลขอ้างอิง SKU (SKU Reference No.)"
+    const skuRefVal = ((iSkuRef >= 0 ? r[iSkuRef] : "")?.trim() || "").slice(0, 50);
+
     result.push({
       lineKey,
       orderId,
@@ -504,6 +511,7 @@ export function parseShopee(rows: string[][]): ParseResult {
       platform:    "shopee",
       productName,
       variant,
+      sellerSku:   skuRefVal,
     });
   }
 

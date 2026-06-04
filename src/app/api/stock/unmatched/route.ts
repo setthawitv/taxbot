@@ -20,10 +20,11 @@ export async function GET(req: NextRequest) {
     .from("users").select("id").eq("line_user_id", lineUserId).single();
   if (!user) return NextResponse.json({ unmatched: [], matched: [] });
 
-  // Get orders from this batch — include variant
-  let query = supabaseAdmin
+  // Get orders from this batch — include variant + seller_sku
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let query: any = supabaseAdmin
     .from("platform_orders")
-    .select("product_name, variant, amount")
+    .select("product_name, variant, seller_sku, amount")
     .eq("user_id", user.id)
     .eq("platform", platform);
 
@@ -32,19 +33,38 @@ export async function GET(req: NextRequest) {
   const { data: orders } = await query;
   if (!orders?.length) return NextResponse.json({ unmatched: [], matched: [] });
 
-  // Aggregate qty per composite key (name | variant)
-  const keyMap: Record<string, { qty: number; productName: string; variant: string }> = {};
+  // Aggregate per composite key, also track seller_sku
+  type KeyInfo = { qty: number; productName: string; variant: string; sellerSku: string };
+  const keyMap: Record<string, KeyInfo> = {};
   for (const o of orders) {
     const key = compositeKey(o.product_name, o.variant);
     if (!keyMap[key]) {
-      keyMap[key] = { qty: 0, productName: o.product_name, variant: o.variant ?? "" };
+      keyMap[key] = { qty: 0, productName: o.product_name, variant: o.variant ?? "", sellerSku: o.seller_sku ?? "" };
     }
-    keyMap[key].qty += 1; // each row = 1 order (qty=1 per line in Shopee)
+    keyMap[key].qty += 1;
   }
 
   const allKeys = Object.keys(keyMap);
 
-  // Find existing mappings for these composite keys
+  // 1. Try SKU-based auto-match (TikTok Seller SKU → products.sku)
+  const skuAutoMatched: Record<string, string> = {}; // key → productId
+  const skusToMatch = [...new Set(Object.values(keyMap).map((v) => v.sellerSku).filter(Boolean))];
+  if (skusToMatch.length > 0) {
+    const { data: skuProducts } = await supabaseAdmin
+      .from("products")
+      .select("id, sku, name")
+      .eq("user_id", user.id)
+      .in("sku", skusToMatch);
+
+    for (const key of allKeys) {
+      const sku = keyMap[key].sellerSku;
+      if (!sku) continue;
+      const match = (skuProducts ?? []).find((p) => p.sku === sku);
+      if (match) skuAutoMatched[key] = match.id;
+    }
+  }
+
+  // 2. Check existing name-based mappings
   const { data: existing } = await supabaseAdmin
     .from("product_platform_names")
     .select("platform_name, product_id, products(id, name, sku, stock_qty, attr1_val, attr2_val)")
@@ -52,27 +72,46 @@ export async function GET(req: NextRequest) {
     .eq("platform", platform)
     .in("platform_name", allKeys);
 
-  const mappedKeys = new Set((existing ?? []).map((e) => e.platform_name));
+  const mappedByName = new Set((existing ?? []).map((e) => e.platform_name));
 
-  const unmatched = allKeys
-    .filter((k) => !mappedKeys.has(k))
-    .map((k) => ({
-      key:         k,
-      platformName: keyMap[k].productName,
-      variant:     keyMap[k].variant,
-      qty:         keyMap[k].qty,
-    }));
-
+  // Build results
+  const unmatched: object[] = [];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const matched = (existing ?? []).map((e: any) => ({
-    key:         e.platform_name,
-    platformName: keyMap[e.platform_name]?.productName ?? e.platform_name,
-    variant:     keyMap[e.platform_name]?.variant ?? "",
-    productId:   e.product_id,
-    productName: e.products?.name ?? "",
-    attrVal:     [e.products?.attr1_val, e.products?.attr2_val].filter(Boolean).join(" / "),
-    qty:         keyMap[e.platform_name]?.qty ?? 0,
-  }));
+  const matched: any[] = [];
+
+  for (const key of allKeys) {
+    const info = keyMap[key];
+
+    if (skuAutoMatched[key]) {
+      // Auto-matched via SKU
+      const { data: prod } = await supabaseAdmin.from("products").select("name, attr1_val, attr2_val")
+        .eq("id", skuAutoMatched[key]).single();
+      matched.push({
+        key, platformName: info.productName, variant: info.variant,
+        productId: skuAutoMatched[key],
+        productName: prod?.name ?? "",
+        attrVal: [prod?.attr1_val, prod?.attr2_val].filter(Boolean).join(" / "),
+        qty: info.qty, matchMethod: "sku",
+      });
+    } else if (mappedByName.has(key)) {
+      // Matched via saved name mapping
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const e = (existing ?? []).find((x: any) => x.platform_name === key)!;
+      matched.push({
+        key, platformName: info.productName, variant: info.variant,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        productId: e.product_id, productName: (e.products as any)?.name ?? "",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        attrVal: [(e.products as any)?.attr1_val, (e.products as any)?.attr2_val].filter(Boolean).join(" / "),
+        qty: info.qty, matchMethod: "name",
+      });
+    } else {
+      unmatched.push({
+        key, platformName: info.productName, variant: info.variant,
+        sellerSku: info.sellerSku, qty: info.qty,
+      });
+    }
+  }
 
   return NextResponse.json({ unmatched, matched, platform, batchId: batchId ?? "" });
 }
