@@ -44,6 +44,15 @@ export default function ImportPage() {
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  // Stock mapping modal
+  const [showMappingModal, setShowMappingModal] = useState(false);
+  const [unmatchedData,    setUnmatchedData]    = useState<{
+    unmatched: {platformName:string; qty:number}[];
+    matched:   {platformName:string; productId:string; productName:string; qty:number}[];
+    platform:  string; batchId: string;
+  } | null>(null);
+  const [productOptions,   setProductOptions]   = useState<{id:string; name:string; sku:string|null}[]>([]);
+  const [mappingSelections,setMappingSelections]= useState<Record<string,string>>({}); // platformName → productId
 
   const { data: session, status: sessionStatus } = useSession();
 
@@ -153,6 +162,27 @@ export default function ImportPage() {
       const data = await res.json();
 
       if (!res.ok) throw new Error(data.error ?? "บันทึกไม่สำเร็จ");
+
+      // Check for unmatched stock products
+      const batchId = data.batchId ?? "";
+      const umRes = await fetch(`/api/stock/unmatched?lineUserId=${lineUserId}&platform=${platform}&batchId=${batchId}`);
+      if (umRes.ok) {
+        const umData = await umRes.json();
+        if (umData.unmatched?.length > 0 || umData.matched?.length > 0) {
+          setUnmatchedData(umData);
+          setShowMappingModal(true);
+          setStep("done");
+          return;
+        }
+        // Auto-deduct for already-mapped products
+        if (umData.matched?.length > 0) {
+          await fetch("/api/stock", { method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "map_and_deduct", lineUserId,
+              mappings: umData.matched.map((m: {platformName: string; productId: string; qty: number}) => ({
+                platform, platformName: m.platformName, productId: m.productId, qty: m.qty })),
+              batchId }) });
+        }
+      }
       setStep("done");
     } catch (err) {
       setError(String(err instanceof Error ? err.message : err));
@@ -435,20 +465,95 @@ export default function ImportPage() {
           ฿{preview?.total.toLocaleString("th-TH", { maximumFractionDigits: 0 })}
         </p>
         <div className="flex flex-col gap-3">
-          <Link
-            href="/rairab"
-            className="w-full bg-emerald-500 text-white font-bold py-3 rounded-2xl text-center block"
-          >
+          <Link href="/rairab" className="w-full bg-emerald-500 text-white font-bold py-3 rounded-2xl text-center block">
             ดูรายรับทั้งหมด
           </Link>
-          <button
-            onClick={() => { setStep("platform"); setFile(null); setPreview(null); }}
-            className="w-full bg-white border border-emerald-200 text-emerald-600 font-semibold py-3 rounded-2xl"
-          >
+          <Link href="/stock" className="w-full bg-white border border-emerald-200 text-emerald-700 font-semibold py-3 rounded-2xl text-center block">
+            📦 ดูสต็อกสินค้า
+          </Link>
+          <button onClick={() => { setStep("platform"); setFile(null); setPreview(null); }}
+            className="w-full bg-white border border-gray-200 text-gray-500 font-medium py-3 rounded-2xl">
             นำเข้าไฟล์เพิ่มเติม
           </button>
         </div>
       </div>
+
+      {/* ── Stock mapping modal ──────────────────────────────────────────── */}
+      {showMappingModal && unmatchedData && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl max-h-[85vh] flex flex-col">
+            <div className="p-5 border-b border-gray-100">
+              <h3 className="font-bold text-gray-800 text-lg">🔗 ผูกสินค้ากับสต็อก</h3>
+              <p className="text-sm text-gray-400 mt-1">ระบบจะจำ mapping นี้สำหรับการนำเข้าครั้งถัดไปอัตโนมัติ</p>
+            </div>
+
+            <div className="overflow-y-auto flex-1 p-5 space-y-4">
+              {unmatchedData.unmatched.map((u) => (
+                <div key={u.platformName} className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-sm font-medium text-gray-700 mb-1">
+                    &ldquo;{u.platformName}&rdquo;
+                    <span className="ml-2 text-xs text-gray-400">ขาย {u.qty} ชิ้น</span>
+                  </p>
+                  <select
+                    value={mappingSelections[u.platformName] ?? ""}
+                    onChange={(e) => setMappingSelections((s) => ({ ...s, [u.platformName]: e.target.value }))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                    onClick={async () => {
+                      if (productOptions.length === 0 && lineUserId) {
+                        const r = await fetch(`/api/products?lineUserId=${lineUserId}`);
+                        const d = await r.json();
+                        setProductOptions(d.products ?? []);
+                      }
+                    }}
+                  >
+                    <option value="">-- เลือกสินค้าในระบบ --</option>
+                    {productOptions.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}{p.sku ? ` (${p.sku})` : ""}</option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+
+              {unmatchedData.matched.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase mb-2">ผูกไว้แล้ว (หักสต็อกอัตโนมัติ)</p>
+                  {unmatchedData.matched.map((m) => (
+                    <div key={m.platformName} className="flex items-center justify-between py-1.5">
+                      <span className="text-sm text-gray-600 truncate max-w-[55%]">&ldquo;{m.platformName}&rdquo;</span>
+                      <span className="text-sm font-medium text-emerald-600">→ {m.productName} (-{m.qty})</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="p-5 border-t border-gray-100 flex gap-2">
+              <button onClick={() => setShowMappingModal(false)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-gray-100 text-gray-600">
+                ข้ามไปก่อน
+              </button>
+              <button
+                onClick={async () => {
+                  const mappings = Object.entries(mappingSelections)
+                    .filter(([, pid]) => pid)
+                    .map(([name, pid]) => {
+                      const qty = unmatchedData.unmatched.find((u) => u.platformName === name)?.qty ?? 1;
+                      return { platform: unmatchedData.platform, platformName: name, productId: pid, qty };
+                    });
+                  if (mappings.length > 0) {
+                    await fetch("/api/stock", { method: "POST", headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ action: "map_and_deduct", lineUserId, mappings, batchId: unmatchedData.batchId }) });
+                  }
+                  setShowMappingModal(false);
+                }}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-[#0A192F] text-white"
+              >
+                บันทึกและหักสต็อก
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

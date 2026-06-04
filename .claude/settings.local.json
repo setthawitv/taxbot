@@ -51,7 +51,10 @@
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\mos_b\\\\Desktop\\\\TaxBot\" -Recurse -File)",
       "Bash(Select-Object FullName)",
       "Bash(Sort-Object FullName)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "WebFetch(domain:www.datalab.to)",
+      "WebFetch(domain:github.com)",
+      "Bash(python3 -c ' *)"
     ]
   }
 }
