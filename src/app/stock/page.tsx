@@ -35,21 +35,25 @@ function MappingModal({ product, lineUserId, onClose, onSaved }: {
   const [mappings, setMappings] = useState<PlatformMapping[]>(product.product_platform_names ?? []);
   const [platform, setPlatform] = useState("shopee");
   const [name,     setName]     = useState("");
+  const [variant,  setVariant]  = useState("");
   const [saving,   setSaving]   = useState(false);
 
   async function addMapping() {
     if (!name.trim()) return;
     setSaving(true);
+    const compositeKey = variant.trim()
+      ? `${name.trim()} | ${variant.trim()}`
+      : name.trim();
     await fetch("/api/stock/mapping", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lineUserId, productId: product.id, platform, platformName: name.trim() }),
+      body: JSON.stringify({ lineUserId, productId: product.id, platform, platformName: compositeKey }),
     });
     const res = await fetch(`/api/products?lineUserId=${lineUserId}`);
     const d   = await res.json();
     const updated = (d.products ?? []).find((p: Product) => p.id === product.id);
     setMappings(updated?.product_platform_names ?? []);
-    setName(""); setSaving(false); onSaved();
+    setName(""); setVariant(""); setSaving(false); onSaved();
   }
 
   async function deleteMapping(id: string) {
@@ -109,30 +113,62 @@ function MappingModal({ product, lineUserId, onClose, onSaved }: {
           )}
 
           {/* Add new */}
-          <div className="border-t border-gray-100 pt-4">
-            <p className="text-xs font-semibold text-gray-500 uppercase mb-3">เพิ่ม Mapping ใหม่</p>
-            <div className="flex gap-2 items-end">
-              <div className="w-28 flex-shrink-0">
-                <label className="text-xs text-gray-500 mb-1 block">Platform</label>
-                <select value={platform} onChange={(e) => setPlatform(e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-2 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gray-300">
-                  <option value="shopee">Shopee</option>
-                  <option value="tiktok">TikTok</option>
-                  <option value="lazada">Lazada</option>
-                  <option value="manual">Manual</option>
-                </select>
+          <div className="border-t border-gray-100 pt-4 space-y-3">
+            <p className="text-xs font-semibold text-gray-500 uppercase">เพิ่ม Mapping ใหม่</p>
+
+            {/* Platform */}
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Platform</label>
+              <div className="flex gap-2">
+                {(["shopee","tiktok","lazada","manual"] as const).map((p) => (
+                  <button key={p} onClick={() => setPlatform(p)}
+                    className={`flex-1 py-1.5 rounded-xl text-xs font-semibold border transition-colors ${
+                      platform === p
+                        ? PLATFORM_LABELS[p]?.color + " border-transparent"
+                        : "bg-white text-gray-400 border-gray-200 hover:border-gray-400"
+                    }`}>
+                    {PLATFORM_LABELS[p]?.label ?? p}
+                  </button>
+                ))}
               </div>
-              <div className="flex-1">
-                <label className="text-xs text-gray-500 mb-1 block">ชื่อบน Platform</label>
-                <input value={name} onChange={(e) => setName(e.target.value)}
-                  placeholder="ชื่อที่แสดงใน Excel ของ platform"
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300" />
-              </div>
-              <button onClick={addMapping} disabled={!name.trim() || saving}
-                className="px-3 py-2 rounded-xl text-sm font-semibold bg-[#0A192F] text-white disabled:opacity-40 flex-shrink-0">
-                + เพิ่ม
-              </button>
             </div>
+
+            {/* Product Name */}
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">
+                Product Name
+                <span className="ml-1 text-gray-400">(ชื่อที่แสดงใน Excel ของ platform)</span>
+              </label>
+              <input value={name} onChange={(e) => setName(e.target.value)}
+                placeholder="เช่น Daily Pants 6 colors by Lush&Lune..."
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300" />
+            </div>
+
+            {/* Variant */}
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">
+                Variant
+                <span className="ml-1 text-gray-400">(ตัวเลือก — ถ้าไม่มีให้เว้นว่าง)</span>
+              </label>
+              <input value={variant} onChange={(e) => setVariant(e.target.value)}
+                placeholder="เช่น Pink Stripe,Freesize หรือ Grey, Freesizeเอว 24-36"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300" />
+            </div>
+
+            {/* Preview composite key */}
+            {name.trim() && (
+              <div className="bg-gray-50 rounded-xl px-3 py-2 text-xs text-gray-500">
+                <span className="font-medium text-gray-400">Mapping key: </span>
+                <span className="font-mono text-gray-700">
+                  {name.trim()}{variant.trim() ? ` | ${variant.trim()}` : ""}
+                </span>
+              </div>
+            )}
+
+            <button onClick={addMapping} disabled={!name.trim() || saving}
+              className="w-full py-2.5 rounded-xl text-sm font-semibold bg-[#0A192F] text-white hover:bg-[#0d2240] disabled:opacity-40 transition-colors">
+              {saving ? "กำลังบันทึก..." : "+ เพิ่ม Mapping"}
+            </button>
           </div>
         </div>
 
