@@ -390,11 +390,27 @@ function AdjustModal({ product, onClose, onSave }: {
   );
 }
 
+// ── Types ─────────────────────────────────────────────────────────────────────
+type SummaryRow = {
+  id: string; sku: string|null; name: string; unit: string;
+  attr1_val: string|null; attr2_val: string|null;
+  cost_price: number; sell_price: number;
+  stock_in: number; stock_qty: number; total_sold: number;
+  sold_by_platform: Record<string,number>;
+  platforms: string[]; low_stock_at: number; is_low: boolean;
+};
+
+const PLATFORMS_ALL = ["shopee","tiktok","lazada"] as const;
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function StockPage() {
   const [lineUserId, setLineUserId] = useState("");
   const [authReady,  setAuthReady]  = useState(false);
   const { data: session, status: sessionStatus } = useSession();
+
+  const [tab,       setTab]       = useState<"products"|"summary">("products");
+  const [summary,   setSummary]   = useState<SummaryRow[]>([]);
+  const [sumLoading,setSumLoading]= useState(false);
 
   const [products,  setProducts]  = useState<Product[]>([]);
   const [loading,   setLoading]   = useState(true);
@@ -430,6 +446,16 @@ export default function StockPage() {
     }
     resolve();
   }, [sessionStatus, session]);
+
+  // Load summary
+  const loadSummary = async () => {
+    if (!lineUserId) return;
+    setSumLoading(true);
+    const res = await fetch(`/api/stock/summary?lineUserId=${lineUserId}`);
+    const d   = await res.json();
+    setSummary(d.summary ?? []);
+    setSumLoading(false);
+  };
 
   // Load products
   const loadProducts = async () => {
@@ -486,13 +512,13 @@ export default function StockPage() {
   function downloadTemplate() {
     const wb = XLSX.utils.book_new();
     const headers = [
-      ["ข้อมูลทั่วไป","","","","","ข้อมูลการซื้อ","ข้อมูลการขาย","ยอดยกมา","คุณสมบัติ","คุณสมบัติ"],
-      ["รหัสสินค้า","ชื่อสินค้า*","หมวดหมู่","หน่วยสินค้า (ตัวอย่าง: ชิ้น, ตัว)","Barcode","ราคาต่อหน่วย","ราคาขาย","จำนวนหน่วย","ประเภทคุณสมบัติ","คุณสมบัติ"],
-      ["P0001","เสื้อยืด สีขาว M","เสื้อผ้า","ตัว","","150","350","10","Size","M"],
-      ["P0002","เสื้อยืด สีดำ L","เสื้อผ้า","ตัว","","150","350","8","Size","L"],
+      ["ข้อมูลทั่วไป","","","","","ข้อมูลการซื้อ","ข้อมูลการขาย","ยอดยกมา","ตัวเลือก","Platform Mapping","",""],
+      ["รหัสสินค้า","ชื่อสินค้า*","หมวดหมู่","หน่วยสินค้า (ตัวอย่าง: ชิ้น, ตัว)","Barcode","ราคาต่อหน่วย","ราคาขาย","จำนวนหน่วย","Variant","ชื่อบน TikTok","ชื่อบน Shopee","ชื่อบน Lazada"],
+      ["P0001","เสื้อยืด","เสื้อผ้า","ตัว","","150","350","10","สีขาว ไซส์ M","เสื้อยืด คอกลม สีขาว M","เสื้อยืด สีขาว M",""],
+      ["P0002","เสื้อยืด","เสื้อผ้า","ตัว","","150","350","8","สีดำ ไซส์ L","เสื้อยืด คอกลม สีดำ L","เสื้อยืด สีดำ L",""],
     ];
     const ws = XLSX.utils.aoa_to_sheet(headers);
-    ws["!cols"] = [{wch:12},{wch:25},{wch:12},{wch:18},{wch:12},{wch:12},{wch:10},{wch:10},{wch:15},{wch:10}];
+    ws["!cols"] = [{wch:12},{wch:20},{wch:12},{wch:18},{wch:12},{wch:12},{wch:10},{wch:10},{wch:18},{wch:28},{wch:28},{wch:28}];
     XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
     XLSX.writeFile(wb, "product_import_template.xlsx");
   }
@@ -547,13 +573,112 @@ export default function StockPage() {
           </div>
         )}
 
-        {/* Search */}
-        <input value={search} onChange={(e) => setSearch(e.target.value)}
-          placeholder="🔍 ค้นหาสินค้า..."
-          className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A192F]/20" />
+        {/* Tabs */}
+        <div className="flex gap-2 border-b border-gray-100 pb-0">
+          {([["products","📦 สินค้า"],["summary","📊 สรุปยอดขาย"]] as const).map(([t, label]) => (
+            <button key={t} onClick={() => { setTab(t); if (t === "summary") loadSummary(); }}
+              className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
+                tab === t ? "border-[#0A192F] text-[#0A192F]" : "border-transparent text-gray-400 hover:text-gray-600"
+              }`}>
+              {label}
+            </button>
+          ))}
+        </div>
 
-        {/* Product table */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        {/* Search (products tab only) */}
+        {tab === "products" && (
+          <input value={search} onChange={(e) => setSearch(e.target.value)}
+            placeholder="🔍 ค้นหาสินค้า..."
+            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A192F]/20" />
+        )}
+
+        {/* ── Summary tab ─────────────────────────────────────────────────── */}
+        {tab === "summary" && (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            {sumLoading ? (
+              <div className="p-8 text-center text-gray-400 text-sm">กำลังโหลด...</div>
+            ) : summary.length === 0 ? (
+              <div className="p-10 text-center">
+                <p className="text-3xl mb-2">📊</p>
+                <p className="text-gray-400 text-sm">ยังไม่มีข้อมูลสต็อก — เพิ่มสินค้าก่อน</p>
+              </div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">สินค้า</th>
+                    <th className="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase">สต็อกต้น</th>
+                    {PLATFORMS_ALL.map((pl) => (
+                      <th key={pl} className="text-right px-3 py-3 text-xs font-semibold uppercase">
+                        <span className={`px-2 py-0.5 rounded-full ${PLATFORM_LABELS[pl]?.color}`}>
+                          {PLATFORM_LABELS[pl]?.label}
+                        </span>
+                      </th>
+                    ))}
+                    <th className="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase">รวมขาย</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">คงเหลือ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {summary.map((s) => (
+                    <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-gray-800">{s.name}</span>
+                          {s.attr1_val && <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{s.attr1_val}</span>}
+                          {s.attr2_val && <span className="text-xs font-semibold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">{s.attr2_val}</span>}
+                        </div>
+                        {s.sku && <p className="text-xs text-gray-400 mt-0.5 font-mono">{s.sku}</p>}
+                      </td>
+                      <td className="px-3 py-3 text-right text-gray-500">{s.stock_in > 0 ? fmt(s.stock_in) : "—"}</td>
+                      {PLATFORMS_ALL.map((pl) => (
+                        <td key={pl} className="px-3 py-3 text-right">
+                          {(s.sold_by_platform[pl] ?? 0) > 0
+                            ? <span className="font-medium text-rose-500">-{fmt(s.sold_by_platform[pl])}</span>
+                            : <span className="text-gray-300">—</span>
+                          }
+                        </td>
+                      ))}
+                      <td className="px-3 py-3 text-right font-semibold text-rose-600">
+                        {s.total_sold > 0 ? `-${fmt(s.total_sold)}` : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <span className={`font-bold ${s.is_low ? "text-rose-500" : "text-emerald-600"}`}>
+                          {fmt(s.stock_qty)}
+                        </span>
+                        <span className="text-xs text-gray-400 ml-1">{s.unit}</span>
+                        {s.is_low && <span className="ml-1">⚠️</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                {/* Footer totals */}
+                <tfoot className="bg-gray-50 border-t-2 border-gray-200">
+                  <tr>
+                    <td className="px-4 py-3 font-semibold text-gray-600 text-sm">รวมทั้งหมด</td>
+                    <td className="px-3 py-3 text-right font-semibold text-gray-600">
+                      {fmt(summary.reduce((s, r) => s + r.stock_in, 0))}
+                    </td>
+                    {PLATFORMS_ALL.map((pl) => (
+                      <td key={pl} className="px-3 py-3 text-right font-semibold text-rose-500">
+                        {(() => { const t = summary.reduce((s,r) => s + (r.sold_by_platform[pl]??0), 0); return t > 0 ? `-${fmt(t)}` : "—"; })()}
+                      </td>
+                    ))}
+                    <td className="px-3 py-3 text-right font-bold text-rose-600">
+                      -{fmt(summary.reduce((s, r) => s + r.total_sold, 0))}
+                    </td>
+                    <td className="px-4 py-3 text-right font-bold text-emerald-600">
+                      {fmt(summary.reduce((s, r) => s + r.stock_qty, 0))}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            )}
+          </div>
+        )}
+
+        {/* Product table (products tab only) */}
+        {tab === "products" && <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           {loading ? (
             <div className="p-8 text-center text-gray-400 text-sm">กำลังโหลด...</div>
           ) : products.length === 0 ? (

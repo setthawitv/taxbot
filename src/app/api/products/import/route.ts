@@ -45,7 +45,15 @@ export async function POST(req: NextRequest) {
     return "";
   }
 
-  const products = dataRows.map((row) => ({
+  type ProductRow = {
+    user_id: string; sku: string | null; parent_sku: string | null;
+    name: string; category: string | null; unit: string;
+    cost_price: number; sell_price: number; stock_qty: number;
+    barcode: string | null; attr1_type: string | null; attr1_val: string | null;
+    _tiktok: string; _shopee: string; _lazada: string;
+  };
+
+  const products: ProductRow[] = dataRows.map((row) => ({
     user_id:     user.id,
     sku:         col(row, "รหัสสินค้า") || null,
     parent_sku:  col(row, "รหัสสินค้าหลัก") || null,
@@ -57,7 +65,11 @@ export async function POST(req: NextRequest) {
     stock_qty:   parseInt(col(row, "จำนวนหน่วย", "ยอดยกมา")) || 0,
     barcode:     col(row, "Barcode") || null,
     attr1_type:  col(row, "ประเภทคุณสมบัติ") || null,
-    attr1_val:   col(row, "คุณสมบัติ") || null,
+    attr1_val:   col(row, "Variant", "ตัวเลือก", "คุณสมบัติ") || null,
+    // platform mapping helpers (not persisted in products table)
+    _tiktok:     col(row, "ชื่อบน TikTok", "TikTok"),
+    _shopee:     col(row, "ชื่อบน Shopee", "Shopee"),
+    _lazada:     col(row, "ชื่อบน Lazada", "Lazada"),
   })).filter((p) => p.name);
 
   if (previewOnly) {
@@ -66,45 +78,66 @@ export async function POST(req: NextRequest) {
 
   // Upsert products (sku + user_id as unique key if sku exists)
   let saved = 0;
+  let mappingsSaved = 0;
   const movements: object[] = [];
 
   for (const p of products) {
+    const { _tiktok, _shopee, _lazada, ...productData } = p;
+
+    let productId: string | null = null;
     let existing = null;
-    if (p.sku) {
+    if (productData.sku) {
       const { data } = await supabaseAdmin
         .from("products").select("id, stock_qty")
-        .eq("user_id", user.id).eq("sku", p.sku).maybeSingle();
+        .eq("user_id", user.id).eq("sku", productData.sku).maybeSingle();
       existing = data;
     }
 
     if (existing) {
-      await supabaseAdmin.from("products").update(p).eq("id", existing.id);
-      // Record stock adjustment if changed
-      const diff = p.stock_qty - (existing.stock_qty ?? 0);
+      await supabaseAdmin.from("products").update(productData).eq("id", existing.id);
+      productId = existing.id;
+      const diff = productData.stock_qty - (existing.stock_qty ?? 0);
       if (diff !== 0) {
         movements.push({
           user_id: user.id, product_id: existing.id,
           type: diff > 0 ? "in" : "adjust", qty: diff,
-          stock_after: p.stock_qty, ref_type: "import_excel", note: "นำเข้า Excel",
+          stock_after: productData.stock_qty, ref_type: "import_excel", note: "นำเข้า Excel",
         });
       }
     } else {
       const { data: newP } = await supabaseAdmin
-        .from("products").insert(p).select("id").single();
-      if (newP && p.stock_qty > 0) {
+        .from("products").insert(productData).select("id").single();
+      productId = newP?.id ?? null;
+      if (newP && productData.stock_qty > 0) {
         movements.push({
           user_id: user.id, product_id: newP.id,
-          type: "in", qty: p.stock_qty,
-          stock_after: p.stock_qty, ref_type: "import_excel", note: "ยอดยกมา",
+          type: "in", qty: productData.stock_qty,
+          stock_after: productData.stock_qty, ref_type: "import_excel", note: "ยอดยกมา",
         });
       }
     }
     saved++;
+
+    // Save platform name mappings from template columns
+    if (productId) {
+      const platformEntries: { platform: string; platform_name: string }[] = [];
+      if (_tiktok) platformEntries.push({ platform: "tiktok", platform_name: _tiktok });
+      if (_shopee) platformEntries.push({ platform: "shopee", platform_name: _shopee });
+      if (_lazada) platformEntries.push({ platform: "lazada", platform_name: _lazada });
+
+      for (const entry of platformEntries) {
+        await supabaseAdmin.from("product_platform_names").upsert(
+          { user_id: user.id, product_id: productId, platform: entry.platform, platform_name: entry.platform_name },
+          { onConflict: "user_id,product_id,platform", ignoreDuplicates: false }
+        );
+        mappingsSaved++;
+      }
+    }
   }
 
   if (movements.length > 0) {
     await supabaseAdmin.from("stock_movements").insert(movements);
   }
 
-  return NextResponse.json({ ok: true, saved, movements: movements.length });
+  return NextResponse.json({ ok: true, saved, mappingsSaved, movements: movements.length });
 }
