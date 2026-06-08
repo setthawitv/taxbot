@@ -2,15 +2,16 @@ import { NextResponse } from "next/server";
 import { ImageResponse } from "next/og";
 
 const TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN!;
-const APP_URL = process.env.NEXTAUTH_URL ?? "https://www.vendeefinance.com";
-// LIFF URL — opens pages WITH LIFF context so liff.openWindow(external) works
-const LIFF_URL = `https://liff.line.me/${process.env.NEXT_PUBLIC_LIFF_ID}`;
+const APP_URL = "https://www.vendeefinance.com";
+
+// ?openExternalBrowser=1 forces LINE to open Safari/Chrome instead of in-app browser
+function extUrl(path: string) { return `${APP_URL}${path}?openExternalBrowser=1`; }
 
 const SECTIONS = [
-  { emoji: "📱", label: "หน้าหลัก",      color: "#059669", href: `${APP_URL}/` },
-  { emoji: "📋", label: "Google Sheets", color: "#0f766e", href: `${APP_URL}/sheets` },
-  { emoji: "📁", label: "Google Drive",  color: "#1d4ed8", href: `${APP_URL}/drive` },
-  { emoji: "⚙️", label: "ตั้งค่า",       color: "#374151", href: `${APP_URL}/settings` },
+  { emoji: "📱", label: "หน้าหลัก",      color: "#059669", href: extUrl("/home") },
+  { emoji: "📸", label: "สแกนใบเสร็จ",   color: "#0f766e", href: extUrl("/scan") },
+  { emoji: "📦", label: "สต็อก",         color: "#7c3aed", href: extUrl("/stock") },
+  { emoji: "💰", label: "ภาษี",          color: "#b45309", href: extUrl("/phasi") },
 ];
 
 async function loadThaiFont(): Promise<ArrayBuffer | null> {
