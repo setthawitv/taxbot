@@ -11,11 +11,11 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const file      = formData.get("file")     as File   | null;
     const platform  = formData.get("platform") as string | null;
-    const lineUserId = formData.get("lineUserId") as string | null;
+    const lineUserId = (formData.get("userId") ?? formData.get("lineUserId")) as string | null;
     const preview   = formData.get("preview")  === "true"; // true = parse only, false = save
 
     if (!file || !platform || !lineUserId) {
-      return NextResponse.json({ error: "Missing file, platform, or lineUserId" }, { status: 400 });
+      return NextResponse.json({ error: "Missing file, platform, or userId" }, { status: 400 });
     }
     if (!["tiktok", "shopee", "lazada"].includes(platform)) {
       return NextResponse.json({ error: "Unknown platform" }, { status: 400 });
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
         const { data: user } = await supabaseAdmin
           .from("users")
           .select("id")
-          .eq("line_user_id", lineUserId)
+          .eq("id", lineUserId)
           .single();
 
         if (user) {
@@ -105,6 +105,7 @@ export async function POST(req: NextRequest) {
             .select("line_key")
             .eq("user_id", user.id)
             .in("line_key", lineKeys);
+
 
           existingKeys = new Set((existing ?? []).map((e) => e.line_key));
 
@@ -176,7 +177,7 @@ export async function POST(req: NextRequest) {
     const { data: user } = await supabaseAdmin
       .from("users")
       .select("id")
-      .eq("line_user_id", lineUserId)
+      .eq("id", lineUserId)
       .single();
 
     if (!user) {

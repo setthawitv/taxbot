@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 
 export async function GET(req: NextRequest) {
-  const lineUserId = req.nextUrl.searchParams.get("lineUserId");
-  if (!lineUserId) {
+  const userId = req.nextUrl.searchParams.get("userId") ?? req.nextUrl.searchParams.get("lineUserId");
+  if (!userId) {
     return NextResponse.json({ connected: false, onboarded: false });
   }
 
@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     .select(
       "google_access_token, google_email, business_name, first_name, last_name, business_type, phone, vat_registered, display_name, picture_url"
     )
-    .eq("line_user_id", lineUserId)
+    .eq("id", userId)
     .single();
 
   if (!data) {

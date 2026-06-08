@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 
-async function resolveUserId(lineUserId: string) {
+async function resolveUserId(userId: string) {
   const { data } = await supabaseAdmin
-    .from("users").select("id").eq("line_user_id", lineUserId).single();
+    .from("users").select("id").eq("id", userId).single();
   return data?.id ?? null;
 }
 
 // POST /api/stock/mapping — add platform name mapping
 export async function POST(req: NextRequest) {
-  const { lineUserId, productId, platform, platformName } = await req.json();
+  const body = await req.json();
+  const { productId, platform, platformName } = body;
+  const lineUserId = body.userId ?? body.lineUserId;
   if (!lineUserId || !productId || !platform || !platformName)
     return NextResponse.json({ error: "missing params" }, { status: 400 });
 
@@ -33,7 +35,9 @@ export async function POST(req: NextRequest) {
 
 // DELETE /api/stock/mapping — remove a mapping
 export async function DELETE(req: NextRequest) {
-  const { id, lineUserId } = await req.json();
+  const body = await req.json();
+  const { id } = body;
+  const lineUserId = body.userId ?? body.lineUserId;
   if (!id || !lineUserId) return NextResponse.json({ error: "missing params" }, { status: 400 });
 
   const userId = await resolveUserId(lineUserId);

@@ -4,8 +4,9 @@ import { supabaseAdmin } from "@/lib/supabase";
 // PATCH /api/user/profile — save LINE display_name + picture_url + business_name
 export async function PATCH(req: NextRequest) {
   try {
-    const { lineUserId, displayName, pictureUrl, businessName } = await req.json();
-    if (!lineUserId) return NextResponse.json({ error: "Missing lineUserId" }, { status: 400 });
+    const { userId, lineUserId, displayName, pictureUrl, businessName } = await req.json();
+    const resolvedId = userId ?? lineUserId;
+    if (!resolvedId) return NextResponse.json({ error: "Missing userId" }, { status: 400 });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updates: Record<string, any> = {};
@@ -16,7 +17,7 @@ export async function PATCH(req: NextRequest) {
     const { error } = await supabaseAdmin
       .from("users")
       .update(updates)
-      .eq("line_user_id", lineUserId);
+      .eq("id", resolvedId);
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ ok: true });

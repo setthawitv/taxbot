@@ -123,7 +123,7 @@ function PlatformDonut({ byPlatform, total }: { byPlatform: Record<string, numbe
 }
 
 export default function RaiRab() {
-  const [lineUserId, setLineUserId] = useState("");
+  const [userId, setUserId] = useState("");
   const [authReady,  setAuthReady]  = useState(false);
   const [year,       setYear]       = useState(CURRENT_YEAR);
   const [month,      setMonth]      = useState(0);
@@ -173,7 +173,7 @@ export default function RaiRab() {
       if (session?.user?.email) {
         try {
           const res = await fetch("/api/user/by-email");
-          if (res.ok) { const d = await res.json(); if (d.lineUserId) setLineUserId(d.lineUserId); }
+          if (res.ok) { const d = await res.json(); if (d.userId) setUserId(d.userId); }
         } catch { /* ignore */ }
       }
       setAuthReady(true);
@@ -183,7 +183,7 @@ export default function RaiRab() {
 
   // ── Load summary + adjustments ────────────────────────────────────────────
   useEffect(() => {
-    if (!authReady || !lineUserId) {
+    if (!authReady || !userId) {
       if (authReady) setLoading(false);
       return;
     }
@@ -192,7 +192,7 @@ export default function RaiRab() {
     setLoading(true);
 
     // Summary
-    const params = new URLSearchParams({ lineUserId, year: String(year), month: String(month), platform });
+    const params = new URLSearchParams({ userId, year: String(year), month: String(month), platform });
     fetch(`/api/income/summary?${params}`, { signal: ctrl.signal })
       .then((r) => r.json())
       .then((d) => { if (!d.error) setSummary(d); })
@@ -200,7 +200,7 @@ export default function RaiRab() {
       .finally(() => setLoading(false));
 
     // All transactions (year-wide, no platform filter)
-    fetch(`/api/transactions?type=income&lineUserId=${lineUserId}&year=${year}`, { signal: ctrl.signal })
+    fetch(`/api/transactions?type=income&userId=${userId}&year=${year}`, { signal: ctrl.signal })
       .then((r) => r.json())
       .then((d) => {
         const all: (AdjustEntry & { source?: string; description?: string })[] = d.transactions ?? [];
@@ -213,18 +213,18 @@ export default function RaiRab() {
       .catch((e) => { if (e.name !== "AbortError") console.error(e); });
 
     return () => ctrl.abort();
-  }, [authReady, lineUserId, year, month, platform]);
+  }, [authReady, userId, year, month, platform]);
 
   // Helpers to refresh after save/delete
   function refreshSummary(uid: string) {
-    const params = new URLSearchParams({ lineUserId: uid, year: String(year), month: String(month), platform });
+    const params = new URLSearchParams({ userId: uid, year: String(year), month: String(month), platform });
     fetch(`/api/income/summary?${params}`)
       .then((r) => r.json())
       .then((d) => { if (!d.error) setSummary(d); });
   }
 
   function loadAdjusts(uid: string) {
-    fetch(`/api/transactions?type=income&lineUserId=${uid}&year=${year}`)
+    fetch(`/api/transactions?type=income&userId=${uid}&year=${year}`)
       .then((r) => r.json())
       .then((d) => {
         const all: (AdjustEntry & { source?: string; description?: string })[] = d.transactions ?? [];
@@ -237,7 +237,7 @@ export default function RaiRab() {
   // ── Save manual income ────────────────────────────────────────────────────
   async function handleAddIncome(e: React.FormEvent) {
     e.preventDefault();
-    if (!lineUserId || !addAmt || !addVendor) return;
+    if (!userId || !addAmt || !addVendor) return;
     setAddSaving(true); setAddMsg(null);
 
     try {
@@ -245,7 +245,7 @@ export default function RaiRab() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          lineUserId,
+          userId,
           type: "income",
           amount: parseFloat(addAmt),
           vendor: addVendor.trim(),
@@ -260,8 +260,8 @@ export default function RaiRab() {
       setAddAmt(""); setAddVendor(""); setAddDesc("");
       setAddDate(new Date().toISOString().slice(0, 10));
       setShowAdd(false);
-      refreshSummary(lineUserId);
-      loadAdjusts(lineUserId);
+      refreshSummary(userId);
+      loadAdjusts(userId);
     } catch (err: unknown) {
       setAddMsg({ ok: false, text: `❌ ${err instanceof Error ? err.message : "เกิดข้อผิดพลาด"}` });
     } finally {
@@ -272,7 +272,7 @@ export default function RaiRab() {
   // ── Save adjustment ───────────────────────────────────────────────────────
   async function handleAdjust(e: React.FormEvent) {
     e.preventDefault();
-    if (!lineUserId || !adjAmount) return;
+    if (!userId || !adjAmount) return;
     setAdjSaving(true); setAdjMsg(null);
 
     const amt = parseFloat(adjAmount);
@@ -285,7 +285,7 @@ export default function RaiRab() {
       const res = await fetch("/api/transactions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lineUserId, type: "income", amount: finalAmt, vendor, description: vendor, date }),
+        body: JSON.stringify({ userId, type: "income", amount: finalAmt, vendor, description: vendor, date }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "เกิดข้อผิดพลาด");
@@ -293,8 +293,8 @@ export default function RaiRab() {
       setAdjMsg({ ok: true, text: `✅ ปรับยอด ${adjDir}฿${amt.toLocaleString("th-TH")} เดือน ${MONTHS[adjMonth - 1]} แล้ว` });
       setAdjAmount(""); setAdjNote("");
       setShowAdjust(false);
-      refreshSummary(lineUserId);
-      loadAdjusts(lineUserId);
+      refreshSummary(userId);
+      loadAdjusts(userId);
     } catch (err: unknown) {
       setAdjMsg({ ok: false, text: `❌ ${err instanceof Error ? err.message : "เกิดข้อผิดพลาด"}` });
     } finally {
@@ -304,17 +304,17 @@ export default function RaiRab() {
 
   // ── Delete adjustment ─────────────────────────────────────────────────────
   async function handleDelete(id: string) {
-    if (!lineUserId) return;
+    if (!userId) return;
     setDeletingId(id);
     try {
       const res = await fetch("/api/transactions", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, lineUserId, table: "transactions" }),
+        body: JSON.stringify({ id, userId, table: "transactions" }),
       });
       if (!res.ok) throw new Error();
       setAdjusts((prev) => prev.filter((t) => t.id !== id));
-      refreshSummary(lineUserId);
+      refreshSummary(userId);
     } catch {
       setAdjMsg({ ok: false, text: "❌ ลบไม่สำเร็จ" });
     } finally {
@@ -331,14 +331,14 @@ export default function RaiRab() {
   }
 
   async function runScan() {
-    if (!scanPreview || !lineUserId) return;
+    if (!scanPreview || !userId) return;
     setScanning(true);
     setScanError("");
     try {
       const res = await fetch("/api/scan", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ lineUserId, imageBase64: scanPreview, forceType: "income" }),
+        body:    JSON.stringify({ userId, imageBase64: scanPreview, forceType: "income" }),
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error ?? "เกิดข้อผิดพลาด");

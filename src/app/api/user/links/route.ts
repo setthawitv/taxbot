@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   const { data } = await supabaseAdmin
     .from("users")
     .select("google_access_token, sheet_id, drive_folder_id")
-    .eq("line_user_id", lid)
+    .eq("id", lid)
     .single();
 
   if (!data) return NextResponse.json({ error: "User not found" }, { status: 404 });

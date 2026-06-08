@@ -6,14 +6,15 @@ function genCode(): string {
   return Math.random().toString(36).slice(2, 10).toUpperCase();
 }
 
-// ── GET /api/staff/invite?lineUserId=xxx ─────────────────────────────────────
+// ── GET /api/staff/invite?userId=xxx ─────────────────────────────────────────
 // Returns the owner's current active invite (creates one if none exists)
 export async function GET(req: NextRequest) {
-  const lineUserId = new URL(req.url).searchParams.get("lineUserId");
-  if (!lineUserId) return NextResponse.json({ error: "Missing lineUserId" }, { status: 400 });
+  const sp = new URL(req.url).searchParams;
+  const lineUserId = sp.get("userId") ?? sp.get("lineUserId");
+  if (!lineUserId) return NextResponse.json({ error: "Missing userId" }, { status: 400 });
 
   const { data: user } = await supabaseAdmin
-    .from("users").select("id").eq("line_user_id", lineUserId).single();
+    .from("users").select("id").eq("id", lineUserId).single();
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
   // Get existing active invite
@@ -42,11 +43,12 @@ export async function GET(req: NextRequest) {
 
 // ── POST /api/staff/invite — reset (deactivate old + create new) ─────────────
 export async function POST(req: NextRequest) {
-  const { lineUserId } = await req.json();
-  if (!lineUserId) return NextResponse.json({ error: "Missing lineUserId" }, { status: 400 });
+  const body = await req.json();
+  const lineUserId = body.userId ?? body.lineUserId;
+  if (!lineUserId) return NextResponse.json({ error: "Missing userId" }, { status: 400 });
 
   const { data: user } = await supabaseAdmin
-    .from("users").select("id").eq("line_user_id", lineUserId).single();
+    .from("users").select("id").eq("id", lineUserId).single();
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
   // Deactivate all existing invites
@@ -69,11 +71,12 @@ export async function POST(req: NextRequest) {
 
 // ── DELETE /api/staff/invite — disable invite ────────────────────────────────
 export async function DELETE(req: NextRequest) {
-  const { lineUserId } = await req.json();
-  if (!lineUserId) return NextResponse.json({ error: "Missing lineUserId" }, { status: 400 });
+  const body = await req.json();
+  const lineUserId = body.userId ?? body.lineUserId;
+  if (!lineUserId) return NextResponse.json({ error: "Missing userId" }, { status: 400 });
 
   const { data: user } = await supabaseAdmin
-    .from("users").select("id").eq("line_user_id", lineUserId).single();
+    .from("users").select("id").eq("id", lineUserId).single();
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
   await supabaseAdmin

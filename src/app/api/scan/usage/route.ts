@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 
-// GET /api/scan/usage?lineUserId=xxx&year=2026&month=6
+// GET /api/scan/usage?userId=xxx&year=2026&month=6
 // Returns count of AI-scanned receipts for the given month
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const lineUserId = searchParams.get("lineUserId");
+  const lineUserId = searchParams.get("userId") ?? searchParams.get("lineUserId");
   const year       = parseInt(searchParams.get("year")  ?? "0");
   const month      = parseInt(searchParams.get("month") ?? "0");
 
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   const { data: user } = await supabaseAdmin
     .from("users")
     .select("id")
-    .eq("line_user_id", lineUserId)
+    .eq("id", lineUserId)
     .single();
 
   if (!user) return NextResponse.json({ count: 0 });

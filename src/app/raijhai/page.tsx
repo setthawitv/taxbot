@@ -29,7 +29,7 @@ type Transaction = {
 const fmt = (n: number) => n.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default function RaiJhai() {
-  const [lineUserId, setLineUserId] = useState("");
+  const [userId, setUserId] = useState("");
   const [authReady,  setAuthReady]  = useState(false);
 
   const [year,  setYear]  = useState(CURRENT_YEAR);
@@ -71,7 +71,7 @@ export default function RaiJhai() {
       if (session?.user?.email) {
         try {
           const res = await fetch("/api/user/by-email");
-          if (res.ok) { const d = await res.json(); if (d.lineUserId) setLineUserId(d.lineUserId); }
+          if (res.ok) { const d = await res.json(); if (d.userId) setUserId(d.userId); }
         } catch { /* ignore */ }
       }
       setAuthReady(true);
@@ -84,7 +84,7 @@ export default function RaiJhai() {
     setLoading(true);
     const params = new URLSearchParams({
       type: "expense",
-      lineUserId: uid,
+      userId: uid,
       year:  String(year),
       month: String(month),
     });
@@ -100,9 +100,9 @@ export default function RaiJhai() {
 
   useEffect(() => {
     if (!authReady) return;
-    if (lineUserId) loadTxns(lineUserId);
+    if (userId) loadTxns(userId);
     else setLoading(false);
-  }, [authReady, lineUserId, year, month]);
+  }, [authReady, userId, year, month]);
 
   // ── Open form for add ─────────────────────────────────────────────────────
   function openAddForm() {
@@ -129,7 +129,7 @@ export default function RaiJhai() {
   // ── Save (add or edit) ────────────────────────────────────────────────────
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    if (!lineUserId || !vendor.trim() || !amount) return;
+    if (!userId || !vendor.trim() || !amount) return;
     setSaving(true);
     setSaveMsg(null);
 
@@ -140,7 +140,7 @@ export default function RaiJhai() {
         res = await fetch("/api/transactions", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: editId, lineUserId, amount: parseFloat(amount), vendor: vendor.trim(), description: desc.trim(), date }),
+          body: JSON.stringify({ id: editId, userId, amount: parseFloat(amount), vendor: vendor.trim(), description: desc.trim(), date }),
         });
       } else {
         // POST — new
@@ -148,7 +148,7 @@ export default function RaiJhai() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            lineUserId,
+            userId,
             amount:           parseFloat(amount),
             vendor:           vendor.trim(),
             description:      desc.trim(),
@@ -177,7 +177,7 @@ export default function RaiJhai() {
       setShowForm(false);
       setEditId(null);
       setScannedImageBase64(null);
-      loadTxns(lineUserId);
+      loadTxns(userId);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "เกิดข้อผิดพลาด";
       setSaveMsg({ ok: false, text: `❌ ${msg}` });
@@ -188,13 +188,13 @@ export default function RaiJhai() {
 
   // ── Delete ────────────────────────────────────────────────────────────────
   async function handleDelete(id: string) {
-    if (!lineUserId) return;
+    if (!userId) return;
     setDeletingId(id);
     try {
       const res = await fetch("/api/transactions", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, lineUserId, table: "transactions" }),
+        body: JSON.stringify({ id, userId, table: "transactions" }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "ลบไม่สำเร็จ");
@@ -222,14 +222,14 @@ export default function RaiJhai() {
   }
 
   async function runScan() {
-    if (!scanPreview || !lineUserId) return;
+    if (!scanPreview || !userId) return;
     setScanning(true);
     setScanError("");
     try {
       const res = await fetch("/api/scan", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ lineUserId, imageBase64: scanPreview, forceType: "expense" }),
+        body:    JSON.stringify({ userId, imageBase64: scanPreview, forceType: "expense" }),
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error ?? "เกิดข้อผิดพลาด");

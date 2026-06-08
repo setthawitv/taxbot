@@ -29,7 +29,7 @@ const fmt = (n: number) =>
   n.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 function ScanPageInner() {
-  const [lineUserId, setLineUserId] = useState("");
+  const [userId, setUserId] = useState("");
   const [authReady,  setAuthReady]  = useState(false);
   const { data: session, status: sessionStatus } = useSession();
 
@@ -56,7 +56,7 @@ function ScanPageInner() {
       if (session?.user?.email) {
         try {
           const res = await fetch("/api/user/by-email");
-          if (res.ok) { const d = await res.json(); if (d.lineUserId) setLineUserId(d.lineUserId); }
+          if (res.ok) { const d = await res.json(); if (d.userId) setUserId(d.userId); }
         } catch { /* ignore */ }
       }
       setAuthReady(true);
@@ -88,14 +88,14 @@ function ScanPageInner() {
 
   // ── Step 2: OCR ───────────────────────────────────────────────────────────────
   async function handleScan() {
-    if (!preview || !lineUserId) return;
+    if (!preview || !userId) return;
     setScanning(true);
     setError("");
     try {
       const res  = await fetch("/api/scan", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ lineUserId, imageBase64: preview }),
+        body:    JSON.stringify({ userId, imageBase64: preview }),
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error ?? "เกิดข้อผิดพลาด");
@@ -110,7 +110,7 @@ function ScanPageInner() {
 
   // ── Step 3: Save ──────────────────────────────────────────────────────────────
   async function handleSave() {
-    if (!ocr || !lineUserId) return;
+    if (!ocr || !userId) return;
     setSaving(true);
     setError("");
     try {
@@ -118,7 +118,7 @@ function ScanPageInner() {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({
-          lineUserId,
+          userId,
           type:            ocr.type,
           amount:          ocr.amount,
           vendor:          ocr.vendor,
@@ -213,7 +213,7 @@ function ScanPageInner() {
               </div>
             )}
 
-            <button onClick={handleScan} disabled={scanning || !lineUserId}
+            <button onClick={handleScan} disabled={scanning || !userId}
               className="w-full py-4 rounded-2xl text-base font-bold bg-emerald-500 hover:bg-emerald-600 text-white disabled:opacity-40 transition-colors flex items-center justify-center gap-2">
               {scanning
                 ? <><span className="animate-spin">⏳</span> AI กำลังอ่านใบเสร็จ...</>

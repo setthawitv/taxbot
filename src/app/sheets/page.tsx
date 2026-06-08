@@ -15,10 +15,10 @@ export default function SheetsRedirectPage() {
       try {
         const byEmail = await fetch("/api/user/by-email");
         if (!byEmail.ok) { setStatus("error"); return; }
-        const { lineUserId } = await byEmail.json();
-        if (!lineUserId) { setStatus("error"); return; }
+        const { userId } = await byEmail.json();
+        if (!userId) { setStatus("error"); return; }
 
-        const res = await fetch(`/api/user/links?lid=${lineUserId}`);
+        const res = await fetch(`/api/user/links?lid=${userId}`);
         if (!res.ok) { setStatus("error"); return; }
         const data = await res.json();
         if (!data.google_connected) { setStatus("no_google"); return; }

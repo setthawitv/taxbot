@@ -1,19 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 
-async function resolveUserId(lineUserId: string) {
+async function resolveUserId(userId: string) {
   const { data } = await supabaseAdmin
-    .from("users").select("id").eq("line_user_id", lineUserId).single();
+    .from("users").select("id").eq("id", userId).single();
   return data?.id ?? null;
 }
 
-// GET /api/stock?lineUserId=xxx&productId=xxx  — movement history
+// GET /api/stock?userId=xxx&productId=xxx  — movement history
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const lineUserId = searchParams.get("lineUserId");
+  const lineUserId = searchParams.get("userId") ?? searchParams.get("lineUserId");
   const productId  = searchParams.get("productId");
 
-  if (!lineUserId) return NextResponse.json({ error: "missing lineUserId" }, { status: 400 });
+  if (!lineUserId) return NextResponse.json({ error: "missing userId" }, { status: 400 });
   const userId = await resolveUserId(lineUserId);
   if (!userId) return NextResponse.json({ movements: [] });
 
@@ -37,7 +37,8 @@ export async function POST(req: NextRequest) {
 
   // ── Save platform mappings + deduct stock from platform import ──
   if (body.action === "map_and_deduct") {
-    const { lineUserId, mappings, batchId } = body;
+    const { mappings, batchId } = body;
+    const lineUserId = body.userId ?? body.lineUserId;
     // mappings = [{ platform, platformName, productId, qty }]
 
     const userId = await resolveUserId(lineUserId);
@@ -84,7 +85,8 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Manual stock adjustment ──
-  const { lineUserId, productId, type, qty, note } = body;
+  const { productId, type, qty, note } = body;
+  const lineUserId = body.userId ?? body.lineUserId;
   if (!lineUserId || !productId || !qty)
     return NextResponse.json({ error: "missing params" }, { status: 400 });
 

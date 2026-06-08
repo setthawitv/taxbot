@@ -30,16 +30,16 @@ function platformLabel(platform: string): string {
   return platform;
 }
 
-/** Resolve user.id + google tokens from either lineUserId or Google session email */
+/** Resolve user.id + google tokens from either userId (UUID) or Google session email */
 async function resolveUser(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const lineUserId = searchParams.get("lineUserId");
+  const userId = searchParams.get("userId") ?? searchParams.get("lineUserId");
 
-  if (lineUserId) {
+  if (userId) {
     const { data } = await supabaseAdmin
       .from("users")
       .select("id, google_access_token, sheet_id")
-      .eq("line_user_id", lineUserId)
+      .eq("id", userId)
       .single();
     return data ?? null;
   }
@@ -56,19 +56,19 @@ async function resolveUser(req: NextRequest) {
   return data ?? null;
 }
 
-// ── GET /api/transactions?type=income|expense&lineUserId=&year=&month= ────────
+// ── GET /api/transactions?type=income|expense&userId=&year=&month= ────────────
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const type       = searchParams.get("type");
-  const lineUserId = searchParams.get("lineUserId");
-  const year       = searchParams.get("year");
-  const month      = searchParams.get("month"); // "0" or null = all months
+  const type           = searchParams.get("type");
+  const paramUserId    = searchParams.get("userId") ?? searchParams.get("lineUserId");
+  const year           = searchParams.get("year");
+  const month          = searchParams.get("month"); // "0" or null = all months
 
   let userId: string | null = null;
 
-  if (lineUserId) {
+  if (paramUserId) {
     const { data } = await supabaseAdmin
-      .from("users").select("id").eq("line_user_id", lineUserId).single();
+      .from("users").select("id").eq("id", paramUserId).single();
     userId = data?.id ?? null;
   } else {
     const session = await getServerSession();
@@ -149,7 +149,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body        = await req.json();
-    const lineUserId  = body.lineUserId  as string | undefined;
+    const lineUserId  = (body.userId ?? body.lineUserId) as string | undefined;
     const staffCode   = body.staffCode   as string | undefined; // staff entry via invite code
     const staffName   = body.staffName   as string | undefined;
     const txType      = (body.type ?? "expense") === "income" ? "income" : "expense";
@@ -200,7 +200,7 @@ export async function POST(req: NextRequest) {
       const { data: owner } = await supabaseAdmin
         .from("users")
         .select("id, google_access_token, google_refresh_token, sheet_id, drive_folder_id, business_name")
-        .eq("line_user_id", lineUserId!)
+        .eq("id", lineUserId!)
         .single();
       user = owner;
     }
@@ -325,13 +325,15 @@ export async function POST(req: NextRequest) {
 // ── DELETE /api/transactions — remove a transaction or platform order ─────────
 export async function DELETE(req: NextRequest) {
   try {
-    const { id, lineUserId, table } = await req.json();
-    if (!id || !lineUserId) return NextResponse.json({ error: "Missing id or lineUserId" }, { status: 400 });
+    const body = await req.json();
+    const { id, table } = body;
+    const lineUserId = body.userId ?? body.lineUserId;
+    if (!id || !lineUserId) return NextResponse.json({ error: "Missing id or userId" }, { status: 400 });
 
     const { data: user } = await supabaseAdmin
       .from("users")
       .select("id, google_access_token, google_refresh_token, sheet_id")
-      .eq("line_user_id", lineUserId)
+      .eq("id", lineUserId)
       .single();
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
@@ -368,13 +370,15 @@ export async function DELETE(req: NextRequest) {
 // ── PATCH /api/transactions — edit a transaction ──────────────────────────────
 export async function PATCH(req: NextRequest) {
   try {
-    const { id, lineUserId, amount, vendor, description, date } = await req.json();
-    if (!id || !lineUserId) return NextResponse.json({ error: "Missing id or lineUserId" }, { status: 400 });
+    const body2 = await req.json();
+    const { id, amount, vendor, description, date } = body2;
+    const lineUserId = body2.userId ?? body2.lineUserId;
+    if (!id || !lineUserId) return NextResponse.json({ error: "Missing id or userId" }, { status: 400 });
 
     const { data: user } = await supabaseAdmin
       .from("users")
       .select("id, google_access_token, google_refresh_token, sheet_id")
-      .eq("line_user_id", lineUserId)
+      .eq("id", lineUserId)
       .single();
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 

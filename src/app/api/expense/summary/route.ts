@@ -4,16 +4,16 @@ import { supabaseAdmin } from "@/lib/supabase";
 // GET /api/expense/summary?lineUserId=xxx&year=2026&month=5
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const lineUserId = searchParams.get("lineUserId");
+  const userId     = searchParams.get("userId") ?? searchParams.get("lineUserId");
   const year       = parseInt(searchParams.get("year")  ?? String(new Date().getFullYear()));
   const month      = parseInt(searchParams.get("month") ?? "0"); // 0 = full year
 
-  if (!lineUserId) return NextResponse.json({ error: "Missing lineUserId" }, { status: 400 });
+  if (!userId) return NextResponse.json({ error: "Missing userId" }, { status: 400 });
 
   const { data: user } = await supabaseAdmin
     .from("users")
     .select("id")
-    .eq("line_user_id", lineUserId)
+    .eq("id", userId)
     .single();
 
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });

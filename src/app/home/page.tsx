@@ -273,7 +273,7 @@ function PieChart({ income, expense }: { income: number; expense: number }) {
 }
 
 export default function Home() {
-  const [lineUserId,   setLineUserId]   = useState("");
+  const [userId,       setUserId]        = useState("");
   const [authReady,    setAuthReady]    = useState(false);
   const [userInfo,     setUserInfo]     = useState<UserInfo | null>(null);
   const [stats,        setStats]        = useState<Stats | null>(null);
@@ -320,8 +320,8 @@ export default function Home() {
           const res = await fetch("/api/user/by-email");
           if (res.ok) {
             const d = await res.json();
-            if (d.lineUserId) {
-              setLineUserId(d.lineUserId);
+            if (d.userId) {
+              setUserId(d.userId);
               setUserInfo({
                 displayName:    session.user.name ?? session.user.email ?? "",
                 pictureUrl:     session.user.image ?? "",
@@ -340,20 +340,21 @@ export default function Home() {
 
   // ── Fetch all dashboard data ──────────────────────────────────────────────
   useEffect(() => {
-    if (!authReady || !lineUserId) { if (authReady) setLoadingStats(false); return; }
+    if (!authReady || !userId) { if (authReady) setLoadingStats(false); return; }
     setLoadingStats(true);
-    const uid = lineUserId;
+    const uid = userId;
     const yr  = selectedYear;
     const mo  = selectedMonth;
 
     Promise.all([
-      fetch(`/api/income/summary?lineUserId=${uid}&year=${yr}&month=${mo}`).then((r) => r.json()),
-      fetch(`/api/income/summary?lineUserId=${uid}&year=${yr}`).then((r) => r.json()),
-      fetch(`/api/expense/summary?lineUserId=${uid}&year=${yr}&month=${mo}`).then((r) => r.json()),
-      fetch(`/api/expense/summary?lineUserId=${uid}&year=${yr}`).then((r) => r.json()),
-      fetch(`/api/tax/summary?lineUserId=${uid}&year=${yr}`).then((r) => r.json()),
-      fetch(`/api/user/status?lineUserId=${uid}`).then((r) => r.json()),
+      fetch(`/api/income/summary?userId=${uid}&year=${yr}&month=${mo}`).then((r) => r.json()),
+      fetch(`/api/income/summary?userId=${uid}&year=${yr}`).then((r) => r.json()),
+      fetch(`/api/expense/summary?userId=${uid}&year=${yr}&month=${mo}`).then((r) => r.json()),
+      fetch(`/api/expense/summary?userId=${uid}&year=${yr}`).then((r) => r.json()),
+      fetch(`/api/tax/summary?userId=${uid}&year=${yr}`).then((r) => r.json()),
+      fetch(`/api/user/status?userId=${uid}`).then((r) => r.json()),
       fetch(`/api/user/links?lid=${uid}`).then((r) => r.json()),
+
     ]).then(([moIncome, yrIncome, moExpense, yrExpense, tax, status, lnks]) => {
       const recommended = tax.recommended ?? 1;
       const taxAmt = recommended === 1 ? (tax.method1?.estimatedTax ?? 0) : (tax.method2?.estimatedTax ?? 0);
@@ -383,7 +384,7 @@ export default function Home() {
       });
       setLinks({ sheetUrl: lnks.sheet_url ?? null, driveUrl: lnks.drive_url ?? null });
     }).finally(() => setLoadingStats(false));
-  }, [authReady, lineUserId, selectedYear, selectedMonth]);
+  }, [authReady, userId, selectedYear, selectedMonth]);
 
   function openExternal(url: string | null, fallback: string) {
     // Always open in new tab — use URL if ready, otherwise fallback page

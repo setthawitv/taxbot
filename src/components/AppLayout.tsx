@@ -36,8 +36,8 @@ function useResolvedUser(externalUserInfo?: UserInfo | null) {
           const res = await fetch("/api/user/by-email");
           if (res.ok) {
             const d = await res.json();
-            if (d.lineUserId) {
-              const statusRes = await fetch(`/api/user/status?lineUserId=${d.lineUserId}`);
+            if (d.userId) {
+              const statusRes = await fetch(`/api/user/status?userId=${d.userId}`);
               if (statusRes.ok) {
                 const sd = await statusRes.json();
                 setUser({

@@ -34,7 +34,7 @@ function SettingsPageInner() {
   const [name, setName] = useState("");
   const [type, setType] = useState<"income" | "expense">("expense");
   const [saving, setSaving] = useState(false);
-  const [lineUserId, setLineUserId] = useState<string>("");
+  const [userId, setUserId] = useState<string>("");
   const [googleEmail, setGoogleEmail] = useState<string>("");
   const [showLiffLink, setShowLiffLink] = useState(false);
   const [syncing,      setSyncing]      = useState(false);
@@ -93,10 +93,10 @@ function SettingsPageInner() {
           const res = await fetch("/api/user/by-email");
           if (res.ok) {
             const d = await res.json();
-            if (d.lineUserId) {
-              setLineUserId(d.lineUserId);
+            if (d.userId) {
+              setUserId(d.userId);
               setGoogleEmail(session.user.email ?? "");
-              const statusRes = await fetch(`/api/user/status?lineUserId=${d.lineUserId}`);
+              const statusRes = await fetch(`/api/user/status?userId=${d.userId}`);
               if (statusRes.ok) {
                 const statusData = await statusRes.json();
                 const biz = statusData.profile?.businessName ?? "";
@@ -104,7 +104,7 @@ function SettingsPageInner() {
                 setBusinessNameDraft(biz);
                 setCurrentPlan(statusData.profile?.plan ?? "trial");
                 const now = new Date();
-                fetchScanUsage(d.lineUserId, now.getFullYear(), now.getMonth() + 1);
+                fetchScanUsage(d.userId, now.getFullYear(), now.getMonth() + 1);
               }
             }
           }
@@ -132,7 +132,7 @@ function SettingsPageInner() {
   async function fetchScanUsage(uid: string, year: number, month: number) {
     setScanLoading(true);
     try {
-      const res = await fetch(`/api/scan/usage?lineUserId=${uid}&year=${year}&month=${month}`);
+      const res = await fetch(`/api/scan/usage?userId=${uid}&year=${year}&month=${month}`);
       if (res.ok) {
         const d = await res.json();
         setScanUsed(d.count ?? 0);
@@ -143,13 +143,13 @@ function SettingsPageInner() {
 
   async function saveBusinessName(e: React.FormEvent) {
     e.preventDefault();
-    if (!lineUserId || !businessNameDraft.trim()) return;
+    if (!userId || !businessNameDraft.trim()) return;
     setSavingBusinessName(true);
     try {
       await fetch("/api/user/profile", {
         method:  "PATCH",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ lineUserId, businessName: businessNameDraft.trim() }),
+        body:    JSON.stringify({ userId, businessName: businessNameDraft.trim() }),
       });
       setBusinessName(businessNameDraft.trim());
       setBusinessNameSaved(true);
@@ -161,7 +161,7 @@ function SettingsPageInner() {
 
   // Re-save Google tokens after reconnect redirect (web users only)
   useEffect(() => {
-    if (!reconnecting || !lineUserId || !session) return;
+    if (!reconnecting || !userId || !session) return;
     const s = session as typeof session & { accessToken?: string; refreshToken?: string };
     if (!s.accessToken) return;
 
@@ -169,7 +169,7 @@ function SettingsPageInner() {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        lineUserId,
+        userId,
         googleEmail:        session.user?.email ?? "",
         googleAccessToken:  s.accessToken  ?? null,
         googleRefreshToken: s.refreshToken ?? null,
@@ -182,16 +182,16 @@ function SettingsPageInner() {
       })
       .catch(() => setSyncResult({ synced: 0, failed: 0, skipped: 0, message: "เชื่อมต่อใหม่ไม่สำเร็จ" }))
       .finally(() => setReconnecting(false));
-  }, [reconnecting, lineUserId, session]);
+  }, [reconnecting, userId, session]);
 
   // Open Google connect in external browser.
   // liff.openWindow({ external: true }) requires a user gesture AND proper LIFF context
   // (page opened via liff.line.me). Settings opens via direct Rich Menu URL, so we:
-  // 1. Save lineUserId to localStorage
+  // 1. Save userId to localStorage
   // 2. Show a real <a> link to the LIFF URL — tapping it = user gesture + LIFF context
   // 3. Intro page detects the key and shows a "tap to open Safari" button
   function handleGoogleConnect() {
-    if (!lineUserId) return;
+    if (!userId) return;
     // Web user (Google-only, no LINE): re-run Google OAuth to get fresh tokens
     if (isWebUser) {
       signIn("google", { callbackUrl: "/settings?reconnect=1" });
@@ -201,14 +201,14 @@ function SettingsPageInner() {
   }
 
   async function handleSyncSheets() {
-    if (!lineUserId) return;
+    if (!userId) return;
     setSyncing(true);
     setSyncResult(null);
     try {
       const res = await fetch("/api/sync/sheets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lineUserId }),
+        body: JSON.stringify({ userId }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "เกิดข้อผิดพลาด");
@@ -221,15 +221,15 @@ function SettingsPageInner() {
     }
   }
 
-  // Load admin list when lineUserId is available
+  // Load admin list when userId is available
   useEffect(() => {
-    if (!lineUserId) return;
+    if (!userId) return;
     setAdminLoading(true);
-    fetch(`/api/admin/invite?lineUserId=${lineUserId}`)
+    fetch(`/api/admin/invite?userId=${userId}`)
       .then((r) => r.json())
       .then((d) => { if (Array.isArray(d.admins)) setAdmins(d.admins); })
       .finally(() => setAdminLoading(false));
-  }, [lineUserId]);
+  }, [userId]);
 
   function adminJoinLink(code: string) {
     const base = typeof window !== "undefined" ? window.location.origin : "";
@@ -254,18 +254,18 @@ function SettingsPageInner() {
   async function addAdmin(e: React.FormEvent) {
     e.preventDefault();
     const email = adminEmail.trim().toLowerCase();
-    if (!email || !lineUserId) return;
+    if (!email || !userId) return;
     setAdminAdding(true);
     try {
       const res = await fetch("/api/admin/invite", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ lineUserId, adminEmail: email }),
+        body:    JSON.stringify({ userId, adminEmail: email }),
       });
       const d = await res.json();
       if (d.error) { alert(d.error); return; }
       // Reload list
-      const list = await fetch(`/api/admin/invite?lineUserId=${lineUserId}`).then((r) => r.json());
+      const list = await fetch(`/api/admin/invite?userId=${userId}`).then((r) => r.json());
       if (Array.isArray(list.admins)) setAdmins(list.admins);
       setAdminEmail("");
     } finally {
@@ -274,11 +274,11 @@ function SettingsPageInner() {
   }
 
   async function removeAdmin(adminId: string) {
-    if (!lineUserId) return;
+    if (!userId) return;
     await fetch("/api/admin/invite", {
       method:  "DELETE",
       headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ lineUserId, adminId }),
+      body:    JSON.stringify({ userId, adminId }),
     });
     setAdmins((prev) => prev.filter((a) => a.id !== adminId));
   }
@@ -301,7 +301,7 @@ function SettingsPageInner() {
   }, [qrStatus, countdown <= 0]);
 
   async function startPayment() {
-    if (!lineUserId || !selectedPlan) return;
+    if (!userId || !selectedPlan) return;
     setPaying(true);
     setQrImage("");
     setChargeId("");
@@ -310,7 +310,7 @@ function SettingsPageInner() {
       const res = await fetch("/api/payment/create", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ lineUserId, plan: selectedPlan, currentPlan }),
+        body:    JSON.stringify({ userId, plan: selectedPlan, currentPlan }),
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
@@ -417,12 +417,12 @@ function SettingsPageInner() {
                   value={businessNameDraft}
                   onChange={(e) => setBusinessNameDraft(e.target.value)}
                   placeholder="เช่น ร้านดอกไม้มีนา, บริษัท ABC"
-                  disabled={!lineUserId}
+                  disabled={!userId}
                   className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 disabled:opacity-40"
                 />
                 <button
                   type="submit"
-                  disabled={savingBusinessName || !businessNameDraft.trim() || !lineUserId || businessNameDraft.trim() === businessName}
+                  disabled={savingBusinessName || !businessNameDraft.trim() || !userId || businessNameDraft.trim() === businessName}
                   className="px-4 py-2.5 rounded-xl text-sm font-semibold bg-[#0A192F] text-white hover:bg-[#0d2240] disabled:opacity-40 transition-colors flex-shrink-0"
                 >
                   {businessNameSaved ? <IconCheck className="w-4 h-4" /> : savingBusinessName ? "..." : "บันทึก"}
@@ -520,7 +520,7 @@ function SettingsPageInner() {
               </p>
               {showLiffLink ? (
                 <a
-                  href={`${typeof window !== "undefined" ? window.location.origin : ""}/connect-google?lid=${lineUserId}&ext=1&openExternalBrowser=1`}
+                  href={`${typeof window !== "undefined" ? window.location.origin : ""}/connect-google?lid=${userId}&ext=1&openExternalBrowser=1`}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold text-white bg-blue-500 active:bg-blue-600 transition-colors text-center"
                 >
                   กดที่นี่เพื่อเปิด Safari / Chrome
@@ -534,13 +534,13 @@ function SettingsPageInner() {
                       <p className="text-sm font-medium text-gray-700">{googleEmail}</p>
                     </div>
                   </div>
-                  <button onClick={handleGoogleConnect} disabled={!lineUserId}
+                  <button onClick={handleGoogleConnect} disabled={!userId}
                     className="w-full inline-flex items-center justify-center gap-1.5 bg-gray-100 text-gray-600 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-200 transition-colors disabled:opacity-40">
                     <IconRefresh className="w-4 h-4" /> เชื่อมต่อใหม่อีกครั้ง
                   </button>
                 </div>
               ) : (
-                <button onClick={handleGoogleConnect} disabled={!lineUserId}
+                <button onClick={handleGoogleConnect} disabled={!userId}
                   className="w-full py-3 rounded-xl text-sm font-semibold text-white bg-blue-500 hover:bg-blue-600 transition-colors disabled:opacity-40">
                   เชื่อมต่อ Google
                 </button>
@@ -571,7 +571,7 @@ function SettingsPageInner() {
                   )}
                 </div>
               )}
-              <button onClick={handleSyncSheets} disabled={syncing || !lineUserId || !googleEmail}
+              <button onClick={handleSyncSheets} disabled={syncing || !userId || !googleEmail}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold bg-green-500 hover:bg-green-600 text-white disabled:opacity-40 transition-colors">
                 {syncing ? <>กำลังซิงค์...</> : <><IconGoogleSheets className="w-5 h-5" /> Sync รายจ่ายทั้งหมดไป Sheets</>}
               </button>
@@ -651,12 +651,12 @@ function SettingsPageInner() {
                   value={adminEmail}
                   onChange={(e) => setAdminEmail(e.target.value)}
                   placeholder="อีเมล Google เช่น admin@gmail.com"
-                  disabled={!lineUserId}
+                  disabled={!userId}
                   className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 disabled:opacity-40"
                 />
                 <button
                   type="submit"
-                  disabled={adminAdding || !adminEmail.trim() || !lineUserId}
+                  disabled={adminAdding || !adminEmail.trim() || !userId}
                   className="px-4 py-2 rounded-xl text-sm font-semibold bg-[#0A192F] text-white hover:bg-[#0d2240] disabled:opacity-40 transition-colors flex-shrink-0"
                 >
                   {adminAdding ? "..." : "+ เพิ่ม"}
@@ -841,7 +841,7 @@ function SettingsPageInner() {
                   return (
                     <button
                       onClick={startPayment}
-                      disabled={paying || !lineUserId}
+                      disabled={paying || !userId}
                       className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-violet-500 to-purple-600 text-white font-bold text-sm hover:opacity-90 disabled:opacity-40 transition-opacity"
                     >
                       {paying ? "กำลังสร้าง QR..." : `จ่าย ฿${chargeThb} ผ่าน PromptPay`}

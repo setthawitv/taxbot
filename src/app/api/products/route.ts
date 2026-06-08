@@ -1,19 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 
-async function resolveUserId(lineUserId: string) {
+async function resolveUserId(userId: string) {
   const { data } = await supabaseAdmin
-    .from("users").select("id").eq("line_user_id", lineUserId).single();
+    .from("users").select("id").eq("id", userId).single();
   return data?.id ?? null;
 }
 
-// GET /api/products?lineUserId=xxx&search=xxx
+// GET /api/products?userId=xxx&search=xxx
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const lineUserId = searchParams.get("lineUserId");
+  const lineUserId = searchParams.get("userId") ?? searchParams.get("lineUserId");
   const search     = searchParams.get("search") ?? "";
 
-  if (!lineUserId) return NextResponse.json({ error: "missing lineUserId" }, { status: 400 });
+  if (!lineUserId) return NextResponse.json({ error: "missing userId" }, { status: 400 });
   const userId = await resolveUserId(lineUserId);
   if (!userId) return NextResponse.json({ products: [] });
 
@@ -34,8 +34,9 @@ export async function GET(req: NextRequest) {
 // POST /api/products — create single product
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { lineUserId, ...fields } = body;
-  if (!lineUserId) return NextResponse.json({ error: "missing lineUserId" }, { status: 400 });
+  const { userId: bodyUserId, lineUserId: bodyLineUserId, ...fields } = body;
+  const lineUserId = bodyUserId ?? bodyLineUserId;
+  if (!lineUserId) return NextResponse.json({ error: "missing userId" }, { status: 400 });
 
   const userId = await resolveUserId(lineUserId);
   if (!userId) return NextResponse.json({ error: "user not found" }, { status: 404 });
@@ -66,7 +67,9 @@ export async function POST(req: NextRequest) {
 
 // PATCH /api/products — update product
 export async function PATCH(req: NextRequest) {
-  const { lineUserId, id, ...fields } = await req.json();
+  const body = await req.json();
+  const { id, ...fields } = body;
+  const lineUserId = body.userId ?? body.lineUserId;
   if (!lineUserId || !id) return NextResponse.json({ error: "missing params" }, { status: 400 });
 
   const userId = await resolveUserId(lineUserId);
@@ -84,7 +87,9 @@ export async function PATCH(req: NextRequest) {
 
 // DELETE /api/products
 export async function DELETE(req: NextRequest) {
-  const { lineUserId, id } = await req.json();
+  const body = await req.json();
+  const { id } = body;
+  const lineUserId = body.userId ?? body.lineUserId;
   if (!lineUserId || !id) return NextResponse.json({ error: "missing params" }, { status: 400 });
 
   const userId = await resolveUserId(lineUserId);

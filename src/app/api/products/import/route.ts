@@ -9,15 +9,15 @@ export const runtime = "nodejs";
 export async function POST(req: NextRequest) {
   const form = await req.formData();
   const file       = form.get("file")       as File   | null;
-  const lineUserId = form.get("lineUserId") as string | null;
+  const lineUserId = (form.get("userId") ?? form.get("lineUserId")) as string | null;
   const previewOnly = form.get("preview") === "true";
 
   if (!file || !lineUserId)
-    return NextResponse.json({ error: "missing file or lineUserId" }, { status: 400 });
+    return NextResponse.json({ error: "missing file or userId" }, { status: 400 });
 
   // Resolve user
   const { data: user } = await supabaseAdmin
-    .from("users").select("id").eq("line_user_id", lineUserId).single();
+    .from("users").select("id").eq("id", lineUserId).single();
   if (!user) return NextResponse.json({ error: "user not found" }, { status: 404 });
 
   // Parse Excel

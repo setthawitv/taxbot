@@ -5,11 +5,11 @@ import { supabaseAdmin } from "@/lib/supabase";
 // Returns each product with sold qty per platform + remaining stock
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const lineUserId = searchParams.get("lineUserId");
-  if (!lineUserId) return NextResponse.json({ error: "missing lineUserId" }, { status: 400 });
+  const lineUserId = searchParams.get("userId") ?? searchParams.get("lineUserId");
+  if (!lineUserId) return NextResponse.json({ error: "missing userId" }, { status: 400 });
 
   const { data: user } = await supabaseAdmin
-    .from("users").select("id").eq("line_user_id", lineUserId).single();
+    .from("users").select("id").eq("id", lineUserId).single();
   if (!user) return NextResponse.json({ summary: [] });
 
   // Get all active products

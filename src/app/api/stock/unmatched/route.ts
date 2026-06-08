@@ -10,14 +10,14 @@ function compositeKey(productName: string, variant: string | null): string {
 // GET /api/stock/unmatched?lineUserId=xxx&platform=shopee&batchId=xxx
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const lineUserId = searchParams.get("lineUserId");
+  const lineUserId = searchParams.get("userId") ?? searchParams.get("lineUserId");
   const platform   = searchParams.get("platform");
   const batchId    = searchParams.get("batchId");
 
   if (!lineUserId || !platform) return NextResponse.json({ unmatched: [], matched: [] });
 
   const { data: user } = await supabaseAdmin
-    .from("users").select("id").eq("line_user_id", lineUserId).single();
+    .from("users").select("id").eq("id", lineUserId).single();
   if (!user) return NextResponse.json({ unmatched: [], matched: [] });
 
   // Get orders from this batch — include variant + seller_sku

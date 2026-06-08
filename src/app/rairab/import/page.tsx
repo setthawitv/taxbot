@@ -35,7 +35,7 @@ const PLATFORMS: { id: Platform; label: string; emoji: string; color: string; ac
 ];
 
 export default function ImportPage() {
-  const [lineUserId, setLineUserId] = useState("");
+  const [userId, setUserId] = useState("");
   const [authReady, setAuthReady]   = useState(false); // true once auth check done
   const [step, setStep]     = useState<"platform" | "upload" | "preview" | "done">("platform");
   const [platform, setPlatform] = useState<Platform | null>(null);
@@ -65,7 +65,7 @@ export default function ImportPage() {
           const res = await fetch("/api/user/by-email");
           if (res.ok) {
             const data = await res.json();
-            if (data.lineUserId) setLineUserId(data.lineUserId);
+            if (data.userId) setUserId(data.userId);
           }
         } catch { /* ignore */ }
       }
@@ -93,7 +93,7 @@ export default function ImportPage() {
       const fd = new FormData();
       fd.append("file",        f);
       fd.append("platform",    platform);
-      fd.append("lineUserId",  lineUserId || "preview");
+      fd.append("userId",  userId || "preview");
       fd.append("preview",     "true");
 
       const res  = await fetch("/api/import", { method: "POST", body: fd });
@@ -112,7 +112,7 @@ export default function ImportPage() {
   }
 
   async function handleConfirm() {
-    if (!file || !platform || !lineUserId) return;
+    if (!file || !platform || !userId) return;
     setLoading(true);
     setError("");
 
@@ -120,7 +120,7 @@ export default function ImportPage() {
       const fd = new FormData();
       fd.append("file",        file);
       fd.append("platform",    platform);
-      fd.append("lineUserId",  lineUserId);
+      fd.append("userId",  userId);
       fd.append("preview",     "false");
 
       const res  = await fetch("/api/import", { method: "POST", body: fd });
@@ -130,7 +130,7 @@ export default function ImportPage() {
 
       // Check for unmatched stock products
       const batchId = data.batchId ?? "";
-      const umRes = await fetch(`/api/stock/unmatched?lineUserId=${lineUserId}&platform=${platform}&batchId=${batchId}`);
+      const umRes = await fetch(`/api/stock/unmatched?userId=${userId}&platform=${platform}&batchId=${batchId}`);
       if (umRes.ok) {
         const umData = await umRes.json();
         if (umData.unmatched?.length > 0 || umData.matched?.length > 0) {
@@ -142,7 +142,7 @@ export default function ImportPage() {
         // Auto-deduct for already-mapped products
         if (umData.matched?.length > 0) {
           await fetch("/api/stock", { method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "map_and_deduct", lineUserId,
+            body: JSON.stringify({ action: "map_and_deduct", userId,
               mappings: umData.matched.map((m: {platformName: string; productId: string; qty: number}) => ({
                 platform, platformName: m.platformName, productId: m.productId, qty: m.qty })),
               batchId }) });
@@ -184,7 +184,7 @@ export default function ImportPage() {
           </div>
 
           {/* Auth banner — shown when not logged in via LINE or Google */}
-          {!lineUserId && (
+          {!userId && (
             <div className="mb-4 bg-amber-50 border border-amber-200 rounded-2xl p-4">
               <p className="text-amber-700 text-sm font-medium mb-3">
                 ⚠️ ยังไม่ได้เข้าสู่ระบบ — ดูตัวอย่างได้ แต่บันทึกไม่ได้
@@ -380,7 +380,7 @@ export default function ImportPage() {
             </div>
           )}
 
-          {!lineUserId ? (
+          {!userId ? (
             /* Not authenticated — offer Google sign-in */
             <div className="text-center">
               <p className="text-sm text-gray-500 mb-3">กรุณาเข้าสู่ระบบเพื่อบันทึกข้อมูล</p>
@@ -471,8 +471,8 @@ export default function ImportPage() {
                     onChange={(e) => setMappingSelections((s) => ({ ...s, [u.key ?? u.platformName]: e.target.value }))}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-300"
                     onClick={async () => {
-                      if (productOptions.length === 0 && lineUserId) {
-                        const r = await fetch(`/api/products?lineUserId=${lineUserId}`);
+                      if (productOptions.length === 0 && userId) {
+                        const r = await fetch(`/api/products?userId=${userId}`);
                         const d = await r.json();
                         setProductOptions(d.products ?? []);
                       }
@@ -520,7 +520,7 @@ export default function ImportPage() {
                     });
                   if (mappings.length > 0) {
                     await fetch("/api/stock", { method: "POST", headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ action: "map_and_deduct", lineUserId, mappings, batchId: unmatchedData.batchId }) });
+                      body: JSON.stringify({ action: "map_and_deduct", userId, mappings, batchId: unmatchedData.batchId }) });
                   }
                   setShowMappingModal(false);
                 }}

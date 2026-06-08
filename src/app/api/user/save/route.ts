@@ -6,6 +6,7 @@ import { createRootFolder } from "@/lib/drive";
 export async function POST(req: NextRequest) {
   try {
     const {
+      userId: bodyUserId,
       lineUserId,
       firstName,
       lastName,
@@ -17,6 +18,17 @@ export async function POST(req: NextRequest) {
       googleRefreshToken,
       googleEmail,
     } = await req.json();
+
+    // If a Supabase UUID is provided directly (e.g. from settings reconnect flow), update by id
+    if (bodyUserId && !lineUserId) {
+      const updates: Record<string, unknown> = {};
+      if (googleAccessToken  !== undefined) updates.google_access_token  = googleAccessToken;
+      if (googleRefreshToken !== undefined) updates.google_refresh_token = googleRefreshToken;
+      if (googleEmail        !== undefined) updates.google_email         = googleEmail;
+      const { error } = await supabaseAdmin.from("users").update(updates).eq("id", bodyUserId);
+      if (error) throw error;
+      return NextResponse.json({ ok: true });
+    }
 
     // For Google-only users (no LINE), generate a synthetic LINE user ID from email
     let resolvedLineUserId: string = lineUserId;

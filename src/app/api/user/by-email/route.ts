@@ -14,13 +14,13 @@ export async function GET(req: NextRequest) {
   // 1. Try direct owner match (user connected their own Google account)
   const { data: owner } = await supabaseAdmin
     .from("users")
-    .select("id, line_user_id, business_name")
+    .select("id, business_name")
     .eq("google_email", email)
     .single();
 
-  if (owner?.line_user_id) {
+  if (owner?.id) {
     return NextResponse.json({
-      lineUserId:   owner.line_user_id,
+      userId:       owner.id,
       businessName: owner.business_name ?? "",
       email,
       role: "owner",
@@ -38,18 +38,35 @@ export async function GET(req: NextRequest) {
   if (adminRow?.owner_user_id) {
     const { data: ownerUser } = await supabaseAdmin
       .from("users")
-      .select("line_user_id, business_name")
+      .select("id, business_name")
       .eq("id", adminRow.owner_user_id)
       .single();
 
-    if (ownerUser?.line_user_id) {
+    if (ownerUser?.id) {
       return NextResponse.json({
-        lineUserId:   ownerUser.line_user_id,
+        userId:       ownerUser.id,
         businessName: ownerUser.business_name ?? "",
         email,
         role: "admin",
       });
     }
+  }
+
+  // 3. No user found — create a new one for Google-only sign-up
+  const syntheticLineId = `google_${email.replace(/[@.+]/g, "_")}`;
+  const { data: newUser } = await supabaseAdmin
+    .from("users")
+    .insert({ google_email: email, line_user_id: syntheticLineId })
+    .select("id, business_name")
+    .single();
+
+  if (newUser?.id) {
+    return NextResponse.json({
+      userId:       newUser.id,
+      businessName: newUser.business_name ?? "",
+      email,
+      role: "owner",
+    });
   }
 
   return NextResponse.json({ error: "User not found" }, { status: 404 });

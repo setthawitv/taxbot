@@ -55,14 +55,15 @@ async function getExistingSheetIds(accessToken: string, sheetId: string): Promis
 // POST /api/sync/sheets
 export async function POST(req: NextRequest) {
   try {
-    const { lineUserId } = await req.json();
-    if (!lineUserId) return NextResponse.json({ error: "Missing lineUserId" }, { status: 400 });
+    const body = await req.json();
+    const lineUserId = body.userId ?? body.lineUserId;
+    if (!lineUserId) return NextResponse.json({ error: "Missing userId" }, { status: 400 });
 
     // Get user with Google tokens
     const { data: user } = await supabaseAdmin
       .from("users")
       .select("id, google_access_token, google_refresh_token, sheet_id")
-      .eq("line_user_id", lineUserId)
+      .eq("id", lineUserId)
       .single();
 
     if (!user)                     return NextResponse.json({ error: "User not found" }, { status: 404 });

@@ -109,7 +109,7 @@ function DeductionRow({
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function PhasiPage() {
-  const [lineUserId, setLineUserId] = useState("");
+  const [userId, setUserId] = useState("");
   const [authReady,  setAuthReady]  = useState(false);
   const [year,       setYear]       = useState(CURRENT_YEAR);
   const [raw,        setRaw]        = useState<RawSummary | null>(null);
@@ -138,7 +138,7 @@ export default function PhasiPage() {
       if (session?.user?.email) {
         try {
           const res = await fetch("/api/user/by-email");
-          if (res.ok) { const d = await res.json(); if (d.lineUserId) setLineUserId(d.lineUserId); }
+          if (res.ok) { const d = await res.json(); if (d.userId) setUserId(d.userId); }
         } catch { /* ignore */ }
       }
       setAuthReady(true);
@@ -148,13 +148,13 @@ export default function PhasiPage() {
 
   // ── Fetch raw summary ─────────────────────────────────────────────────────
   useEffect(() => {
-    if (!authReady || !lineUserId) { if (authReady) setLoading(false); return; }
+    if (!authReady || !userId) { if (authReady) setLoading(false); return; }
     setLoading(true);
-    fetch(`/api/tax/summary?lineUserId=${lineUserId}&year=${year}`)
+    fetch(`/api/tax/summary?userId=${userId}&year=${year}`)
       .then((r) => r.json())
       .then((d) => { if (!d.error) setRaw(d); })
       .finally(() => setLoading(false));
-  }, [authReady, lineUserId, year]);
+  }, [authReady, userId, year]);
 
   // ── Load saved deductions from localStorage ────────────────────────────────
   useEffect(() => {

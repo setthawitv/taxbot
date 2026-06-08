@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 
-// GET /api/admin/invite?lineUserId=xxx  — list all admins for owner
+// GET /api/admin/invite?userId=xxx  — list all admins for owner
 export async function GET(req: NextRequest) {
-  const lineUserId = new URL(req.url).searchParams.get("lineUserId");
-  if (!lineUserId) return NextResponse.json({ error: "Missing lineUserId" }, { status: 400 });
+  const sp = new URL(req.url).searchParams;
+  const lineUserId = sp.get("userId") ?? sp.get("lineUserId");
+  if (!lineUserId) return NextResponse.json({ error: "Missing userId" }, { status: 400 });
 
   const { data: user } = await supabaseAdmin
-    .from("users").select("id").eq("line_user_id", lineUserId).single();
+    .from("users").select("id").eq("id", lineUserId).single();
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
   const { data: admins } = await supabaseAdmin
@@ -21,14 +22,16 @@ export async function GET(req: NextRequest) {
 
 // POST /api/admin/invite — add admin by email
 export async function POST(req: NextRequest) {
-  const { lineUserId, adminEmail } = await req.json();
+  const body = await req.json();
+  const { adminEmail } = body;
+  const lineUserId = body.userId ?? body.lineUserId;
   if (!lineUserId || !adminEmail)
-    return NextResponse.json({ error: "Missing lineUserId or adminEmail" }, { status: 400 });
+    return NextResponse.json({ error: "Missing userId or adminEmail" }, { status: 400 });
 
   const email = adminEmail.trim().toLowerCase();
 
   const { data: user } = await supabaseAdmin
-    .from("users").select("id").eq("line_user_id", lineUserId).single();
+    .from("users").select("id").eq("id", lineUserId).single();
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
   // Check not inviting yourself
@@ -51,12 +54,14 @@ export async function POST(req: NextRequest) {
 
 // DELETE /api/admin/invite — remove admin by id
 export async function DELETE(req: NextRequest) {
-  const { lineUserId, adminId } = await req.json();
+  const body = await req.json();
+  const { adminId } = body;
+  const lineUserId = body.userId ?? body.lineUserId;
   if (!lineUserId || !adminId)
-    return NextResponse.json({ error: "Missing lineUserId or adminId" }, { status: 400 });
+    return NextResponse.json({ error: "Missing userId or adminId" }, { status: 400 });
 
   const { data: user } = await supabaseAdmin
-    .from("users").select("id").eq("line_user_id", lineUserId).single();
+    .from("users").select("id").eq("id", lineUserId).single();
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
   const { error } = await supabaseAdmin

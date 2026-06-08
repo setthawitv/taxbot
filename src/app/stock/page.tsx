@@ -26,9 +26,9 @@ const fmt = (n: number) => n.toLocaleString("th-TH", { minimumFractionDigits: 0,
 const fmtB = (n: number) => "฿" + n.toLocaleString("th-TH", { minimumFractionDigits: 0 });
 
 // ── Platform Mapping Modal ────────────────────────────────────────────────────
-function MappingModal({ product, lineUserId, onClose, onSaved }: {
+function MappingModal({ product, userId, onClose, onSaved }: {
   product: Product;
-  lineUserId: string;
+  userId: string;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -47,9 +47,9 @@ function MappingModal({ product, lineUserId, onClose, onSaved }: {
     await fetch("/api/stock/mapping", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lineUserId, productId: product.id, platform, platformName: compositeKey }),
+      body: JSON.stringify({ userId, productId: product.id, platform, platformName: compositeKey }),
     });
-    const res = await fetch(`/api/products?lineUserId=${lineUserId}`);
+    const res = await fetch(`/api/products?userId=${userId}`);
     const d   = await res.json();
     const updated = (d.products ?? []).find((p: Product) => p.id === product.id);
     setMappings(updated?.product_platform_names ?? []);
@@ -60,7 +60,7 @@ function MappingModal({ product, lineUserId, onClose, onSaved }: {
     await fetch("/api/stock/mapping", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, lineUserId }),
+      body: JSON.stringify({ id, userId }),
     });
     setMappings((m) => m.filter((x) => x.id !== id));
     onSaved();
@@ -404,7 +404,7 @@ const PLATFORMS_ALL = ["shopee","tiktok","lazada"] as const;
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function StockPage() {
-  const [lineUserId, setLineUserId] = useState("");
+  const [userId, setUserId] = useState("");
   const [authReady,  setAuthReady]  = useState(false);
   const { data: session, status: sessionStatus } = useSession();
 
@@ -430,7 +430,7 @@ export default function StockPage() {
       if (session?.user?.email) {
         try {
           const res = await fetch("/api/user/by-email");
-          if (res.ok) { const d = await res.json(); if (d.lineUserId) setLineUserId(d.lineUserId); }
+          if (res.ok) { const d = await res.json(); if (d.userId) setUserId(d.userId); }
         } catch { /* ignore */ }
       }
       setAuthReady(true);
@@ -440,9 +440,9 @@ export default function StockPage() {
 
   // Load summary
   const loadSummary = async () => {
-    if (!lineUserId) return;
+    if (!userId) return;
     setSumLoading(true);
-    const res = await fetch(`/api/stock/summary?lineUserId=${lineUserId}`);
+    const res = await fetch(`/api/stock/summary?userId=${userId}`);
     const d   = await res.json();
     setSummary(d.summary ?? []);
     setSumLoading(false);
@@ -450,24 +450,24 @@ export default function StockPage() {
 
   // Load products
   const loadProducts = async () => {
-    if (!lineUserId) return;
+    if (!userId) return;
     setLoading(true);
-    const res = await fetch(`/api/products?lineUserId=${lineUserId}&search=${search}`);
+    const res = await fetch(`/api/products?userId=${userId}&search=${search}`);
     const d   = await res.json();
     setProducts(d.products ?? []);
     setLoading(false);
   };
 
-  useEffect(() => { if (authReady && lineUserId) loadProducts(); else if (authReady) setLoading(false); }, [authReady, lineUserId]);
-  useEffect(() => { if (lineUserId) { const t = setTimeout(loadProducts, 300); return () => clearTimeout(t); } }, [search]);
+  useEffect(() => { if (authReady && userId) loadProducts(); else if (authReady) setLoading(false); }, [authReady, userId]);
+  useEffect(() => { if (userId) { const t = setTimeout(loadProducts, 300); return () => clearTimeout(t); } }, [search]);
 
   async function handleSave(data: Partial<Product>) {
     if (editProd) {
       await fetch("/api/products", { method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lineUserId, id: editProd.id, ...data }) });
+        body: JSON.stringify({ userId, id: editProd.id, ...data }) });
     } else {
       await fetch("/api/products", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lineUserId, ...data }) });
+        body: JSON.stringify({ userId, ...data }) });
     }
     setShowAdd(false); setEditProd(null); loadProducts();
   }
@@ -475,14 +475,14 @@ export default function StockPage() {
   async function handleDelete(id: string) {
     if (!confirm("ลบสินค้านี้ใช่มั้ย?")) return;
     await fetch("/api/products", { method: "DELETE", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lineUserId, id }) });
+      body: JSON.stringify({ userId, id }) });
     loadProducts();
   }
 
   async function handleAdjust(type: "in"|"out"|"adjust", qty: number, note: string) {
     if (!adjustProd) return;
     await fetch("/api/stock", { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lineUserId, productId: adjustProd.id, type, qty, note }) });
+      body: JSON.stringify({ userId, productId: adjustProd.id, type, qty, note }) });
     setAdjustProd(null); loadProducts();
   }
 
@@ -491,7 +491,7 @@ export default function StockPage() {
     if (!file) return;
     setImporting(true); setImportMsg("");
     const fd = new FormData();
-    fd.append("file", file); fd.append("lineUserId", lineUserId);
+    fd.append("file", file); fd.append("userId", userId);
     const res = await fetch("/api/products/import", { method: "POST", body: fd });
     const d   = await res.json();
     setImportMsg(d.ok ? `นำเข้าสำเร็จ ${d.saved} สินค้า` : `Error: ${d.error}`);
@@ -780,7 +780,7 @@ export default function StockPage() {
         <AdjustModal product={adjustProd} onClose={() => setAdjustProd(null)} onSave={handleAdjust} />
       )}
       {mappingProd && (
-        <MappingModal product={mappingProd} lineUserId={lineUserId}
+        <MappingModal product={mappingProd} userId={userId}
           onClose={() => setMappingProd(null)} onSaved={loadProducts} />
       )}
     </AppLayout>
