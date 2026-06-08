@@ -117,15 +117,15 @@ export default function AppLayout({
               <Link
                 key={href}
                 href={href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                   active
-                    ? "bg-white/10 text-white"
-                    : "text-white/55 hover:text-white hover:bg-white/8"
+                    ? "bg-emerald-500 text-white shadow-md shadow-emerald-900/40"
+                    : "text-white/55 hover:text-white hover:bg-white/10"
                 }`}
               >
                 <Icon className="w-4 h-4 flex-shrink-0" />
                 <span className="flex-1">{labelTh}</span>
-                <span className={`text-[10px] font-normal ${active ? "text-white/40" : "text-white/25"}`}>
+                <span className={`text-[10px] font-normal ${active ? "text-white/60" : "text-white/25"}`}>
                   {labelEn}
                 </span>
               </Link>
@@ -172,7 +172,7 @@ export default function AppLayout({
                 key={href}
                 href={href}
                 className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
-                  active ? "text-[#0A192F]" : "text-gray-400 hover:text-gray-600"
+                  active ? "text-emerald-600" : "text-gray-400 hover:text-gray-600"
                 }`}
               >
                 <Icon className="w-5 h-5" />
