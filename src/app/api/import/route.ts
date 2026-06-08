@@ -203,6 +203,15 @@ export async function POST(req: NextRequest) {
     }));
 
     // Upsert into platform_orders — (user_id, line_key) is unique
+    const existingKeysBefore = new Set<string>();
+    const lineKeys = records.map((r) => r.line_key);
+    if (lineKeys.length > 0) {
+      const { data: existing } = await supabaseAdmin
+        .from("platform_orders").select("line_key")
+        .eq("user_id", user.id).in("line_key", lineKeys);
+      (existing ?? []).forEach((e) => existingKeysBefore.add(e.line_key));
+    }
+
     const { error: upsertErr } = await supabaseAdmin
       .from("platform_orders")
       .upsert(records, { onConflict: "user_id,line_key", ignoreDuplicates: true });
@@ -212,6 +221,19 @@ export async function POST(req: NextRequest) {
       console.error("[import] upsert error:", errMsg);
       return NextResponse.json({ error: errMsg }, { status: 500 });
     }
+
+    const newCount = records.filter((r) => !existingKeysBefore.has(r.line_key)).length;
+
+    // Save import log
+    // Save import log (non-blocking, fire-and-forget)
+    void supabaseAdmin.from("import_logs").insert({
+      user_id:      user.id,
+      platform,
+      filename:     file.name,
+      order_count:  parsed.rows.length,
+      new_count:    newCount,
+      total_amount: parsed.total,
+    });
 
     return NextResponse.json({
       ok:      true,

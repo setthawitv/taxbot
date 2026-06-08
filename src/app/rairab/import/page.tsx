@@ -6,6 +6,16 @@ import { useSession, signIn } from "next-auth/react";
 
 type Platform = "tiktok" | "shopee" | "lazada";
 
+type ImportLog = {
+  id: string;
+  platform: Platform;
+  filename: string;
+  order_count: number;
+  new_count: number;
+  total_amount: number;
+  created_at: string;
+};
+
 type PreviewRow = {
   orderId:     string;
   date:        string;
@@ -53,6 +63,9 @@ export default function ImportPage() {
   } | null>(null);
   const [productOptions,   setProductOptions]   = useState<{id:string; name:string; sku:string|null}[]>([]);
   const [mappingSelections,setMappingSelections]= useState<Record<string,string>>({}); // platformName → productId
+  const [logs,          setLogs]          = useState<ImportLog[]>([]);
+  const [logsLoading,   setLogsLoading]   = useState(false);
+  const [showLogs,      setShowLogs]      = useState(false);
 
   const { data: session, status: sessionStatus } = useSession();
 
@@ -65,7 +78,10 @@ export default function ImportPage() {
           const res = await fetch("/api/user/by-email");
           if (res.ok) {
             const data = await res.json();
-            if (data.userId) setUserId(data.userId);
+            if (data.userId) {
+              setUserId(data.userId);
+              loadLogs(data.userId);
+            }
           }
         } catch { /* ignore */ }
       }
@@ -73,6 +89,14 @@ export default function ImportPage() {
     }
     resolveUser();
   }, [sessionStatus, session]);
+
+  async function loadLogs(uid: string) {
+    setLogsLoading(true);
+    try {
+      const res = await fetch(`/api/import/logs?userId=${uid}`);
+      if (res.ok) { const d = await res.json(); setLogs(d.logs ?? []); }
+    } finally { setLogsLoading(false); }
+  }
 
   function selectPlatform(p: Platform) {
     setPlatform(p);
@@ -149,6 +173,7 @@ export default function ImportPage() {
         }
       }
       setStep("done");
+      if (userId) loadLogs(userId); // refresh log
     } catch (err) {
       setError(String(err instanceof Error ? err.message : err));
     } finally {
@@ -227,6 +252,57 @@ export default function ImportPage() {
             <p>🛒 <strong>Shopee</strong> → Seller Centre → Orders → Export</p>
             <p>📦 <strong>Lazada</strong> → Seller Center → Orders → Export</p>
           </div>
+
+          {/* ── Upload history ── */}
+          {userId && (
+            <div className="mt-4">
+              <button
+                onClick={() => { setShowLogs((v) => !v); if (!showLogs && logs.length === 0) loadLogs(userId); }}
+                className="w-full flex items-center justify-between px-4 py-3 bg-white rounded-2xl border border-gray-100 text-sm text-gray-600 hover:border-gray-300 transition-colors"
+              >
+                <span className="font-semibold">🕓 ประวัติการอัพโหลด</span>
+                <span className="text-gray-400">{showLogs ? "▲" : "▼"} {logs.length > 0 ? `${logs.length} ครั้ง` : ""}</span>
+              </button>
+
+              {showLogs && (
+                <div className="mt-2 bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                  {logsLoading ? (
+                    <p className="text-center text-gray-400 text-xs py-6">กำลังโหลด...</p>
+                  ) : logs.length === 0 ? (
+                    <p className="text-center text-gray-400 text-xs py-6">ยังไม่มีประวัติการอัพโหลด</p>
+                  ) : (
+                    <div className="divide-y divide-gray-50">
+                      {logs.map((log) => {
+                        const pl = PLATFORMS.find((p) => p.id === log.platform);
+                        const date = new Date(log.created_at);
+                        const dateStr = date.toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
+                        const timeStr = date.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+                        return (
+                          <div key={log.id} className="px-4 py-3 flex items-start gap-3">
+                            <span className="text-xl mt-0.5">{pl?.emoji ?? "📄"}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium text-gray-700 truncate">{log.filename}</p>
+                              <p className="text-xs text-gray-400 mt-0.5">{dateStr} {timeStr}</p>
+                              <div className="flex gap-2 mt-1">
+                                {log.new_count > 0 && (
+                                  <span className="text-[11px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded-full font-medium">
+                                    +{log.new_count} ใหม่
+                                  </span>
+                                )}
+                                <span className="text-[11px] bg-gray-50 text-gray-500 px-1.5 py-0.5 rounded-full">
+                                  {log.order_count} orders · ฿{Number(log.total_amount).toLocaleString("th-TH", { maximumFractionDigits: 0 })}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </main>
     );

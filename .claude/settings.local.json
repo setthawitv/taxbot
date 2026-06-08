@@ -55,7 +55,13 @@
       "WebFetch(domain:www.datalab.to)",
       "WebFetch(domain:github.com)",
       "Bash(python3 -c ' *)",
-      "PowerShell(cd \"C:\\\\Users\\\\mos_b\\\\Desktop\\\\TaxBot\"; Get-ChildItem -Recurse -Directory | Where-Object {$_.FullName -notmatch '\\(node_modules|\\\\.next|\\\\.vercel\\)'} | Sort-Object FullName | Select-Object -First 50 | ForEach-Object {$_.FullName.Replace\\('C:\\\\Users\\\\mos_b\\\\Desktop\\\\TaxBot\\\\', ''\\)})"
+      "PowerShell(cd \"C:\\\\Users\\\\mos_b\\\\Desktop\\\\TaxBot\"; Get-ChildItem -Recurse -Directory | Where-Object {$_.FullName -notmatch '\\(node_modules|\\\\.next|\\\\.vercel\\)'} | Sort-Object FullName | Select-Object -First 50 | ForEach-Object {$_.FullName.Replace\\('C:\\\\Users\\\\mos_b\\\\Desktop\\\\TaxBot\\\\', ''\\)})",
+      "Bash(node -e \"require\\('sharp'\\)\")",
+      "Bash(grep \"LINE_CHANNEL_ACCESS_TOKEN\" .env.local)",
+      "Bash(grep \"LINE_CHANNEL_ACCESS_TOKEN\" .env)",
+      "Bash(curl -s -X POST https://www.vendeefinance.com/api/setup-richmenu -H 'Authorization: Bearer yXW47jG4jQiuHoZcwv/IVmMOyFSRxiCeBwN9qG24maz3oUkzBohnkYoWyBZloiZ7HzR8Y317kXey60dAMt1KdzSQyT0yDzrjO8XWP11xlATQHIWB1acJM2rYxB61LFn7Ri2xx2mUF+RzHDbQ1RrghgdB04t89/1O/w1cDnyilFU=')",
+      "Bash(curl -sf https://www.vendeefinance.com/api/setup-richmenu -o /dev/null -w \"%{http_code}\" -X HEAD)",
+      "WebFetch(domain:developers.zortout.com)"
     ]
   }
 }
