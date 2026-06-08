@@ -427,20 +427,11 @@ export default function StockPage() {
   useEffect(() => {
     if (sessionStatus === "loading") return;
     async function resolve() {
-      const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
-      if (liffId) {
-        try {
-          const { default: liff } = await import("@line/liff");
-          await liff.init({ liffId });
-          if (liff.isLoggedIn()) {
-            const p = await liff.getProfile();
-            setLineUserId(p.userId); setAuthReady(true); return;
-          }
-        } catch { /* ignore */ }
-      }
       if (session?.user?.email) {
-        const res = await fetch("/api/user/by-email");
-        if (res.ok) { const d = await res.json(); if (d.lineUserId) setLineUserId(d.lineUserId); }
+        try {
+          const res = await fetch("/api/user/by-email");
+          if (res.ok) { const d = await res.json(); if (d.lineUserId) setLineUserId(d.lineUserId); }
+        } catch { /* ignore */ }
       }
       setAuthReady(true);
     }

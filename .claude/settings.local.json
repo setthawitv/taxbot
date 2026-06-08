@@ -54,7 +54,8 @@
       "Bash(node -e ' *)",
       "WebFetch(domain:www.datalab.to)",
       "WebFetch(domain:github.com)",
-      "Bash(python3 -c ' *)"
+      "Bash(python3 -c ' *)",
+      "PowerShell(cd \"C:\\\\Users\\\\mos_b\\\\Desktop\\\\TaxBot\"; Get-ChildItem -Recurse -Directory | Where-Object {$_.FullName -notmatch '\\(node_modules|\\\\.next|\\\\.vercel\\)'} | Sort-Object FullName | Select-Object -First 50 | ForEach-Object {$_.FullName.Replace\\('C:\\\\Users\\\\mos_b\\\\Desktop\\\\TaxBot\\\\', ''\\)})"
     ]
   }
 }

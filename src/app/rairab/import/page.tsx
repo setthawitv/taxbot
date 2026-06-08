@@ -56,56 +56,21 @@ export default function ImportPage() {
 
   const { data: session, status: sessionStatus } = useSession();
 
-  // ── Resolve LINE user ID (LIFF first, Google session fallback) ──────────────
+  // ── Resolve LINE user ID (Google session) ────────────────────────────────
   useEffect(() => {
-    if (sessionStatus === "loading") return; // wait for next-auth
-
-    const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
-
+    if (sessionStatus === "loading") return;
     async function resolveUser() {
-      // 1️⃣ Try LIFF (works when opened inside LINE app)
-      if (liffId) {
-        try {
-          const { default: liff } = await import("@line/liff");
-          await liff.init({ liffId });
-          if (!liff.isLoggedIn() && !liff.isInClient() && /Line\//i.test(navigator.userAgent)) {
-            window.location.replace(`https://liff.line.me/${liffId}`);
-            return;
-          }
-          if (liff.isLoggedIn()) {
-            const p = await liff.getProfile();
-            setLineUserId(p.userId);
-            setAuthReady(true);
-            return;
-          }
-          // Inside LINE app but not logged in → force LIFF login
-          if (liff.isInClient()) {
-            liff.login();
-            return;
-          }
-        } catch {
-          // Not in LINE context — fall through to Google session
-        }
-      }
-
-      // 2️⃣ Fall back to Google session (regular browser)
       if (session?.user?.email) {
         try {
           const res = await fetch("/api/user/by-email");
           if (res.ok) {
             const data = await res.json();
-            if (data.lineUserId) {
-              setLineUserId(data.lineUserId);
-            }
+            if (data.lineUserId) setLineUserId(data.lineUserId);
           }
-        } catch {
-          // ignore — lineUserId stays empty
-        }
+        } catch { /* ignore */ }
       }
-
       setAuthReady(true);
     }
-
     resolveUser();
   }, [sessionStatus, session]);
 

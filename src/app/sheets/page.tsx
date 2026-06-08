@@ -1,31 +1,35 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 
 export default function SheetsRedirectPage() {
   const [status, setStatus] = useState<"loading" | "redirecting" | "no_sheet" | "no_google" | "error">("loading");
+  const { data: session, status: sessionStatus } = useSession();
 
   useEffect(() => {
-    const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
-    if (!liffId) { setStatus("error"); return; }
+    if (sessionStatus === "loading") return;
 
-    import("@line/liff").then(({ default: liff }) => {
-      liff.init({ liffId }).then(async () => {
-        if (!liff.isLoggedIn()) { liff.login(); return; }
+    async function resolve() {
+      if (!session?.user?.email) { setStatus("error"); return; }
+      try {
+        const byEmail = await fetch("/api/user/by-email");
+        if (!byEmail.ok) { setStatus("error"); return; }
+        const { lineUserId } = await byEmail.json();
+        if (!lineUserId) { setStatus("error"); return; }
 
-        const profile = await liff.getProfile();
-        const res = await fetch(`/api/user/links?lid=${profile.userId}`);
+        const res = await fetch(`/api/user/links?lid=${lineUserId}`);
         if (!res.ok) { setStatus("error"); return; }
-
         const data = await res.json();
         if (!data.google_connected) { setStatus("no_google"); return; }
         if (!data.sheet_url) { setStatus("no_sheet"); return; }
-
         setStatus("redirecting");
         window.location.href = data.sheet_url;
-      }).catch(() => setStatus("error"));
-    });
-  }, []);
+      } catch { setStatus("error"); }
+    }
+
+    resolve();
+  }, [sessionStatus, session]);
 
   return (
     <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4">

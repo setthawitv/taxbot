@@ -31,34 +31,6 @@ function useResolvedUser(externalUserInfo?: UserInfo | null) {
     if (status === "loading") return;
 
     async function resolve() {
-      // Try LIFF first
-      const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
-      if (liffId) {
-        try {
-          const { default: liff } = await import("@line/liff");
-          await liff.init({ liffId });
-          if (liff.isLoggedIn()) {
-            const p = await liff.getProfile();
-            // Fetch business name from DB
-            try {
-              const res = await fetch(`/api/user/status?lineUserId=${p.userId}`);
-              if (res.ok) {
-                const d = await res.json();
-                setUser({
-                  displayName: p.displayName,
-                  pictureUrl: p.pictureUrl ?? "",
-                  businessName: d.profile?.businessName ?? "",
-                });
-                return;
-              }
-            } catch { /* ignore */ }
-            setUser({ displayName: p.displayName, pictureUrl: p.pictureUrl ?? "", businessName: "" });
-            return;
-          }
-        } catch { /* not in LINE */ }
-      }
-
-      // Fallback: Google session
       if (session?.user?.email) {
         try {
           const res = await fetch("/api/user/by-email");

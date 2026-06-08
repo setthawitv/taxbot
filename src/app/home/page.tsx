@@ -315,36 +315,6 @@ export default function Home() {
   useEffect(() => {
     if (sessionStatus === "loading") return;
     async function resolveUser() {
-      const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
-      if (liffId) {
-        try {
-          const { default: liff } = await import("@line/liff");
-          await liff.init({ liffId });
-          // If opened in LINE browser but not via LIFF URL → redirect to LIFF URL for auth
-          if (!liff.isLoggedIn() && !liff.isInClient() && /Line\//i.test(navigator.userAgent)) {
-            window.location.replace(`https://liff.line.me/${liffId}`);
-            return;
-          }
-          if (liff.isLoggedIn()) {
-            const p = await liff.getProfile();
-            setLineUserId(p.userId);
-            setUserInfo({ displayName: p.displayName, pictureUrl: p.pictureUrl ?? "", businessName: "", googleConnected: false });
-            // Save latest LINE profile to DB in background
-            fetch("/api/user/profile", {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ lineUserId: p.userId, displayName: p.displayName, pictureUrl: p.pictureUrl }),
-            }).catch(() => {});
-            setAuthReady(true);
-            return;
-          }
-          // Inside LINE app but not logged in → force LIFF login
-          if (liff.isInClient()) {
-            liff.login();
-            return;
-          }
-        } catch { /* not in LINE */ }
-      }
       if (session?.user?.email) {
         try {
           const res = await fetch("/api/user/by-email");

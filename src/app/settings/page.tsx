@@ -82,41 +82,11 @@ function SettingsPageInner() {
     }
   }, [searchParams]);
 
-  // Init LIFF → fallback to Google session for browser users
+  // Resolve user via Google session
   useEffect(() => {
     if (sessionStatus === "loading") return;
-    const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
 
     async function resolve() {
-      if (liffId) {
-        try {
-          const { default: liff } = await import("@line/liff");
-          await liff.init({ liffId });
-          if (!liff.isLoggedIn() && !liff.isInClient() && /Line\//i.test(navigator.userAgent)) {
-            window.location.replace(`https://liff.line.me/${liffId}`);
-            return;
-          }
-          if (liff.isLoggedIn()) {
-            const profile = await liff.getProfile();
-            setLineUserId(profile.userId);
-            const res = await fetch(`/api/user/status?lineUserId=${profile.userId}`);
-            if (res.ok) {
-              const data = await res.json();
-              setGoogleEmail(data.email ?? "");
-              const biz = data.profile?.businessName ?? "";
-              setBusinessName(biz);
-              setBusinessNameDraft(biz);
-              setCurrentPlan(data.profile?.plan ?? "trial");
-              const now = new Date();
-              fetchScanUsage(profile.userId, now.getFullYear(), now.getMonth() + 1);
-            }
-            return;
-          }
-          if (liff.isInClient()) { liff.login(); return; }
-        } catch { /* not in LINE */ }
-      }
-
-      // Fallback: Google session (browser)
       if (session?.user?.email) {
         setIsWebUser(true);
         try {
@@ -126,7 +96,6 @@ function SettingsPageInner() {
             if (d.lineUserId) {
               setLineUserId(d.lineUserId);
               setGoogleEmail(session.user.email ?? "");
-              // Load business name + plan
               const statusRes = await fetch(`/api/user/status?lineUserId=${d.lineUserId}`);
               if (statusRes.ok) {
                 const statusData = await statusRes.json();
@@ -134,9 +103,8 @@ function SettingsPageInner() {
                 setBusinessName(biz);
                 setBusinessNameDraft(biz);
                 setCurrentPlan(statusData.profile?.plan ?? "trial");
-              // Fetch scan usage for current month
-              const now = new Date();
-              fetchScanUsage(d.lineUserId, now.getFullYear(), now.getMonth() + 1);
+                const now = new Date();
+                fetchScanUsage(d.lineUserId, now.getFullYear(), now.getMonth() + 1);
               }
             }
           }
@@ -145,14 +113,11 @@ function SettingsPageInner() {
     }
 
     resolve().then(() => {
-      // After resolving user, check if we just came back from a Google reconnect
       const isReconnect = searchParams.get("reconnect") === "1";
       if (isReconnect) {
-        // Remove the param from URL without reload
         const url = new URL(window.location.href);
         url.searchParams.delete("reconnect");
         window.history.replaceState({}, "", url.toString());
-        // Re-save tokens from the fresh session
         setReconnecting(true);
       }
     });
@@ -319,18 +284,7 @@ function SettingsPageInner() {
   }
 
   async function handleLogout() {
-    // Clear onboarding cookie
     document.cookie = "taxbot_onboarded=; path=/; max-age=0";
-    // Sign out from LIFF if available
-    try {
-      const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
-      if (liffId) {
-        const { default: liff } = await import("@line/liff");
-        await liff.init({ liffId });
-        if (liff.isLoggedIn()) liff.logout();
-      }
-    } catch { /* ignore */ }
-    // Sign out from NextAuth (Google session)
     await signOut({ callbackUrl: "/" });
   }
 

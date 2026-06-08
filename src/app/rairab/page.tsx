@@ -170,31 +170,10 @@ export default function RaiRab() {
   useEffect(() => {
     if (sessionStatus === "loading") return;
     async function resolveUser() {
-      const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
-      if (liffId) {
-        try {
-          const { default: liff } = await import("@line/liff");
-          await liff.init({ liffId });
-          if (!liff.isLoggedIn() && !liff.isInClient() && /Line\//i.test(navigator.userAgent)) {
-            window.location.replace(`https://liff.line.me/${liffId}`);
-            return;
-          }
-          if (liff.isLoggedIn()) {
-            const p = await liff.getProfile();
-            setLineUserId(p.userId);
-            setAuthReady(true);
-            return;
-          }
-          if (liff.isInClient()) { liff.login(); return; }
-        } catch { /* not in LINE */ }
-      }
       if (session?.user?.email) {
         try {
           const res = await fetch("/api/user/by-email");
-          if (res.ok) {
-            const d = await res.json();
-            if (d.lineUserId) setLineUserId(d.lineUserId);
-          }
+          if (res.ok) { const d = await res.json(); if (d.lineUserId) setLineUserId(d.lineUserId); }
         } catch { /* ignore */ }
       }
       setAuthReady(true);

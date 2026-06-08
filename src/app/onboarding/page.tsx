@@ -3,11 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { initLiff, getLiffProfile, isInLineClient } from "@/lib/liff";
 import { VendeeLogo } from "@/components/icons";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
-type LiffProfile = { userId: string; displayName: string; pictureUrl?: string };
 type BusinessType = "individual" | "partnership" | "company";
 
 // ─── Step indicator ────────────────────────────────────────────────────────────
@@ -46,12 +44,10 @@ function StepBar({ step }: { step: number }) {
 
 // ─── Step 1 – Personal info ────────────────────────────────────────────────────
 function Step1({
-  profile,
   firstName, lastName,
   onFirstName, onLastName,
   onNext,
 }: {
-  profile: LiffProfile | null;
   firstName: string; lastName: string;
   onFirstName: (v: string) => void; onLastName: (v: string) => void;
   onNext: () => void;
@@ -59,22 +55,6 @@ function Step1({
   const canProceed = firstName.trim() && lastName.trim();
   return (
     <div className="flex flex-col gap-5">
-      {/* LINE profile card — only shown when logged in via LINE */}
-      {profile && (
-        <div>
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">LINE</p>
-          <div className="flex items-center gap-3 bg-gray-50 rounded-2xl px-4 py-3 border border-gray-100">
-            {profile.pictureUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={profile.pictureUrl} alt="avatar" className="w-10 h-10 rounded-full object-cover" />
-            ) : (
-              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-lg">👤</div>
-            )}
-            <span className="flex-1 font-medium text-gray-800">{profile.displayName}</span>
-            <div className="w-7 h-7 rounded-full bg-green-500 flex items-center justify-center text-white text-sm">✓</div>
-          </div>
-        </div>
-      )}
 
       {/* First name */}
       <div>
@@ -298,13 +278,11 @@ function Step3({
 
 // ─── Main page ─────────────────────────────────────────────────────────────────
 export default function OnboardingPage() {
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
 
   const [step, setStep] = useState(1);
-  const [liffProfile, setLiffProfile] = useState<LiffProfile | null>(null);
-  const [notInLine, setNotInLine] = useState(false);
-  const [checking, setChecking] = useState(true); // true while verifying onboarding status
+  const [checking, setChecking] = useState(true);
 
   // Step 1
   const [firstName, setFirstName] = useState("");
@@ -319,16 +297,18 @@ export default function OnboardingPage() {
   // Step 3
   const [googleEmail, setGoogleEmail] = useState<string | null>(null);
   const [googleConnected, setGoogleConnected] = useState(false);
-  const [saving,          setSaving]          = useState(false);
-  const [saveError,       setSaveError]       = useState("");
-  const [pollingGoogle, setPollingGoogle] = useState(false);
+  const [saving,    setSaving]    = useState(false);
+  const [saveError, setSaveError] = useState("");
+
+  // unused ref kept to satisfy Step3 polling prop
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => { return () => { if (pollTimerRef.current) clearInterval(pollTimerRef.current); }; }, []);
 
-  // ── When not in LINE: check Google session then decide what to show ──────────
+  // ── Check Google session ──────────────────────────────────────────────────
   useEffect(() => {
-    if (!notInLine) return;
+    if (sessionStatus === "loading") return;
 
-    async function checkBrowserUser() {
+    async function checkUser() {
       if (session?.user?.email) {
         try {
           const res = await fetch("/api/user/by-email");
@@ -342,113 +322,40 @@ export default function OnboardingPage() {
                 router.replace("/home");
                 return;
               }
+              // Pre-fill saved data
+              if (status.profile) {
+                const p = status.profile;
+                if (p.firstName)    setFirstName(p.firstName);
+                if (p.lastName)     setLastName(p.lastName);
+                if (p.businessName) setBusinessName(p.businessName);
+                if (p.businessType) setBusinessType(p.businessType);
+                if (p.phone)        setPhone(p.phone);
+                setVatRegistered(p.vatRegistered ?? false);
+              }
             }
           }
         } catch { /* ignore */ }
-        // Google session exists but user not onboarded yet — pre-fill and show form
         setGoogleConnected(true);
         setGoogleEmail(session.user.email);
       }
       setChecking(false);
     }
 
-    checkBrowserUser();
-  }, [notInLine, session, router]);
-
-  // ── Main LIFF init ─────────────────────────────────────────────────────────
-  useEffect(() => {
-    initLiff()
-      .then(async () => {
-        if (!isInLineClient()) {
-          setNotInLine(true); // checking stays true until checkBrowserUser runs
-          return;
-        }
-
-        const profile = await getLiffProfile();
-        if (!profile) return;
-        setLiffProfile(profile);
-
-        // Check Supabase — skip onboarding entirely if already done
-        const res = await fetch(`/api/user/status?lineUserId=${profile.userId}`);
-        const status = await res.json();
-
-        if (status.onboarded) {
-          // User has registered before — restore cookie and go to dashboard
-          document.cookie = "taxbot_onboarded=1; path=/; max-age=31536000";
-          router.replace("/home");
-          return;
-        }
-
-        setChecking(false); // new user — show the form
-
-        // Pre-fill any data they saved in a previous partial session
-        if (status.profile) {
-          const p = status.profile;
-          if (p.firstName)    setFirstName(p.firstName);
-          if (p.lastName)     setLastName(p.lastName);
-          if (p.businessName) setBusinessName(p.businessName);
-          if (p.businessType) setBusinessType(p.businessType);
-          if (p.phone)        setPhone(p.phone);
-          setVatRegistered(p.vatRegistered ?? false);
-        }
-
-        if (status.connected) {
-          setGoogleConnected(true);
-          setGoogleEmail(status.email);
-        }
-      })
-      .catch(() => { setNotInLine(true); }); // checkBrowserUser will call setChecking(false)
-  }, [router]);
-
-  useEffect(() => {
-    return () => { if (pollTimerRef.current) clearInterval(pollTimerRef.current); };
-  }, []);
-
-  function startGooglePolling(lineUserId: string) {
-    setPollingGoogle(true);
-    if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-
-    pollTimerRef.current = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/user/status?lineUserId=${lineUserId}`);
-        const data = await res.json();
-        if (data.connected) {
-          clearInterval(pollTimerRef.current!);
-          setPollingGoogle(false);
-          setGoogleEmail(data.email);
-          setGoogleConnected(true);
-        }
-      } catch { /* keep polling */ }
-    }, 3000);
-
-    setTimeout(() => {
-      if (pollTimerRef.current) { clearInterval(pollTimerRef.current); setPollingGoogle(false); }
-    }, 5 * 60 * 1000);
-  }
+    checkUser();
+  }, [sessionStatus, session, router]);
 
   async function connectGoogle() {
-    if (isInLineClient()) {
-      const userId = liffProfile?.userId;
-      if (!userId) return;
-      const liffModule = await import("@line/liff");
-      liffModule.default.openWindow({
-        url: `${window.location.origin}/connect-google?lid=${userId}`,
-        external: true,
-      });
-      startGooglePolling(userId);
-    } else {
-      signIn("google", { callbackUrl: "/onboarding" });
-    }
+    signIn("google", { callbackUrl: "/onboarding" });
   }
 
   async function finish() {
-    if (saving) return;       // prevent double-click
+    if (saving) return;
     setSaving(true);
     setSaveError("");
 
-    // For Google-only users (no LINE), generate a synthetic user ID from email
-    const lineUserId = liffProfile?.userId
-      ?? (googleEmail ? `google_${googleEmail.toLowerCase().replace(/[@.+]/g, "_")}` : null);
+    const lineUserId = googleEmail
+      ? `google_${googleEmail.toLowerCase().replace(/[@.+]/g, "_")}`
+      : null;
 
     try {
       const s = session as typeof session & { accessToken?: string; refreshToken?: string };
@@ -471,7 +378,6 @@ export default function OnboardingPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         console.error("[onboarding] /api/user/save failed:", res.status, data);
-        // Show error but still proceed — user can fix in settings later
         setSaveError(data.error || `บันทึกไม่สำเร็จ (${res.status}) — ระบบจะพาเข้าหน้าหลักให้`);
       }
     } catch (err) {
@@ -482,7 +388,6 @@ export default function OnboardingPage() {
     router.push("/home");
   }
 
-  // ── Checking onboarding status (LINE or browser Google check) ──────────────
   if (checking) {
     return (
       <main className="min-h-screen bg-white flex items-center justify-center">
@@ -494,14 +399,12 @@ export default function OnboardingPage() {
     );
   }
 
-  // ── Not opened inside LINE — show login options (only if not yet authenticated) ──
-  if (notInLine && !googleConnected) {
+  if (!googleConnected) {
     return (
       <main className="min-h-screen bg-white flex flex-col items-center justify-center px-8 text-center">
         <div className="mb-4"><VendeeLogo className="w-20 h-20" /></div>
         <h1 className="text-2xl font-bold text-gray-900 mb-1">Vendee Finance</h1>
         <p className="text-gray-400 text-sm mb-8">เข้าสู่ระบบเพื่อเริ่มใช้งาน</p>
-
         <div className="w-full max-w-xs flex flex-col gap-3">
           <button
             onClick={() => signIn("google", { callbackUrl: "/onboarding" })}
@@ -522,7 +425,6 @@ export default function OnboardingPage() {
 
   return (
     <main className="min-h-screen bg-white flex flex-col px-6 pt-10 pb-8">
-      {/* Header */}
       <div className="text-center mb-6">
         <div className="text-4xl mb-2">🤖</div>
         <h1 className="text-xl font-bold text-gray-800">ยินดีต้อนรับสู่ Vendee Finance</h1>
@@ -533,7 +435,6 @@ export default function OnboardingPage() {
 
       {step === 1 && (
         <Step1
-          profile={liffProfile}
           firstName={firstName} lastName={lastName}
           onFirstName={setFirstName} onLastName={setLastName}
           onNext={() => setStep(2)}
@@ -550,9 +451,9 @@ export default function OnboardingPage() {
       )}
       {step === 3 && (
         <Step3
-          googleEmail={googleEmail} connected={googleConnected} polling={pollingGoogle}
+          googleEmail={googleEmail} connected={googleConnected} polling={false}
           onConnect={connectGoogle} onFinish={finish} onBack={() => setStep(2)}
-          googleOnly={notInLine}
+          googleOnly={true}
           saving={saving} saveError={saveError}
         />
       )}
