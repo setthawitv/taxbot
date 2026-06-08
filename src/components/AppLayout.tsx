@@ -112,7 +112,7 @@ export default function AppLayout({
         {/* Nav items */}
         <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
           {NAV.map(({ href, Icon, labelTh, labelEn }) => {
-            const active = pathname === href;
+            const active = pathname === href || (href !== "/home" && pathname.startsWith(href));
             return (
               <Link
                 key={href}
@@ -166,7 +166,7 @@ export default function AppLayout({
       <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-gray-100">
         <div className="flex h-16">
           {NAV.map(({ href, Icon, labelTh }) => {
-            const active = pathname === href;
+            const active = pathname === href || (href !== "/home" && pathname.startsWith(href));
             return (
               <Link
                 key={href}
