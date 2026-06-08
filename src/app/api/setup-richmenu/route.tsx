@@ -85,7 +85,7 @@ const RICH_MENU = {
   size: { width: 2500, height: 1686 },
   selected: true,
   name: "Vendee Finance Menu",
-  chatBarText: "เมนู Vendee Finance",
+  chatBarText: "เมนู",
   areas: SECTIONS.map((s, i) => ({
     bounds: {
       x: i % 2 === 0 ? 0 : 1250,
