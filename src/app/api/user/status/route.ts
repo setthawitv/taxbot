@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   const { data } = await supabaseAdmin
     .from("users")
     .select(
-      "google_access_token, google_email, business_name, first_name, last_name, business_type, phone, vat_registered, display_name, picture_url"
+      "google_access_token, google_email, business_name, first_name, last_name, business_type, phone, vat_registered, display_name, picture_url, plan, plan_expires_at"
     )
     .eq("id", userId)
     .single();
@@ -24,10 +24,12 @@ export async function GET(req: NextRequest) {
   const onboarded = !!data.business_name;
 
   return NextResponse.json({
-    connected:    !!data.google_access_token,
-    email:        data.google_email  ?? null,
-    displayName:  data.display_name  ?? null,
-    pictureUrl:   data.picture_url   ?? null,
+    connected:     !!data.google_access_token,
+    email:         data.google_email  ?? null,
+    displayName:   data.display_name  ?? null,
+    pictureUrl:    data.picture_url   ?? null,
+    plan:          data.plan          ?? "trial",
+    planExpiresAt: data.plan_expires_at ?? null,
     onboarded,
     profile: {
       firstName: data.first_name ?? "",

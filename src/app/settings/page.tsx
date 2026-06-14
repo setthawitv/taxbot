@@ -61,6 +61,7 @@ function SettingsPageInner() {
 
   // Payment / upgrade
   const [currentPlan,   setCurrentPlan]   = useState<string>("trial");
+  const [planExpiresAt, setPlanExpiresAt] = useState<string | null>(null);
   const [showUpgrade,   setShowUpgrade]   = useState(false);
   const [selectedPlan,  setSelectedPlan]  = useState<string>("pro");
   const [paying,        setPaying]        = useState(false);
@@ -109,7 +110,8 @@ function SettingsPageInner() {
                 const biz = statusData.profile?.businessName ?? "";
                 setBusinessName(biz);
                 setBusinessNameDraft(biz);
-                setCurrentPlan(statusData.profile?.plan ?? "trial");
+                setCurrentPlan(statusData.plan ?? "trial");
+                setPlanExpiresAt(statusData.planExpiresAt ?? null);
                 const now = new Date();
                 fetchScanUsage(d.userId, now.getFullYear(), now.getMonth() + 1);
               }
@@ -142,6 +144,14 @@ function SettingsPageInner() {
     trial: 8, free: 8, eco: 30, pro: 100, platinum: null, // null = unlimited
   };
   const scanLimit = SCAN_LIMIT[currentPlan] ?? 8;
+
+  // Days remaining on the current subscription (30-day cycle, renews on payment)
+  const daysLeft = planExpiresAt
+    ? Math.ceil((new Date(planExpiresAt).getTime() - Date.now()) / 86_400_000)
+    : null;
+  const expiryLabel = planExpiresAt
+    ? new Date(planExpiresAt).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" })
+    : "";
 
   async function fetchScanUsage(uid: string, year: number, month: number) {
     setScanLoading(true);
@@ -476,6 +486,22 @@ function SettingsPageInner() {
                   </button>
                 )}
               </div>
+
+              {daysLeft !== null && (
+                daysLeft > 0 ? (
+                  <div className="mt-4 flex items-center justify-between bg-gray-50 border border-gray-100 rounded-xl px-3 py-2.5">
+                    <span className="text-xs text-gray-500">เหลืออายุการใช้งาน</span>
+                    <span className={`text-sm font-semibold ${daysLeft <= 3 ? "text-rose-500" : "text-gray-700"}`}>
+                      {daysLeft} วัน <span className="text-xs font-normal text-gray-400">· หมดอายุ {expiryLabel}</span>
+                    </span>
+                  </div>
+                ) : (
+                  <div className="mt-4 flex items-center justify-between bg-rose-50 border border-rose-100 rounded-xl px-3 py-2.5">
+                    <span className="text-xs text-rose-600">แพ็กเกจหมดอายุแล้ว</span>
+                    <span className="text-sm font-semibold text-rose-600">ต่ออายุเพื่อใช้ต่อ</span>
+                  </div>
+                )
+              )}
             </div>
 
             {/* Scan quota */}
