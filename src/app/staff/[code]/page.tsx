@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import ThaiDateInput from "@/components/ThaiDateInput";
+import { lsGet, lsSet, lsRemove } from "@/lib/storage";
 
 const EXPENSE_CATEGORIES = [
   "ค่าสินค้า", "ค่าขนส่ง", "ค่าแพ็คเกจ", "ค่าโฆษณา",
   "ค่าอุปกรณ์", "ค่าเช่า", "ค่าสาธารณูปโภค", "อื่นๆ",
 ];
 
-const STAFF_NAME_KEY = "taxbot_staff_name";
+const STAFF_NAME_KEY = "staff_name";
 
 export default function StaffExpensePage() {
   const { code } = useParams<{ code: string }>();
@@ -45,13 +46,13 @@ export default function StaffExpensePage() {
 
   // Check for saved staff name in localStorage
   useEffect(() => {
-    const saved = localStorage.getItem(STAFF_NAME_KEY);
+    const saved = lsGet(STAFF_NAME_KEY);
     if (saved) { setStaffName(saved); setNameSet(true); }
   }, []);
 
   function confirmName() {
     if (!nameInput.trim()) return;
-    localStorage.setItem(STAFF_NAME_KEY, nameInput.trim());
+    lsSet(STAFF_NAME_KEY, nameInput.trim());
     setStaffName(nameInput.trim());
     setNameSet(true);
   }
@@ -170,7 +171,7 @@ export default function StaffExpensePage() {
             </p>
           </div>
           <button
-            onClick={() => { localStorage.removeItem(STAFF_NAME_KEY); setNameSet(false); setNameInput(""); }}
+            onClick={() => { lsRemove(STAFF_NAME_KEY); setNameSet(false); setNameInput(""); }}
             className="text-xs text-gray-300 hover:text-gray-500 transition-colors"
           >
             เปลี่ยนชื่อ

@@ -10,6 +10,7 @@ import {
   IconScan, IconShield, IconCheckCircle, IconWave, IconLightbulb, IconUser, IconRocket,
 } from "@/components/icons";
 import AppLayout from "@/components/AppLayout";
+import { lsGet, lsSet } from "@/lib/storage";
 import type { ComponentType } from "react";
 
 // ── Tour steps ────────────────────────────────────────────────────────────────
@@ -282,33 +283,33 @@ export default function Home() {
   const [showTour,      setShowTour]      = useState(false);
   const [selectedYear,  setSelectedYear]  = useState<number>(() => {
     if (typeof window === "undefined") return CURRENT_YEAR;
-    return parseInt(localStorage.getItem("taxbot_year") || String(CURRENT_YEAR), 10);
+    return parseInt(lsGet("year") || String(CURRENT_YEAR), 10);
   });
   const [selectedMonth, setSelectedMonth] = useState<number>(() => {
     if (typeof window === "undefined") return CURRENT_MONTH;
-    return parseInt(localStorage.getItem("taxbot_month") || String(CURRENT_MONTH), 10);
+    return parseInt(lsGet("month") || String(CURRENT_MONTH), 10);
   });
 
   function pickYear(y: number) {
     setSelectedYear(y);
-    localStorage.setItem("taxbot_year", String(y));
+    lsSet("year", String(y));
   }
   function pickMonth(m: number) {
     setSelectedMonth(m);
-    localStorage.setItem("taxbot_month", String(m));
+    lsSet("month", String(m));
   }
 
   const { data: session, status: sessionStatus } = useSession();
 
   // Auto-show tour once for new users
   useEffect(() => {
-    const seen = localStorage.getItem("taxbot_tour_done");
+    const seen = lsGet("tour_done");
     if (!seen) setShowTour(true);
   }, []);
 
   function closeTour() {
     setShowTour(false);
-    localStorage.setItem("taxbot_tour_done", "1");
+    lsSet("tour_done", "1");
   }
 
   // ── Resolve user ──────────────────────────────────────────────────────────

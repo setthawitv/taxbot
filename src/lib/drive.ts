@@ -49,8 +49,8 @@ export async function createRootFolder(
   businessName: string
 ): Promise<string> {
   const drive = getDriveClient(accessToken);
-  const taxbotId = await findOrCreateFolder(drive, "root", "Vendee Finance");
-  return findOrCreateFolder(drive, taxbotId, businessName);
+  const rootId = await findOrCreateFolder(drive, "root", "Vendee Finance");
+  return findOrCreateFolder(drive, rootId, businessName);
 }
 
 /**

@@ -298,6 +298,8 @@ function SettingsPageInner() {
   }
 
   async function handleLogout() {
+    // Clear both new and legacy onboarding cookies on logout
+    document.cookie = "vendee_onboarded=; path=/; max-age=0";
     document.cookie = "taxbot_onboarded=; path=/; max-age=0";
     await signOut({ callbackUrl: "/" });
   }

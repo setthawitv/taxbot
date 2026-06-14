@@ -1,4 +1,4 @@
-# SKILLS.md — Coding Patterns & Rules for TaxBot
+# SKILLS.md — Coding Patterns & Rules for Vendee
 
 ## 1. LINE Webhook Handler Pattern
 

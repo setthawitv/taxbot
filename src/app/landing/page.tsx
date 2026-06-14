@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { ComponentType } from "react";
 import {
-  TaxBotLogo,
+  VendeeLogo,
   IconScan, IconIncome, IconTax, IconGoogleSheets, IconUpload, IconShield,
   IconSparkle, IconRocket, IconFire, IconCrown,
   IconCheck, IconX, IconArrowDown, IconArrowRight,
@@ -111,8 +111,8 @@ export default function LandingPage() {
       {/* ── Navbar ─────────────────────────────────────────────────────────── */}
       <nav className="flex items-center justify-between px-6 py-4 max-w-6xl mx-auto">
         <div className="flex items-center gap-2.5">
-          <TaxBotLogo className="w-8 h-8" />
-          <span className="font-bold text-lg tracking-tight">TaxBot</span>
+          <VendeeLogo className="w-8 h-8" />
+          <span className="font-bold text-lg tracking-tight">Vendee</span>
         </div>
         <Link
           href="/onboarding"
@@ -136,7 +136,7 @@ export default function LandingPage() {
         </h1>
 
         <p className="text-gray-400 text-lg sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
-          แค่ถ่ายรูปใบเสร็จ TaxBot จัดการทุกอย่างให้ — บันทึกรายรับรายจ่าย
+          แค่ถ่ายรูปใบเสร็จ Vendee จัดการทุกอย่างให้ — บันทึกรายรับรายจ่าย
           คำนวณภาษี ซิงค์ Google Sheets โดยไม่ต้องมีความรู้บัญชีเลย
         </p>
 
@@ -287,7 +287,7 @@ export default function LandingPage() {
       <section className="px-6 py-20">
         <div className="max-w-2xl mx-auto bg-gradient-to-br from-emerald-500/20 to-cyan-500/10 border border-emerald-500/30 rounded-3xl p-10 text-center">
           <div className="flex justify-center mb-4">
-            <TaxBotLogo className="w-14 h-14" />
+            <VendeeLogo className="w-14 h-14" />
           </div>
           <h2 className="text-3xl font-bold mb-3">พร้อมเริ่มต้นแล้วหรือยัง?</h2>
           <p className="text-gray-400 mb-8 leading-relaxed">
@@ -304,7 +304,7 @@ export default function LandingPage() {
 
       {/* ── Footer ─────────────────────────────────────────────────────────── */}
       <footer className="border-t border-white/10 px-6 py-8 text-center text-gray-600 text-sm">
-        <p>© {new Date().getFullYear()} TaxBot · สร้างสำหรับร้านค้าออนไลน์ไทย</p>
+        <p>© {new Date().getFullYear()} Vendee · สร้างสำหรับร้านค้าออนไลน์ไทย</p>
       </footer>
 
     </main>

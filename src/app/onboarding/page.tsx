@@ -318,7 +318,7 @@ export default function OnboardingPage() {
               const statusRes = await fetch(`/api/user/status?userId=${d.userId}`);
               const status = await statusRes.json();
               if (status.onboarded) {
-                document.cookie = "taxbot_onboarded=1; path=/; max-age=31536000";
+                document.cookie = "vendee_onboarded=1; path=/; max-age=31536000";
                 router.replace("/home");
                 return;
               }
@@ -384,7 +384,7 @@ export default function OnboardingPage() {
       console.error("Failed to save user:", err);
       setSaveError("เครือข่ายขัดข้อง — ระบบจะพาเข้าหน้าหลักให้");
     }
-    document.cookie = "taxbot_onboarded=1; path=/; max-age=31536000";
+    document.cookie = "vendee_onboarded=1; path=/; max-age=31536000";
     router.push("/home");
   }
 

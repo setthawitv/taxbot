@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     const chargeThb      = currentPlanThb > 0 ? planInfo.thb - currentPlanThb : planInfo.thb;
     const chargeSatang   = chargeThb * 100;  // Beam uses satang
 
-    const referenceId = `taxbot_${plan}_${lineUserId}_${Date.now()}`;
+    const referenceId = `vendee_${plan}_${lineUserId}_${Date.now()}`;
     const returnUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://www.vendeefinance.com"}/payment/done`;
 
     const charge = await createCharge({

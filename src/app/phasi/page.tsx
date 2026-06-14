@@ -13,6 +13,7 @@ import {
   type DeductionItem,
 } from "@/lib/deductions";
 import { calcPIT, calcCIT, type Breakdown } from "@/lib/tax-calc";
+import { lsGet, lsSet, lsRemove } from "@/lib/storage";
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: 6 }, (_, i) => CURRENT_YEAR - i);
@@ -158,24 +159,23 @@ export default function PhasiPage() {
 
   // ── Load saved deductions from localStorage ────────────────────────────────
   useEffect(() => {
-    const key = `taxbot_deductions_${year}`;
-    const saved = localStorage.getItem(key);
+    const saved = lsGet(`deductions_${year}`);
     if (saved) {
       try { setDeductions({ personal: 60_000, ...JSON.parse(saved) }); } catch {}
     }
-    const tp = localStorage.getItem("taxbot_taxpayer");
+    const tp = lsGet("taxpayer");
     if (tp === "individual" || tp === "corporate") setTaxpayer(tp);
-    const sme = localStorage.getItem("taxbot_is_sme");
+    const sme = lsGet("is_sme");
     if (sme !== null) setIsSME(sme === "1");
-    const sal = localStorage.getItem(`taxbot_salary_${year}`);
+    const sal = lsGet(`salary_${year}`);
     if (sal) setSalaryIncome(parseFloat(sal) || 0);
-    const com = localStorage.getItem(`taxbot_commission_${year}`);
+    const com = lsGet(`commission_${year}`);
     if (com) setCommissionIncome(parseFloat(com) || 0);
 
     // ── Migrate from landing-page calculator (one-time) ────────────────────
     // If user filled in the public calculator before signup, port that into
     // their account-bound data. Only migrate fields that aren't already set.
-    const landing = localStorage.getItem("taxbot_landing_calc");
+    const landing = lsGet("landing_calc");
     if (landing) {
       try {
         const d = JSON.parse(landing);
@@ -197,20 +197,19 @@ export default function PhasiPage() {
         if (migrated) setMigratedBanner(true);
       } catch {}
       // Clear after migration so it doesn't re-trigger
-      localStorage.removeItem("taxbot_landing_calc");
+      lsRemove("landing_calc");
     }
   }, [year]);
 
   // ── Persist deductions ─────────────────────────────────────────────────────
   useEffect(() => {
-    const key = `taxbot_deductions_${year}`;
-    localStorage.setItem(key, JSON.stringify(deductions));
+    lsSet(`deductions_${year}`, JSON.stringify(deductions));
   }, [deductions, year]);
 
-  useEffect(() => { localStorage.setItem("taxbot_taxpayer", taxpayer); }, [taxpayer]);
-  useEffect(() => { localStorage.setItem("taxbot_is_sme", isSME ? "1" : "0"); }, [isSME]);
-  useEffect(() => { localStorage.setItem(`taxbot_salary_${year}`,     String(salaryIncome));     }, [salaryIncome, year]);
-  useEffect(() => { localStorage.setItem(`taxbot_commission_${year}`, String(commissionIncome)); }, [commissionIncome, year]);
+  useEffect(() => { lsSet("taxpayer", taxpayer); }, [taxpayer]);
+  useEffect(() => { lsSet("is_sme", isSME ? "1" : "0"); }, [isSME]);
+  useEffect(() => { lsSet(`salary_${year}`,     String(salaryIncome));     }, [salaryIncome, year]);
+  useEffect(() => { lsSet(`commission_${year}`, String(commissionIncome)); }, [commissionIncome, year]);
 
   // ── Compute taxes ─────────────────────────────────────────────────────────
   const compute = useMemo(() => {

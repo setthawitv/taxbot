@@ -1,7 +1,7 @@
-# AGENTS.md — TaxBot Project Guide for Claude Code
+# AGENTS.md — Vendee Project Guide for Claude Code
 
 ## Project Overview
-TaxBot is a LINE OA-based web app for Thai SME owners and ecommerce sellers (Shopee, TikTok, Lazada).
+Vendee is a LINE OA-based web app for Thai SME owners and ecommerce sellers (Shopee, TikTok, Lazada).
 Users interact via:
 - **LINE Chatbot** — send receipt photos, ask quick balance questions, get tax reminders
 - **LINE Mini App (LIFF)** — full dashboard, transaction history, tax summary
@@ -29,7 +29,7 @@ The core value: zero accounting knowledge needed. Upload a slip → AI reads it 
 ## Project Structure
 
 ```
-taxbot/
+vendee/
 ├── src/
 │   ├── app/
 │   │   ├── api/

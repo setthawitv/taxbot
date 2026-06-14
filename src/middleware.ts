@@ -14,6 +14,7 @@ const PUBLIC_PATHS = [
   "/api/auth",
   "/api/webhook",
   "/api/user",
+  "/api/leads",           // Public lead-capture form on the tax calculator
   "/api/staff",
   "/api/admin/join",    // Admin join endpoint (called before full auth)
   "/api/setup-richmenu",
@@ -29,7 +30,10 @@ export function middleware(request: NextRequest) {
   );
   if (isPublic) return NextResponse.next();
 
-  const onboarded = request.cookies.get("taxbot_onboarded")?.value;
+  // Accept the new `vendee_` cookie or the legacy `taxbot_` one (pre-rebrand users)
+  const onboarded =
+    request.cookies.get("vendee_onboarded")?.value ??
+    request.cookies.get("taxbot_onboarded")?.value;
   if (!onboarded) {
     // Send to onboarding — it auto-skips to dashboard if user is already registered
     return NextResponse.redirect(new URL("/onboarding", request.url));
