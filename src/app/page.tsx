@@ -11,8 +11,22 @@ import {
 import { calcPIT, calcCIT } from "@/lib/tax-calc";
 import { DEDUCTIONS, GROUP_LABELS, maxAllowed, sumDeductions, type DeductionItem } from "@/lib/deductions";
 import { useEffect } from "react";
+import { lsGet, lsSet } from "@/lib/storage";
 
 type IconC = ComponentType<{ className?: string }>;
+
+// ── Segment fields collected from free visitors before showing the tax result ──
+const AGE_OPTIONS        = ["ต่ำกว่า 20", "20–29", "30–39", "40–49", "50 ปีขึ้นไป"];
+const OCCUPATION_OPTIONS = ["พ่อค้าแม่ค้าออนไลน์", "พนักงานประจำ", "ธุรกิจส่วนตัว", "ฟรีแลนซ์", "นักศึกษา", "อื่นๆ"];
+const CHANNEL_OPTIONS    = ["Shopee", "TikTok", "Lazada", "หน้าร้านตัวเอง", "ยังไม่ได้ขาย", "อื่นๆ"];
+const INCOME_OPTIONS     = ["น้อยกว่า 50,000", "50,000–100,000", "100,000–300,000", "มากกว่า 300,000"];
+
+const SEGMENT_FIELDS = [
+  { key: "age_range",     label: "อายุ",            options: AGE_OPTIONS },
+  { key: "occupation",    label: "อาชีพ",           options: OCCUPATION_OPTIONS },
+  { key: "sales_channel", label: "ช่องทางขายหลัก",  options: CHANNEL_OPTIONS },
+  { key: "income_range",  label: "รายได้ต่อเดือน",  options: INCOME_OPTIONS },
+] as const;
 
 const FEATURES: { slug: string; Icon: IconC; title: string; desc: string; color: string; iconColor: string; chipBg: string }[] = [
   { slug: "scan",           Icon: IconScan,          title: "สแกนใบเสร็จด้วย AI",
@@ -178,9 +192,20 @@ function PublicTaxCalculator() {
   const [deductions, setDeductions] = useState<Record<string, number>>({ personal: 60_000 });
   const [showDeductions, setShowDeductions] = useState(false);
 
+  // Segment gate: visitor must fill 4 fields before the tax result is revealed.
+  const [seg, setSeg]         = useState<Record<string, string>>({});
+  const [unlocked, setUnlocked] = useState(false);
+  const [savingSeg, setSavingSeg] = useState(false);
+  const segComplete = SEGMENT_FIELDS.every((f) => seg[f.key]);
+
+  // Returning visitors who already submitted skip the gate.
+  useEffect(() => {
+    if (lsGet("lead_unlocked") === "1") setUnlocked(true);
+  }, []);
+
   // Persist to localStorage so user can come back
   useEffect(() => {
-    const saved = localStorage.getItem("taxbot_landing_calc");
+    const saved = lsGet("landing_calc");
     if (saved) {
       try {
         const d = JSON.parse(saved);
@@ -196,7 +221,7 @@ function PublicTaxCalculator() {
     }
   }, []);
   useEffect(() => {
-    localStorage.setItem("taxbot_landing_calc", JSON.stringify({
+    lsSet("landing_calc", JSON.stringify({
       income, salary, expense, method, taxpayer, incomeMode, isSME, deductions,
     }));
   }, [income, salary, expense, method, taxpayer, incomeMode, isSME, deductions]);
@@ -233,6 +258,30 @@ function PublicTaxCalculator() {
   }, [taxpayer, isSME, income, salary, expense, method, deductions, incomeMode]);
 
   const hasInput = (incomeMode !== "salary" && income > 0) || (incomeMode !== "business" && salary > 0) || Object.values(deductions).some((v) => v > 0 && v !== 60_000);
+
+  async function submitSegment() {
+    if (!segComplete) return;
+    setSavingSeg(true);
+    const est_income = result.kind === "individual" ? result.grand : income;
+    try {
+      await fetch("/api/leads", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...seg,
+          taxpayer_type: taxpayer,
+          est_income,
+          est_tax: result.tax,
+        }),
+      });
+    } catch {
+      // Network/logging failure shouldn't trap the user — reveal the result anyway.
+    } finally {
+      setUnlocked(true);
+      lsSet("lead_unlocked", "1");
+      setSavingSeg(false);
+    }
+  }
 
   return (
     <section id="calculator" className="px-6 py-20 max-w-5xl mx-auto">
@@ -452,6 +501,8 @@ function PublicTaxCalculator() {
 
         {/* RIGHT — Result */}
         <div className="lg:col-span-2 bg-gradient-to-br from-blue-500/10 to-emerald-500/10 border border-blue-500/30 rounded-2xl p-6 space-y-4 lg:sticky lg:top-4">
+          {unlocked ? (
+          <>
           <p className="text-xs text-blue-300 font-semibold uppercase tracking-wide">ภาษีโดยประมาณ</p>
           <p className="text-4xl font-extrabold text-white">฿{fmt2(result.tax)}</p>
           {result.tax === 0 && (
@@ -532,6 +583,47 @@ function PublicTaxCalculator() {
           <p className="text-[11px] text-gray-500 text-center leading-relaxed">
             * ตัวเลขโดยประมาณตามอัตรากรมสรรพากร
           </p>
+          </>
+          ) : (
+          <div className="space-y-4">
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-blue-500/15 text-blue-300 mb-2">
+                <IconTax className="w-6 h-6" />
+              </div>
+              <p className="font-bold text-white text-lg">ดูผลภาษีของคุณ</p>
+              <p className="text-xs text-gray-400 mt-1 leading-relaxed">
+                ตอบสั้นๆ 4 ข้อ เพื่อปลดล็อกผลการคำนวณ — ฟรี ไม่ต้องสมัคร
+              </p>
+            </div>
+
+            {SEGMENT_FIELDS.map((f) => (
+              <div key={f.key}>
+                <label className="text-sm font-medium text-gray-300 mb-1.5 block">{f.label}</label>
+                <select
+                  value={seg[f.key] ?? ""}
+                  onChange={(e) => setSeg((p) => ({ ...p, [f.key]: e.target.value }))}
+                  className="w-full bg-gray-900/50 border border-white/10 rounded-xl py-3 px-3 text-base text-white outline-none focus:border-blue-400"
+                >
+                  <option value="" disabled>เลือก...</option>
+                  {f.options.map((o) => (
+                    <option key={o} value={o} className="bg-gray-900">{o}</option>
+                  ))}
+                </select>
+              </div>
+            ))}
+
+            <button
+              onClick={submitSegment}
+              disabled={!segComplete || savingSeg}
+              className="w-full text-center inline-flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold bg-emerald-500 enabled:hover:bg-emerald-400 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {savingSeg ? "กำลังโหลด..." : (<><IconTax className="w-4 h-4" /> ดูผลภาษี</>)}
+            </button>
+            <p className="text-[11px] text-gray-500 text-center leading-relaxed">
+              เราใช้ข้อมูลนี้เพื่อพัฒนาบริการเท่านั้น · ไม่เปิดเผยต่อบุคคลภายนอก
+            </p>
+          </div>
+          )}
         </div>
       </div>
     </section>
