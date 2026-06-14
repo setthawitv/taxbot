@@ -24,9 +24,12 @@ type ImportLog = { id: string; platform: string; filename: string; order_count: 
 const PLATFORM_EMOJI: Record<string, string> = { tiktok: "🎵", shopee: "🛒", lazada: "📦" };
 
 const PLAN_OPTIONS = [
-  { key: "eco",      name: "Eco",      thb: 100,  desc: "สำหรับร้านค้าเล็ก",        color: "from-teal-400 to-cyan-500",    rank: 1 },
-  { key: "pro",      name: "Pro",      thb: 200,  desc: "สำหรับธุรกิจที่กำลังโต",   color: "from-violet-500 to-purple-600", rank: 2 },
-  { key: "platinum", name: "Platinum", thb: 700,  desc: "ครบทุกฟีเจอร์ ไม่จำกัด",   color: "from-amber-400 to-orange-500",  rank: 3 },
+  { key: "eco",      name: "Eco",      thb: 100,  desc: "สำหรับร้านค้าเล็ก",        color: "from-teal-400 to-cyan-500",    rank: 1,
+    features: ["รายจ่าย 30 รายการ/เดือน", "รายรับ Manual ไม่จำกัด", "นำเข้า Excel 1 ไฟล์/เดือน", "Google Sheets sync", "สแกนใบเสร็จด้วย AI 30 ครั้ง/เดือน"] },
+  { key: "pro",      name: "Pro",      thb: 200,  desc: "สำหรับธุรกิจที่กำลังโต",   color: "from-violet-500 to-purple-600", rank: 2,
+    features: ["รายจ่าย 100 รายการ/เดือน", "รายรับ Manual ไม่จำกัด", "นำเข้า Excel 5 ไฟล์/เดือน", "Google Sheets sync", "สแกนใบเสร็จด้วย AI 100 ครั้ง/เดือน"] },
+  { key: "platinum", name: "Platinum", thb: 700,  desc: "ครบทุกฟีเจอร์ ไม่จำกัด",   color: "from-amber-400 to-orange-500",  rank: 3,
+    features: ["รายจ่าย 1,200 รายการ/เดือน", "รายรับ Manual ไม่จำกัด", "นำเข้า Excel 12 ไฟล์/เดือน", "Google Sheets sync", "สแกนใบเสร็จด้วย AI ไม่จำกัด"] },
 ] as const;
 
 const PLAN_RANK: Record<string, number> = { trial: 0, free: 0, eco: 1, pro: 2, platinum: 3 };
@@ -63,6 +66,7 @@ function SettingsPageInner() {
   const [currentPlan,   setCurrentPlan]   = useState<string>("trial");
   const [planExpiresAt, setPlanExpiresAt] = useState<string | null>(null);
   const [showUpgrade,   setShowUpgrade]   = useState(false);
+  const [confirmingPlan, setConfirmingPlan] = useState(false);   // review-features step before QR
   const [selectedPlan,  setSelectedPlan]  = useState<string>("pro");
   const [paying,        setPaying]        = useState(false);
   const [chargeId,      setChargeId]      = useState<string>("");
@@ -80,6 +84,11 @@ function SettingsPageInner() {
 
   const { data: session, status: sessionStatus } = useSession();
   const searchParams = useSearchParams();
+
+  // Reset the review step whenever the upgrade modal closes
+  useEffect(() => {
+    if (!showUpgrade) setConfirmingPlan(false);
+  }, [showUpgrade]);
 
   // Auto-open upgrade modal if ?upgrade=plan is in URL
   useEffect(() => {
@@ -852,6 +861,55 @@ function SettingsPageInner() {
                   ลองใหม่
                 </button>
               </div>
+            ) : confirmingPlan ? (
+              (() => {
+                const PLAN_THB: Record<string, number> = { trial: 0, free: 0, eco: 100, pro: 200, platinum: 700 };
+                const info           = PLAN_OPTIONS.find((p) => p.key === selectedPlan);
+                const currentPlanThb = PLAN_THB[currentPlan] ?? 0;
+                const chargeThb      = currentPlanThb > 0 && info ? info.thb - currentPlanThb : info?.thb ?? 0;
+                if (!info) return null;
+                return (
+                  <>
+                    <div className="flex items-center justify-between mb-4">
+                      <button onClick={() => setConfirmingPlan(false)}
+                        className="text-sm font-medium text-gray-500 hover:text-gray-700">← เปลี่ยนแพ็กเกจ</button>
+                      <button onClick={() => setShowUpgrade(false)}
+                        className="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
+                    </div>
+
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${info.color} flex items-center justify-center text-white font-bold flex-shrink-0`}>
+                        {info.name[0]}
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-800">แพ็กเกจ {info.name}</p>
+                        <p className="text-xs text-gray-400">{info.desc}</p>
+                      </div>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-2xl p-4 mb-4">
+                      <p className="text-xs font-semibold text-gray-500 mb-2.5">สิ่งที่คุณจะได้รับ</p>
+                      <ul className="space-y-2">
+                        {info.features.map((f) => (
+                          <li key={f} className="flex items-start gap-2 text-sm text-gray-700">
+                            <IconCheck className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                            {f}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <button
+                      onClick={startPayment}
+                      disabled={paying || !userId}
+                      className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-violet-500 to-purple-600 text-white font-bold text-sm hover:opacity-90 disabled:opacity-40 transition-opacity"
+                    >
+                      {paying ? "กำลังสร้าง QR..." : `ยืนยันชำระ ฿${chargeThb} ผ่าน PromptPay`}
+                    </button>
+                    <p className="text-center text-xs text-gray-400 mt-2">ชำระผ่าน QR PromptPay — ฟรีค่าธรรมเนียม</p>
+                  </>
+                );
+              })()
             ) : (
               <>
                 <div className="flex items-center justify-between mb-5">
@@ -918,11 +976,11 @@ function SettingsPageInner() {
                     : selectedInfo?.thb ?? 0;
                   return (
                     <button
-                      onClick={startPayment}
-                      disabled={paying || !userId}
+                      onClick={() => setConfirmingPlan(true)}
+                      disabled={!userId}
                       className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-violet-500 to-purple-600 text-white font-bold text-sm hover:opacity-90 disabled:opacity-40 transition-opacity"
                     >
-                      {paying ? "กำลังสร้าง QR..." : `จ่าย ฿${chargeThb} ผ่าน PromptPay`}
+                      ดูสิ่งที่จะได้รับ · ฿{chargeThb} →
                     </button>
                   );
                 })()}

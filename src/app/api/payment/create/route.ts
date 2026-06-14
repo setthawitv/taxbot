@@ -4,7 +4,21 @@ import { supabaseAdmin } from "@/lib/supabase";
 
 export async function POST(req: NextRequest) {
   try {
-    const { lineUserId, plan, currentPlan } = await req.json();
+    const body = await req.json();
+    const { plan, currentPlan } = body;
+
+    // Web (Google) users send their users.id as `userId`; LINE users may send
+    // `lineUserId` directly. We always settle on the row's line_user_id, since
+    // the Beam webhook upgrades the user by matching on line_user_id.
+    let lineUserId: string | undefined = body.lineUserId;
+    if (!lineUserId && body.userId) {
+      const { data: u } = await supabaseAdmin
+        .from("users")
+        .select("line_user_id")
+        .eq("id", body.userId)
+        .single();
+      lineUserId = u?.line_user_id ?? undefined;
+    }
 
     if (!lineUserId || !plan) {
       return NextResponse.json({ error: "Missing lineUserId or plan" }, { status: 400 });
