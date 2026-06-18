@@ -43,6 +43,11 @@ const QUICK: { q: string; key: string }[] = [
   { q: "ภาษีปีนี้ประมาณเท่าไหร่?",        key: "tax" },
   { q: "รายได้ถึงเกณฑ์ VAT หรือยัง?",     key: "vat" },
   { q: "หักค่าใช้จ่ายแบบไหนคุ้มกว่า?",    key: "method" },
+  { q: "โควต้าถาม AI เหลือกี่ครั้ง?",     key: "aiQuota" },
+  { q: "ภาษีต้องยื่นเมื่อไหร่?",          key: "taxDeadline" },
+  { q: "ลดหย่อนภาษีมีอะไรบ้าง?",         key: "deductions" },
+  { q: "นำเข้า Excel ยังไง?",            key: "howImport" },
+  { q: "สแกนสลิปยังไง?",                 key: "howScan" },
 ];
 
 const PLATFORM_LABEL: Record<string, string> = { tiktok: "TikTok", shopee: "Shopee", lazada: "Lazada" };
@@ -80,6 +85,7 @@ export default function ChatWidget() {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [showQuick, setShowQuick] = useState(false);
 
   const shouldShow = status === "authenticated" && SHOW_ON.some((p) => pathname.startsWith(p));
 
@@ -208,12 +214,13 @@ export default function ChatWidget() {
 
   // Instant, deterministic answers — no /api/chat call, no quota used
   function quickAnswer(key: string): string {
-    if (!summary) return "กำลังโหลดข้อมูล ลองใหม่อีกครั้งค่ะ";
-    const tax = summary.tax;
+    const needsData = ["monthProfit", "yearTotals", "topPlatform", "tax", "vat", "method"];
+    if (needsData.includes(key) && !summary) return "กำลังโหลดข้อมูล... ลองอีกครั้งค่ะ";
+    const tax = summary?.tax ?? null;
     switch (key) {
       case "monthProfit": {
-        const p = summary.monthIncome - summary.monthExpense;
-        return `เดือนนี้:\n• รายรับ ฿${fmtNum(summary.monthIncome)}\n• รายจ่าย ฿${fmtNum(summary.monthExpense)}\n• ${p >= 0 ? "กำไร" : "ขาดทุน"} ฿${fmtNum(Math.abs(p))}`;
+        const mi = summary?.monthIncome ?? 0, me = summary?.monthExpense ?? 0, p = mi - me;
+        return `เดือนนี้:\n• รายรับ ฿${fmtNum(mi)}\n• รายจ่าย ฿${fmtNum(me)}\n• ${p >= 0 ? "กำไร" : "ขาดทุน"} ฿${fmtNum(Math.abs(p))}`;
       }
       case "yearTotals": {
         const inc = tax?.totalIncome ?? 0, exp = tax?.totalExpense ?? 0, p = inc - exp;
@@ -247,11 +254,27 @@ export default function ChatWidget() {
         const save = Math.abs(t1 - t2);
         return `เปรียบเทียบวิธีหักค่าใช้จ่าย (ภาษีปีนี้):\n• หักเหมา 60% → ฿${fmtNum(t1)}\n• หักตามจริง → ฿${fmtNum(t2)}\n👉 แนะนำ "${better}"${save > 0 ? ` ประหยัดกว่า ฿${fmtNum(save)}` : " (เท่ากัน)"}`;
       }
+      case "aiQuota": {
+        const left = Math.max(0, limit - used);
+        const u = period === "week" ? "สัปดาห์" : "เดือน";
+        return limit > 0
+          ? `โควต้าถาม AI (พิมพ์เอง): เหลืออีก ${left} จาก ${limit} ครั้ง/${u}\n(ปุ่มคำถามด่วนแบบนี้ไม่นับโควต้านะคะ — กดได้เรื่อยๆ)`
+          : `กำลังโหลดข้อมูลโควต้าค่ะ`;
+      }
+      case "taxDeadline":
+        return `กำหนดยื่นภาษีเงินได้บุคคลธรรมดา (ภ.ง.ด.90/91):\n• ยื่นกระดาษ: ภายใน 31 มีนาคม ปีถัดไป\n• ยื่นออนไลน์ (e-Filing): ขยายถึงประมาณ 8 เมษายน\nยื่นที่กรมสรรพากร (rd.go.th)`;
+      case "deductions":
+        return `ค่าลดหย่อนยอดนิยม:\n• ส่วนตัว 60,000\n• คู่สมรส 60,000\n• บุตร 30,000/คน\n• ประกันสังคม (ตามจ่ายจริง ≤ 9,000)\n• ประกันชีวิต ≤ 100,000\n• กองทุน SSF/RMF, ดอกเบี้ยบ้าน, บริจาค ฯลฯ\nกรอกได้ในหน้า "ภาษี" เพื่อคำนวณแม่นขึ้น`;
+      case "howImport":
+        return `นำเข้ายอดขายจากแพลตฟอร์ม:\n1. โหลดไฟล์ Excel ออเดอร์จาก Shopee / TikTok / Lazada\n2. ไปหน้า "รายรับ" → ปุ่มนำเข้า\n3. อัปโหลดไฟล์ — ระบบแยกยอดให้อัตโนมัติ\n(จำนวนไฟล์/เดือนตามแพ็กเกจ)`;
+      case "howScan":
+        return `สแกนสลิป/ใบเสร็จ:\n1. ไปหน้า "รายจ่าย" หรือปุ่มสแกน\n2. ถ่ายรูป/อัปโหลดสลิป\n3. AI อ่านยอด-วันที่-ร้านค้าให้ ตรวจแล้วกดบันทึก\n(โควต้าสแกนตามแพ็กเกจ)`;
       default: return "ขออภัย ไม่พบคำตอบค่ะ";
     }
   }
 
   function onQuick(item: { q: string; key: string }) {
+    setShowQuick(false);
     setMessages((m) => [...m, { role: "user", content: item.q }, { role: "assistant", content: quickAnswer(item.key) }]);
   }
 
@@ -368,15 +391,22 @@ export default function ChatWidget() {
 
             {/* Input */}
             <div className="border-t border-gray-100 bg-white px-3 py-3 flex-shrink-0">
-              {/* Instant quick answers — no AI, no quota */}
-              <div className="flex gap-2 overflow-x-auto pb-2 mb-1">
-                {QUICK.map((item) => (
-                  <button key={item.key} type="button" onClick={() => onQuick(item)} disabled={!summary}
-                    className="flex-shrink-0 text-xs font-medium text-[#0A192F] bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-full px-3 py-1.5 whitespace-nowrap disabled:opacity-50 transition-colors">
-                    {item.q}
-                  </button>
-                ))}
-              </div>
+              {/* Instant quick answers — free, no quota (collapsible, wraps) */}
+              <button type="button" onClick={() => setShowQuick((v) => !v)}
+                className="flex items-center justify-between w-full text-xs font-semibold text-[#0A192F] bg-slate-50 hover:bg-slate-100 rounded-xl px-3 py-2 mb-2 border border-slate-200 transition-colors">
+                <span>⚡ คำถามด่วน · ฟรี ไม่นับโควต้า</span>
+                <span className="text-slate-400">{showQuick ? "▲" : "▼"}</span>
+              </button>
+              {showQuick && (
+                <div className="flex flex-wrap gap-2 mb-2 max-h-44 overflow-y-auto">
+                  {QUICK.map((item) => (
+                    <button key={item.key} type="button" onClick={() => onQuick(item)}
+                      className="text-xs font-medium text-[#0A192F] bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-full px-3 py-1.5 transition-colors">
+                      {item.q}
+                    </button>
+                  ))}
+                </div>
+              )}
               {error && <p className="text-xs text-rose-500 mb-2 text-center">{error}</p>}
               {atLimit && plan !== "platinum" && (
                 <Link href="/settings?upgrade=pro" onClick={() => setOpen(false)}
@@ -406,7 +436,9 @@ export default function ChatWidget() {
                   </svg>
                 </button>
               </form>
-              <p className="text-[10px] text-gray-300 text-center mt-2">AI อาจคลาดเคลื่อน · ตรวจสอบตัวเลขสำคัญอีกครั้ง</p>
+              <p className="text-[10px] text-gray-400 text-center mt-2">
+                พิมพ์ถาม = ใช้โควต้า AI · ปุ่มคำถามด่วน = ฟรี · AI อาจคลาดเคลื่อน
+              </p>
             </div>
         </>
       </div>
