@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { IconSparkle, IconRocket, IconCrown, IconX } from "@/components/icons";
+import { IconSparkle, IconCrown, IconX } from "@/components/icons";
 import { useChat } from "@/components/ChatContext";
 import { lsGet } from "@/lib/storage";
 
@@ -37,8 +37,10 @@ export default function ChatWidget() {
   const [loading, setLoading] = useState(false);
 
   const [userId, setUserId] = useState<string | null>(null);
-  const [plan, setPlan]     = useState<"pro" | "platinum" | null>(null);
-  const [locked, setLocked] = useState(false);
+  const [plan, setPlan]     = useState<string | null>(null);
+  const [label, setLabel]   = useState("");
+  const [period, setPeriod] = useState<"week" | "month">("month");
+  const [mode, setMode]     = useState<"descriptive" | "predictive">("descriptive");
 
   const [messages, setMessages] = useState<Msg[]>([]);
   const [used, setUsed]   = useState(0);
@@ -69,10 +71,12 @@ export default function ChatWidget() {
         setUserId(d.userId);
 
         const chatRes = await fetch(`/api/chat?userId=${d.userId}`);
-        if (chatRes.status === 403) { setLocked(true); }
-        else if (chatRes.ok) {
+        if (chatRes.ok) {
           const cd = await chatRes.json();
           setPlan(cd.plan);
+          setLabel(cd.label ?? "");
+          setPeriod(cd.period ?? "month");
+          setMode(cd.mode ?? "descriptive");
           setUsed(cd.used);
           setLimit(cd.limit);
           setMessages((cd.messages ?? []).map((m: Msg) => ({ role: m.role, content: m.content })));
@@ -142,7 +146,9 @@ export default function ChatWidget() {
 
   if (!shouldShow) return null;
 
-  const tips = plan ? SUGGESTIONS[plan] ?? [] : [];
+  const tips = mode === "predictive" ? SUGGESTIONS.platinum : SUGGESTIONS.pro;
+  const unit = period === "week" ? "สัปดาห์" : "เดือน";
+  const atLimit = limit > 0 && used >= limit;
 
   return (
     <>
@@ -185,9 +191,8 @@ export default function ChatWidget() {
             <div>
               <p className="font-bold text-base leading-tight">Vendee AI Assistant</p>
               <p className="text-[12px] text-white/60 flex items-center gap-1">
-                {plan === "platinum"
-                  ? <><IconCrown className="w-3.5 h-3.5 text-amber-400" /> Platinum · แนะนำเชิงรุก</>
-                  : plan === "pro" ? "Pro · สรุป & อธิบายข้อมูล" : "ผู้ช่วยการเงินอัจฉริยะ"}
+                {plan === "platinum" && <IconCrown className="w-3.5 h-3.5 text-amber-400" />}
+                {label || "Vendee"}{limit > 0 ? ` · ${limit} ครั้ง/${unit}` : ""}
               </p>
             </div>
           </div>
@@ -203,24 +208,7 @@ export default function ChatWidget() {
           </div>
         </div>
 
-        {locked ? (
-          /* Upsell */
-          <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-emerald-50 text-emerald-600 mb-5">
-              <IconSparkle className="w-10 h-10" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2">ผู้ช่วย AI สำหรับ Pro &amp; Platinum</h3>
-            <p className="text-gray-500 text-sm leading-relaxed mb-7">
-              ถาม-ตอบเกี่ยวกับข้อมูลการเงินของคุณได้ทุกหน้า — <strong>Pro</strong> สรุป/อธิบายตัวเลข,
-              <strong> Platinum</strong> แนะนำเชิงรุกว่าควรทำอะไรต่อ
-            </p>
-            <Link href="/settings?upgrade=pro" onClick={() => setOpen(false)} style={{ backgroundColor: NAVY }}
-              className="inline-flex items-center gap-2 px-7 py-3 rounded-2xl text-white font-bold text-sm hover:opacity-90">
-              <IconRocket className="w-4 h-4" /> อัปเกรดเพื่อใช้งาน
-            </Link>
-          </div>
-        ) : (
-          <>
+        <>
             {/* Messages */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-5 space-y-3 bg-[#F8FAFC]">
               {loading ? (
@@ -270,6 +258,12 @@ export default function ChatWidget() {
             {/* Input */}
             <div className="border-t border-gray-100 bg-white px-3 py-3 flex-shrink-0">
               {error && <p className="text-xs text-rose-500 mb-2 text-center">{error}</p>}
+              {atLimit && plan !== "platinum" && (
+                <Link href="/settings?upgrade=pro" onClick={() => setOpen(false)}
+                  className="block text-center text-xs font-semibold text-emerald-600 mb-2 hover:underline">
+                  ⬆️ อัปเกรดเพื่อถามได้มากขึ้น
+                </Link>
+              )}
               <form onSubmit={(e) => { e.preventDefault(); send(input); }} className="flex items-end gap-2">
                 <textarea
                   value={input}
@@ -294,8 +288,7 @@ export default function ChatWidget() {
               </form>
               <p className="text-[10px] text-gray-300 text-center mt-2">AI อาจคลาดเคลื่อน · ตรวจสอบตัวเลขสำคัญอีกครั้ง</p>
             </div>
-          </>
-        )}
+        </>
       </div>
     </>
   );

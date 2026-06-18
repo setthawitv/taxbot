@@ -1,41 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import { buildUserContext, chat, CHAT_LIMITS, type ChatPlan } from "@/lib/chat";
+import { buildUserContext, chat, CHAT_PLANS, type ChatPlan } from "@/lib/chat";
 
 const HISTORY_TURNS = 8; // last 8 messages (~4 turns) sent back to the model
 
-function monthStartISO(): string {
+// Start of the current quota window (UTC). Month = 1st; week = Monday.
+function periodStartISO(period: "week" | "month"): string {
   const now = new Date();
-  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1)).toISOString();
+  if (period === "month") {
+    return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+  }
+  const day  = now.getUTCDay();            // 0=Sun … 6=Sat
+  const back = day === 0 ? 6 : day - 1;    // days since Monday
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - back)).toISOString();
 }
 
-// Resolve plan eligibility: must be Pro/Platinum and not expired.
-async function resolvePlan(userId: string): Promise<
-  | { ok: true; plan: ChatPlan }
-  | { ok: false; status: number; error: string; locked?: boolean }
-> {
+// Everyone can chat. Expired paid plans fall back to Free; unknown → Free.
+async function resolvePlan(userId: string): Promise<ChatPlan | null> {
   const { data: user } = await supabaseAdmin
     .from("users")
-    .select("id, plan, plan_expires_at")
+    .select("plan, plan_expires_at")
     .eq("id", userId)
     .single();
+  if (!user) return null;
 
-  if (!user) return { ok: false, status: 404, error: "User not found" };
-
+  let plan = (user.plan ?? "free") as string;
   const expired = !!user.plan_expires_at && new Date(user.plan_expires_at) < new Date();
-  if ((user.plan !== "pro" && user.plan !== "platinum") || expired) {
-    return { ok: false, status: 403, error: "ผู้ช่วย AI ใช้ได้เฉพาะแพ็กเกจ Pro และ Platinum", locked: true };
-  }
-  return { ok: true, plan: user.plan as ChatPlan };
+  if (expired && (plan === "eco" || plan === "pro" || plan === "platinum")) plan = "free";
+  if (!(plan in CHAT_PLANS)) plan = "free";
+  return plan as ChatPlan;
 }
 
-async function monthlyUsed(userId: string): Promise<number> {
+async function usedThisPeriod(userId: string, period: "week" | "month"): Promise<number> {
   const { count } = await supabaseAdmin
     .from("chat_messages")
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId)
     .eq("role", "user")
-    .gte("created_at", monthStartISO());
+    .gte("created_at", periodStartISO(period));
   return count ?? 0;
 }
 
@@ -44,13 +46,9 @@ export async function GET(req: NextRequest) {
   const userId = req.nextUrl.searchParams.get("userId");
   if (!userId) return NextResponse.json({ error: "Missing userId" }, { status: 400 });
 
-  const planRes = await resolvePlan(userId);
-  if (!planRes.ok) {
-    return NextResponse.json(
-      { error: planRes.error, locked: planRes.locked ?? false },
-      { status: planRes.status }
-    );
-  }
+  const plan = await resolvePlan(userId);
+  if (!plan) return NextResponse.json({ error: "User not found" }, { status: 404 });
+  const cfg = CHAT_PLANS[plan];
 
   const { data: messages } = await supabaseAdmin
     .from("chat_messages")
@@ -60,14 +58,17 @@ export async function GET(req: NextRequest) {
     .limit(100);
 
   return NextResponse.json({
-    plan:     planRes.plan,
-    used:     await monthlyUsed(userId),
-    limit:    CHAT_LIMITS[planRes.plan],
+    plan,
+    label:    cfg.label,
+    period:   cfg.period,
+    mode:     cfg.mode,
+    used:     await usedThisPeriod(userId, cfg.period),
+    limit:    cfg.limit,
     messages: messages ?? [],
   });
 }
 
-// POST /api/chat  { userId, message }
+// POST /api/chat  { userId, message, clientData }
 export async function POST(req: NextRequest) {
   try {
     const { userId, message, clientData } = await req.json();
@@ -75,24 +76,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing userId or message" }, { status: 400 });
     }
 
-    const planRes = await resolvePlan(userId);
-    if (!planRes.ok) {
-      return NextResponse.json(
-        { error: planRes.error, locked: planRes.locked ?? false },
-        { status: planRes.status }
-      );
-    }
+    const plan = await resolvePlan(userId);
+    if (!plan) return NextResponse.json({ error: "User not found" }, { status: 404 });
+    const cfg = CHAT_PLANS[plan];
 
-    const limit = CHAT_LIMITS[planRes.plan];
-    const used  = await monthlyUsed(userId);
-    if (used >= limit) {
+    const used = await usedThisPeriod(userId, cfg.period);
+    if (used >= cfg.limit) {
+      const unit = cfg.period === "week" ? "สัปดาห์" : "เดือน";
       return NextResponse.json(
-        { error: `ใช้ครบโควต้าเดือนนี้แล้ว (${used}/${limit}) — รีเซ็ตต้นเดือนหน้า`, quotaExceeded: true, used, limit },
+        {
+          error: `ใช้ครบโควต้า${unit}นี้แล้ว (${used}/${cfg.limit}) — รีเซ็ต${cfg.period === "week" ? "ต้นสัปดาห์หน้า" : "ต้นเดือนหน้า"}`,
+          quotaExceeded: true, used, limit: cfg.limit, plan,
+        },
         { status: 429 }
       );
     }
 
-    // Recent history (oldest→newest) for conversational context
     const { data: recent } = await supabaseAdmin
       .from("chat_messages")
       .select("role, content")
@@ -104,15 +103,14 @@ export async function POST(req: NextRequest) {
       .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
 
     const context = await buildUserContext(userId, clientData);
-    const { reply, model } = await chat({ plan: planRes.plan, context, history, message: message.trim() });
+    const { reply, model } = await chat({ plan, context, history, message: message.trim() });
 
-    // Persist both turns (user row first so quota counts it)
     await supabaseAdmin.from("chat_messages").insert([
       { user_id: userId, role: "user",      content: message.trim() },
       { user_id: userId, role: "assistant", content: reply, model },
     ]);
 
-    return NextResponse.json({ reply, used: used + 1, limit });
+    return NextResponse.json({ reply, used: used + 1, limit: cfg.limit });
   } catch (err) {
     console.error("[chat]", err);
     return NextResponse.json(

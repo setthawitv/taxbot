@@ -6,16 +6,26 @@ import { supabaseAdmin } from "@/lib/supabase";
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 // ── Plans that get the chatbot, their monthly message quota, and model ────────
-export type ChatPlan = "pro" | "platinum";
+export type ChatPlan = "trial" | "free" | "eco" | "pro" | "platinum";
 
-export const CHAT_LIMITS: Record<ChatPlan, number> = {
-  pro:      100,   // descriptive
-  platinum: 200,   // predictive
+export type ChatPlanConfig = {
+  limit:  number;            // messages per period
+  period: "week" | "month";
+  model:  string;
+  mode:   "descriptive" | "predictive";
+  label:  string;
 };
 
-const CHAT_MODEL: Record<ChatPlan, string> = {
-  pro:      "meta-llama/llama-4-scout-17b-16e-instruct", // fast/cheap — descriptive
-  platinum: "llama-3.3-70b-versatile",                   // stronger — predictive
+const SCOUT   = "meta-llama/llama-4-scout-17b-16e-instruct"; // fast/cheap
+const LLAMA70 = "llama-3.3-70b-versatile";                   // stronger reasoning
+
+// Everyone can use the assistant; quota + capability scale with the plan.
+export const CHAT_PLANS: Record<ChatPlan, ChatPlanConfig> = {
+  free:     { limit: 2,   period: "week",  model: SCOUT,   mode: "descriptive", label: "Free" },
+  trial:    { limit: 5,   period: "week",  model: SCOUT,   mode: "descriptive", label: "ทดลอง" },
+  eco:      { limit: 15,  period: "week",  model: SCOUT,   mode: "descriptive", label: "Eco" },
+  pro:      { limit: 100, period: "month", model: SCOUT,   mode: "descriptive", label: "Pro" },
+  platinum: { limit: 200, period: "month", model: LLAMA70, mode: "predictive",  label: "Platinum" },
 };
 
 const MAX_OUTPUT_TOKENS = 800;
@@ -188,8 +198,9 @@ export async function chat(opts: {
   history: { role: "user" | "assistant"; content: string }[];
   message: string;
 }): Promise<{ reply: string; model: string }> {
-  const model  = CHAT_MODEL[opts.plan];
-  const system = opts.plan === "platinum" ? SYSTEM_PREDICTIVE : SYSTEM_DESCRIPTIVE;
+  const cfg    = CHAT_PLANS[opts.plan] ?? CHAT_PLANS.free;
+  const model  = cfg.model;
+  const system = cfg.mode === "predictive" ? SYSTEM_PREDICTIVE : SYSTEM_DESCRIPTIVE;
 
   const response = await groq.chat.completions.create({
     model,
