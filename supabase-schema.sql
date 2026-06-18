@@ -119,6 +119,19 @@ CREATE TABLE IF NOT EXISTS landing_leads (
 );
 CREATE INDEX IF NOT EXISTS idx_landing_leads_created ON landing_leads(created_at DESC);
 
+-- ── chat_messages ────────────────────────────────────────────────────────────
+-- AI chatbot history (Pro: descriptive / Platinum: predictive). Doubles as the
+-- monthly message-quota source (count of role='user' rows in the current month).
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role       TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+  content    TEXT NOT NULL,
+  model      TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_user ON chat_messages(user_id, created_at DESC);
+
 -- ── payments ─────────────────────────────────────────────────────────────────
 -- Beam payment-gateway charges. (line_user_id matches users.line_user_id, TEXT.)
 CREATE TABLE IF NOT EXISTS payments (
@@ -217,6 +230,7 @@ ALTER TABLE vendor_rules           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE platform_orders        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE import_logs            ENABLE ROW LEVEL SECURITY;
 ALTER TABLE landing_leads          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE chat_messages          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payments               ENABLE ROW LEVEL SECURITY;
 ALTER TABLE account_admins         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE staff_invites          ENABLE ROW LEVEL SECURITY;
