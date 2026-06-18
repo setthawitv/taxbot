@@ -26,8 +26,12 @@ const BRACKETS = [
   { max: 750_000, rate: 0.15 }, { max: 1_000_000, rate: 0.20 }, { max: 2_000_000, rate: 0.25 },
   { max: 5_000_000, rate: 0.30 }, { max: Infinity, rate: 0.35 },
 ];
-function estimateTax(income: number): number {
-  const taxable = Math.max(0, income - income * 0.6 - 60_000);
+// Mirrors the tax page: 40(8) business income → หักเหมา 60%; 40(1)+(2) salary →
+// หักเหมา 50% capped 100k; minus personal allowance 60k and any extra deductions.
+function estimateTax(businessIncome: number, salaryPlusCommission: number, extraDeductions: number): number {
+  const businessNet = businessIncome * 0.4;
+  const salaryNet   = salaryPlusCommission - Math.min(salaryPlusCommission * 0.5, 100_000);
+  const taxable = Math.max(0, businessNet + salaryNet - 60_000 - extraDeductions);
   let remaining = taxable, tax = 0, prev = 0;
   for (const b of BRACKETS) {
     if (remaining <= 0) break;
@@ -48,7 +52,10 @@ const pad = (n: number) => String(n).padStart(2, "0");
  * vendors, tax estimate) rather than dumping raw rows — keeps input tokens low
  * and answers grounded.
  */
-export async function buildUserContext(userId: string): Promise<string> {
+export async function buildUserContext(
+  userId: string,
+  client?: { salary?: number; commission?: number; deductions?: Record<string, number> }
+): Promise<string> {
   const now   = new Date();
   const year  = now.getFullYear();
   const month = now.getMonth() + 1;
@@ -106,22 +113,41 @@ export async function buildUserContext(userId: string): Promise<string> {
     ? topVendors.map(([v, amt], i) => `  ${i + 1}. ${v}: ${thb(amt)}`).join("\n")
     : "  (ยังไม่มีรายจ่ายบันทึก)";
 
-  const tax = estimateTax(incomeY);
+  // Salary / commission / extra deductions entered on the tax page (browser
+  // localStorage — passed in from the client, since they aren't in the DB).
+  const salary     = Math.max(0, Number(client?.salary) || 0);
+  const commission = Math.max(0, Number(client?.commission) || 0);
+  const dedObj     = client?.deductions && typeof client.deductions === "object" ? client.deductions : {};
+  const extraDeductions = Object.entries(dedObj)
+    .filter(([k]) => k !== "personal")
+    .reduce((s, [, v]) => s + (Number(v) || 0), 0);
+
+  const incomeTotalY = incomeY + salary + commission;
+  const tax = estimateTax(incomeY, salary + commission, extraDeductions);
+
+  const salaryLines = [
+    salary > 0     ? `เงินเดือน 40(1): ${thb(salary)}` : "",
+    commission > 0 ? `ค่านายหน้า/คอมมิชชั่น 40(2): ${thb(commission)}` : "",
+    extraDeductions > 0 ? `ค่าลดหย่อนเพิ่มเติม (นอกเหนือส่วนตัว): ${thb(extraDeductions)}` : "",
+  ].filter(Boolean);
 
   return [
     `ข้อมูลการเงินของผู้ใช้ (อ้างอิงตัวเลขเหล่านี้เท่านั้น ห้ามแต่งเพิ่ม):`,
     `วันนี้: ${year}-${pad(month)}-${pad(now.getDate())}`,
     ``,
     `== ทั้งปี ${year} ==`,
-    `รายรับรวม: ${thb(incomeY)} (จากแพลตฟอร์ม ${thb(platformIncomeY)}, manual ${thb(manualIncomeY)})`,
+    `รายได้ธุรกิจ/ขายของ 40(8): ${thb(incomeY)} (แพลตฟอร์ม ${thb(platformIncomeY)}, manual ${thb(manualIncomeY)})`,
     `แยกแพลตฟอร์ม: ${platformLine}`,
-    `รายจ่ายรวม: ${thb(expenseY)}`,
-    `กำไรสุทธิ: ${thb(incomeY - expenseY)}`,
-    `ภาษีโดยประมาณ (หักเหมา 60% + ลดหย่อนส่วนตัว 60,000): ${thb(tax)}`,
-    incomeY >= 1_800_000 ? `⚠️ รายได้เกิน 1.8 ล้าน — ต้องจดทะเบียน VAT` : ``,
+    ...salaryLines,
+    `รายรับรวมทั้งหมด: ${thb(incomeTotalY)}`,
+    `รายจ่ายธุรกิจที่บันทึก: ${thb(expenseY)}`,
+    `กำไรสุทธิจากธุรกิจ: ${thb(incomeY - expenseY)}`,
+    `ภาษีเงินได้บุคคลธรรมดาโดยประมาณ (รวมเงินเดือน, หักเหมา 60% ฝั่งธุรกิจ + เงินเดือนหัก 50% สูงสุด 100k + ลดหย่อนส่วนตัว 60k${extraDeductions > 0 ? " + ลดหย่อนเพิ่มเติม" : ""}): ${thb(tax)}`,
+    incomeY >= 1_800_000 ? `⚠️ รายได้ธุรกิจเกิน 1.8 ล้าน — ต้องจดทะเบียน VAT` : ``,
     ``,
     `== เดือนนี้ (${pad(month)}/${year}) ==`,
-    `รายรับ: ${thb(incomeM)} | รายจ่าย: ${thb(expenseM)} | กำไร: ${thb(incomeM - expenseM)}`,
+    `รายรับธุรกิจ: ${thb(incomeM)} | รายจ่าย: ${thb(expenseM)} | กำไร: ${thb(incomeM - expenseM)}`,
+    salary > 0 ? `(หมายเหตุ: เงินเดือนเป็นยอดทั้งปี ไม่นับรวมในยอดเดือน)` : "",
     ``,
     `รายจ่ายสูงสุดทั้งปี (top 5 ร้าน/ผู้รับเงิน):`,
     vendorLines,

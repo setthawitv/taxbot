@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
 // POST /api/chat  { userId, message }
 export async function POST(req: NextRequest) {
   try {
-    const { userId, message } = await req.json();
+    const { userId, message, clientData } = await req.json();
     if (!userId || !message?.trim()) {
       return NextResponse.json({ error: "Missing userId or message" }, { status: 400 });
     }
@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
       .reverse()
       .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
 
-    const context = await buildUserContext(userId);
+    const context = await buildUserContext(userId, clientData);
     const { reply, model } = await chat({ plan: planRes.plan, context, history, message: message.trim() });
 
     // Persist both turns (user row first so quota counts it)

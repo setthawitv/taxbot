@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import AppLayout from "@/components/AppLayout";
 import { IconSparkle, IconRocket, IconCrown } from "@/components/icons";
+import { lsGet } from "@/lib/storage";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -71,11 +72,23 @@ export default function ChatPage() {
     setInput("");
     setMessages((m) => [...m, { role: "user", content: msg }]);
     setSending(true);
+
+    // Salary / commission / deductions live only in the tax page's localStorage —
+    // send them so the bot's income & tax match the Tax Summary page.
+    const yr = new Date().getFullYear();
+    let deductions: Record<string, number> = {};
+    try { deductions = JSON.parse(lsGet(`deductions_${yr}`) || "{}"); } catch { /* ignore */ }
+    const clientData = {
+      salary:     parseFloat(lsGet(`salary_${yr}`) || "0") || 0,
+      commission: parseFloat(lsGet(`commission_${yr}`) || "0") || 0,
+      deductions,
+    };
+
     try {
       const res = await fetch("/api/chat", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ userId, message: msg }),
+        body:    JSON.stringify({ userId, message: msg, clientData }),
       });
       const d = await res.json();
       if (!res.ok) {
