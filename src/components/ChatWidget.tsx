@@ -10,6 +10,8 @@ import { lsGet } from "@/lib/storage";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
+const NAVY = "#0A192F";
+
 // Only show the assistant on the authenticated app pages (not landing/onboarding/etc.)
 const SHOW_ON = ["/home", "/rairab", "/raijhai", "/phasi", "/stock", "/settings", "/scan", "/drive", "/sheets"];
 
@@ -29,7 +31,7 @@ const SUGGESTIONS: Record<string, string[]> = {
 export default function ChatWidget() {
   const { status } = useSession();
   const pathname = usePathname();
-  const { open, setOpen } = useChat();
+  const { open, setOpen, setWidth, setDragging } = useChat();
 
   const [loaded, setLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -47,7 +49,6 @@ export default function ChatWidget() {
 
   const shouldShow = status === "authenticated" && SHOW_ON.some((p) => pathname.startsWith(p));
 
-  // Close the panel (drop the content shift) when leaving an app page
   useEffect(() => { if (!shouldShow && open) setOpen(false); }, [shouldShow, open, setOpen]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -82,6 +83,24 @@ export default function ChatWidget() {
     })();
   }, [open, loaded, loading, status]);
 
+  // Drag the left edge to resize the panel (and the page-shift padding with it)
+  function startDrag(e: React.PointerEvent) {
+    e.preventDefault();
+    setDragging(true);
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "col-resize";
+    const onMove = (ev: PointerEvent) => setWidth(window.innerWidth - ev.clientX);
+    const onUp = () => {
+      setDragging(false);
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }
+
   async function send(text: string) {
     const msg = text.trim();
     if (!msg || sending || !userId) return;
@@ -90,8 +109,6 @@ export default function ChatWidget() {
     setMessages((m) => [...m, { role: "user", content: msg }]);
     setSending(true);
 
-    // Salary/commission/deductions live only in the tax page's localStorage —
-    // send them so the bot's numbers match the Tax Summary page.
     const yr = new Date().getFullYear();
     let deductions: Record<string, number> = {};
     try { deductions = JSON.parse(lsGet(`deductions_${yr}`) || "{}"); } catch { /* ignore */ }
@@ -129,15 +146,16 @@ export default function ChatWidget() {
 
   return (
     <>
-      {/* Prominent floating launcher (hidden while the panel is open) */}
+      {/* Prominent floating launcher (fades out while the panel is open) */}
       <button
         onClick={() => setOpen(true)}
         aria-label="เปิด Vendee AI Assistant"
-        className={`fixed z-[55] right-4 bottom-20 lg:bottom-6 flex items-center gap-2.5 pl-3 pr-4 py-2.5 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-600 text-white shadow-xl shadow-purple-900/30 ring-2 ring-white/40 hover:scale-105 active:scale-95 transition-all ${open ? "opacity-0 pointer-events-none translate-y-2" : "opacity-100"}`}
+        style={{ backgroundColor: NAVY }}
+        className={`fixed z-[55] right-4 bottom-20 lg:bottom-6 flex items-center gap-2.5 pl-3 pr-4 py-2.5 rounded-full text-white shadow-xl shadow-black/30 ring-2 ring-white/25 hover:scale-105 active:scale-95 transition-all ${open ? "opacity-0 pointer-events-none translate-y-2" : "opacity-100"}`}
       >
         <span className="relative flex items-center justify-center w-7 h-7">
-          <span className="absolute inline-flex h-full w-full rounded-full bg-white/40 animate-ping" />
-          <span className="relative flex items-center justify-center w-7 h-7 rounded-full bg-white/20">
+          <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400/50 animate-ping" />
+          <span className="relative flex items-center justify-center w-7 h-7 rounded-full bg-white/15 text-emerald-300">
             <IconSparkle className="w-4 h-4" />
           </span>
         </span>
@@ -146,31 +164,40 @@ export default function ChatWidget() {
 
       {/* Side panel — slides in from the right; no backdrop, page stays usable */}
       <div
-        className={`fixed right-0 top-0 bottom-0 z-[60] w-full lg:w-[440px] bg-white shadow-2xl border-l border-gray-200 flex flex-col transition-transform duration-300 ease-out ${open ? "translate-x-0" : "translate-x-full"}`}
+        className={`fixed right-0 top-0 bottom-0 z-[60] w-full lg:w-[var(--chat-w,440px)] bg-white shadow-2xl border-l border-gray-200 flex flex-col transition-transform duration-300 ease-out ${open ? "translate-x-0" : "translate-x-full"}`}
         aria-hidden={!open}
       >
+        {/* Resize handle (desktop) */}
+        <div
+          onPointerDown={startDrag}
+          className="hidden lg:block absolute left-0 top-0 bottom-0 w-2 -ml-1 cursor-col-resize group z-10"
+          aria-label="ลากเพื่อปรับความกว้าง"
+        >
+          <span className="absolute inset-y-0 left-1 w-0.5 bg-transparent group-hover:bg-emerald-400 group-active:bg-emerald-500 transition-colors" />
+        </div>
+
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-violet-500 to-fuchsia-600 text-white flex-shrink-0">
+        <div style={{ backgroundColor: NAVY }} className="flex items-center justify-between px-5 py-4 text-white flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center text-emerald-300">
               <IconSparkle className="w-6 h-6" />
             </div>
             <div>
               <p className="font-bold text-base leading-tight">Vendee AI Assistant</p>
-              <p className="text-[12px] text-white/75 flex items-center gap-1">
+              <p className="text-[12px] text-white/60 flex items-center gap-1">
                 {plan === "platinum"
-                  ? <><IconCrown className="w-3.5 h-3.5" /> Platinum · แนะนำเชิงรุก</>
+                  ? <><IconCrown className="w-3.5 h-3.5 text-amber-400" /> Platinum · แนะนำเชิงรุก</>
                   : plan === "pro" ? "Pro · สรุป & อธิบายข้อมูล" : "ผู้ช่วยการเงินอัจฉริยะ"}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             {limit > 0 && (
-              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${used >= limit ? "bg-rose-500/40" : "bg-white/15"}`}>
+              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${used >= limit ? "bg-rose-500/40" : "bg-white/10"}`}>
                 {used}/{limit}
               </span>
             )}
-            <button onClick={() => setOpen(false)} aria-label="ปิด" className="w-9 h-9 rounded-lg hover:bg-white/15 flex items-center justify-center">
+            <button onClick={() => setOpen(false)} aria-label="ปิด" className="w-9 h-9 rounded-lg hover:bg-white/10 flex items-center justify-center">
               <IconX className="w-5 h-5" />
             </button>
           </div>
@@ -179,7 +206,7 @@ export default function ChatWidget() {
         {locked ? (
           /* Upsell */
           <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-violet-100 text-violet-600 mb-5">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-emerald-50 text-emerald-600 mb-5">
               <IconSparkle className="w-10 h-10" />
             </div>
             <h3 className="text-xl font-bold text-gray-800 mb-2">ผู้ช่วย AI สำหรับ Pro &amp; Platinum</h3>
@@ -187,8 +214,8 @@ export default function ChatWidget() {
               ถาม-ตอบเกี่ยวกับข้อมูลการเงินของคุณได้ทุกหน้า — <strong>Pro</strong> สรุป/อธิบายตัวเลข,
               <strong> Platinum</strong> แนะนำเชิงรุกว่าควรทำอะไรต่อ
             </p>
-            <Link href="/settings?upgrade=pro" onClick={() => setOpen(false)}
-              className="inline-flex items-center gap-2 px-7 py-3 rounded-2xl bg-gradient-to-r from-violet-500 to-fuchsia-600 text-white font-bold text-sm hover:opacity-90">
+            <Link href="/settings?upgrade=pro" onClick={() => setOpen(false)} style={{ backgroundColor: NAVY }}
+              className="inline-flex items-center gap-2 px-7 py-3 rounded-2xl text-white font-bold text-sm hover:opacity-90">
               <IconRocket className="w-4 h-4" /> อัปเกรดเพื่อใช้งาน
             </Link>
           </div>
@@ -200,7 +227,7 @@ export default function ChatWidget() {
                 <p className="text-center text-gray-400 text-sm mt-8">กำลังโหลด...</p>
               ) : messages.length === 0 ? (
                 <div className="text-center mt-10">
-                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-violet-100 text-violet-600 mb-3">
+                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 mb-3">
                     <IconSparkle className="w-7 h-7" />
                   </div>
                   <p className="text-gray-600 text-sm font-semibold mb-1">สวัสดีค่ะ 👋</p>
@@ -208,7 +235,7 @@ export default function ChatWidget() {
                   <div className="flex flex-wrap justify-center gap-2 px-4">
                     {tips.map((t) => (
                       <button key={t} onClick={() => send(t)}
-                        className="text-xs text-violet-600 bg-violet-50 hover:bg-violet-100 border border-violet-100 rounded-full px-3 py-1.5 transition-colors">
+                        className="text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 rounded-full px-3 py-1.5 transition-colors">
                         {t}
                       </button>
                     ))}
@@ -251,12 +278,13 @@ export default function ChatWidget() {
                   placeholder={limit > 0 && used >= limit ? "ใช้ครบโควต้าเดือนนี้แล้ว" : "พิมพ์คำถาม..."}
                   disabled={sending || (limit > 0 && used >= limit) || loading}
                   rows={1}
-                  className="flex-1 resize-none rounded-2xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-violet-400 disabled:bg-gray-50 disabled:text-gray-400 max-h-32"
+                  className="flex-1 resize-none rounded-2xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 disabled:bg-gray-50 disabled:text-gray-400 max-h-32"
                 />
                 <button
                   type="submit"
                   disabled={sending || !input.trim() || (limit > 0 && used >= limit)}
-                  className="flex-shrink-0 w-10 h-10 rounded-2xl bg-gradient-to-r from-violet-500 to-fuchsia-600 text-white flex items-center justify-center disabled:opacity-40 transition-opacity"
+                  style={{ backgroundColor: NAVY }}
+                  className="flex-shrink-0 w-10 h-10 rounded-2xl text-white flex items-center justify-center disabled:opacity-40 hover:opacity-90 transition-opacity"
                   aria-label="ส่ง"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
