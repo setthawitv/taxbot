@@ -176,12 +176,29 @@ type UserInfo = {
 };
 
 type Stats = {
-  monthIncome:   number;
-  yearIncome:    number;
-  monthExpense:  number;
-  yearExpense:   number;
-  estimatedTax:  number;
+  monthIncome:    number;
+  yearIncome:     number;
+  monthExpense:   number;
+  yearExpense:    number;
+  estimatedTax:   number;   // business income only (no salary)
+  taxWithSalary:  number;   // including salary/commission entered on the tax page
 };
+
+// Thai PIT brackets — local quick calc for the dashboard tax card
+const TAX_BRACKETS = [
+  { max: 150_000, rate: 0 }, { max: 300_000, rate: 0.05 }, { max: 500_000, rate: 0.10 },
+  { max: 750_000, rate: 0.15 }, { max: 1_000_000, rate: 0.20 }, { max: 2_000_000, rate: 0.25 },
+  { max: 5_000_000, rate: 0.30 }, { max: Infinity, rate: 0.35 },
+];
+function bracketTax(taxable: number): number {
+  let remaining = Math.max(0, taxable), tax = 0, prev = 0;
+  for (const b of TAX_BRACKETS) {
+    if (remaining <= 0) break;
+    const slice = Math.min(remaining, b.max - prev);
+    tax += slice * b.rate; remaining -= slice; prev = b.max;
+  }
+  return Math.round(tax);
+}
 
 type Links = {
   sheetUrl: string | null;
@@ -357,14 +374,40 @@ export default function Home() {
       fetch(`/api/user/links?lid=${uid}`).then((r) => r.json()),
 
     ]).then(([moIncome, yrIncome, moExpense, yrExpense, tax, status, lnks]) => {
-      const recommended = tax.recommended ?? 1;
-      const taxAmt = recommended === 1 ? (tax.method1?.estimatedTax ?? 0) : (tax.method2?.estimatedTax ?? 0);
+      // Compute two tax estimates that differ ONLY by salary. Business income
+      // is from the DB (tax summary); salary/commission/extra deductions live in
+      // the tax page's localStorage. Pick the lower of หักเหมา 60% vs หักตามจริง.
+      const totalIncome  = tax.totalIncome  ?? 0;
+      const totalExpense = tax.totalExpense ?? 0;
+      let extraDed = 0;
+      try {
+        const ded = JSON.parse(lsGet(`deductions_${yr}`) || "{}");
+        extraDed = Object.entries(ded as Record<string, number>)
+          .filter(([k]) => k !== "personal")
+          .reduce((s, [, v]) => s + (Number(v) || 0), 0);
+      } catch { /* ignore */ }
+      const salaryComm =
+        (parseFloat(lsGet(`salary_${yr}`) || "0") || 0) +
+        (parseFloat(lsGet(`commission_${yr}`) || "0") || 0);
+
+      const bizNet1   = totalIncome * 0.4;           // หักเหมา 60%
+      const bizNet2   = totalIncome - totalExpense;  // หักตามจริง
+      const allowance = 60_000 + extraDed;
+      const taxFor = (sc: number) => {
+        const salaryNet = sc - Math.min(sc * 0.5, 100_000);
+        return Math.min(
+          bracketTax(bizNet1 + salaryNet - allowance),
+          bracketTax(bizNet2 + salaryNet - allowance),
+        );
+      };
+
       setStats({
-        monthIncome:  moIncome.total  ?? 0,
-        yearIncome:   yrIncome.total  ?? 0,
-        monthExpense: moExpense.total ?? 0,
-        yearExpense:  yrExpense.total ?? 0,
-        estimatedTax: taxAmt,
+        monthIncome:   moIncome.total  ?? 0,
+        yearIncome:    yrIncome.total  ?? 0,
+        monthExpense:  moExpense.total ?? 0,
+        yearExpense:   yrExpense.total ?? 0,
+        estimatedTax:  taxFor(0),
+        taxWithSalary: taxFor(salaryComm),
       });
       // For admins: keep their own Google name/picture, only update businessName
       // For owners: prefer LINE display_name + picture from DB
@@ -580,12 +623,19 @@ export default function Home() {
               {loadingStats ? (
                 <div className="h-10 bg-white/10 rounded animate-pulse w-2/3 mb-2" />
               ) : (
-                <p className="text-3xl font-bold text-white">฿{fmt(stats?.estimatedTax ?? 0)}</p>
+                <>
+                  <p className="text-3xl font-bold text-white">฿{fmt(stats?.taxWithSalary ?? 0)}</p>
+                  <p className="text-white/40 text-xs mt-0.5">รวมเงินเดือน</p>
+                  <div className="mt-3 pt-3 border-t border-white/10">
+                    <p className="text-xl font-semibold text-white/80">฿{fmt(stats?.estimatedTax ?? 0)}</p>
+                    <p className="text-white/40 text-xs mt-0.5">ไม่รวมเงินเดือน (เฉพาะธุรกิจ)</p>
+                  </div>
+                  {(stats?.taxWithSalary ?? 0) === 0 && (
+                    <p className="text-white/30 text-xs mt-2">ยังไม่ถึงเกณฑ์เสียภาษี</p>
+                  )}
+                </>
               )}
-              {!loadingStats && (stats?.estimatedTax ?? 0) === 0 && (
-                <p className="text-white/30 text-xs mt-1">ยังไม่ถึงเกณฑ์เสียภาษี</p>
-              )}
-              <p className="text-white/30 text-xs mt-1">ปี {selectedYear}</p>
+              <p className="text-white/30 text-xs mt-2">ปี {selectedYear}</p>
             </div>
             <Link href="/phasi"
               className="mt-6 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#10B981] hover:bg-[#0ea572] transition-colors text-white text-sm font-semibold">
