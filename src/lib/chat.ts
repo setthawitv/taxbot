@@ -1,7 +1,9 @@
-import Anthropic from "@anthropic-ai/sdk";
+import Groq from "groq-sdk";
 import { supabaseAdmin } from "@/lib/supabase";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+// Chatbot runs on Groq for now (Anthropic key pending). To switch back to Claude:
+// swap this client + CHAT_MODEL ids + the call in chat() back to the Anthropic SDK.
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 // ── Plans that get the chatbot, their monthly message quota, and model ────────
 export type ChatPlan = "pro" | "platinum";
@@ -12,8 +14,8 @@ export const CHAT_LIMITS: Record<ChatPlan, number> = {
 };
 
 const CHAT_MODEL: Record<ChatPlan, string> = {
-  pro:      "claude-haiku-4-5",   // cheap, sufficient for describing data
-  platinum: "claude-sonnet-4-6",  // stronger reasoning for recommendations
+  pro:      "meta-llama/llama-4-scout-17b-16e-instruct", // fast/cheap — descriptive
+  platinum: "llama-3.3-70b-versatile",                   // stronger — predictive
 };
 
 const MAX_OUTPUT_TOKENS = 800;
@@ -153,26 +155,17 @@ export async function chat(opts: {
   const model  = CHAT_MODEL[opts.plan];
   const system = opts.plan === "platinum" ? SYSTEM_PREDICTIVE : SYSTEM_DESCRIPTIVE;
 
-  const response = await client.messages.create({
+  const response = await groq.chat.completions.create({
     model,
     max_tokens: MAX_OUTPUT_TOKENS,
-    system: [
-      { type: "text", text: system },
-      // Cache the (larger, stable-within-session) data context so follow-up
-      // questions in the same chat are billed at ~0.1x for this prefix.
-      { type: "text", text: opts.context, cache_control: { type: "ephemeral" } },
-    ],
     messages: [
+      { role: "system" as const, content: `${system}\n\n${opts.context}` },
       ...opts.history,
-      { role: "user", content: opts.message },
-    ] satisfies Anthropic.MessageParam[],
+      { role: "user" as const, content: opts.message },
+    ],
   });
 
-  const reply = response.content
-    .filter((b): b is Anthropic.TextBlock => b.type === "text")
-    .map((b) => b.text)
-    .join("\n")
-    .trim();
+  const reply = response.choices[0]?.message?.content?.trim() ?? "";
 
   return { reply: reply || "ขออภัย ระบบยังตอบไม่ได้ในตอนนี้ ลองใหม่อีกครั้งนะคะ", model };
 }
