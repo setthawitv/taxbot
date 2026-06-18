@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans_Thai } from "next/font/google";
 import SessionProvider from "@/components/SessionProvider";
+import ChatWidget from "@/components/ChatWidget";
 import "./globals.css";
 
 const ibmPlexSansThai = IBM_Plex_Sans_Thai({
@@ -27,7 +28,10 @@ export default function RootLayout({
       style={{ colorScheme: "light" }}
     >
       <body className="min-h-full flex flex-col">
-          <SessionProvider>{children}</SessionProvider>
+          <SessionProvider>
+            {children}
+            <ChatWidget />
+          </SessionProvider>
         </body>
     </html>
   );

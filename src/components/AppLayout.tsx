@@ -7,7 +7,6 @@ import { useSession } from "next-auth/react";
 import {
   IconHome, IconIncome, IconExpense, IconTax, IconSettings, VendeeLogo, IconInbox,
 } from "@/components/icons";
-import ChatWidget from "@/components/ChatWidget";
 import type { ComponentType, ReactNode } from "react";
 
 type NavItem = { href: string; Icon: ComponentType<{ className?: string }>; labelTh: string; labelEn: string };
@@ -183,9 +182,6 @@ export default function AppLayout({
           })}
         </div>
       </nav>
-
-      {/* ── Floating AI assistant (every page) ──────────────────────────────── */}
-      <ChatWidget />
 
     </div>
   );
