@@ -28,6 +28,37 @@ const SUGGESTIONS: Record<string, string[]> = {
   ],
 };
 
+// ── Instant quick answers (no AI call, no quota) ──────────────────────────────
+type TaxSummary = {
+  totalIncome?:  number;
+  totalExpense?: number;
+  byPlatform?:   Record<string, number>;
+};
+type Summary = { tax: TaxSummary | null; monthIncome: number; monthExpense: number };
+
+const QUICK: { q: string; key: string }[] = [
+  { q: "เดือนนี้กำไรเท่าไหร่?",            key: "monthProfit" },
+  { q: "ปีนี้รายรับ/รายจ่ายรวมเท่าไหร่?", key: "yearTotals" },
+  { q: "แพลตฟอร์มไหนขายดีสุดปีนี้?",      key: "topPlatform" },
+  { q: "ภาษีปีนี้ประมาณเท่าไหร่?",        key: "tax" },
+  { q: "รายได้ถึงเกณฑ์ VAT หรือยัง?",     key: "vat" },
+  { q: "หักค่าใช้จ่ายแบบไหนคุ้มกว่า?",    key: "method" },
+];
+
+const PLATFORM_LABEL: Record<string, string> = { tiktok: "TikTok", shopee: "Shopee", lazada: "Lazada" };
+const fmtNum = (n: number) => Math.round(n).toLocaleString("en-US");
+
+const QUICK_BRACKETS = [
+  { max: 150_000, rate: 0 }, { max: 300_000, rate: 0.05 }, { max: 500_000, rate: 0.10 },
+  { max: 750_000, rate: 0.15 }, { max: 1_000_000, rate: 0.20 }, { max: 2_000_000, rate: 0.25 },
+  { max: 5_000_000, rate: 0.30 }, { max: Infinity, rate: 0.35 },
+];
+function bracketTax(taxable: number): number {
+  let r = Math.max(0, taxable), tax = 0, prev = 0;
+  for (const b of QUICK_BRACKETS) { if (r <= 0) break; const s = Math.min(r, b.max - prev); tax += s * b.rate; r -= s; prev = b.max; }
+  return Math.round(tax);
+}
+
 export default function ChatWidget() {
   const { status } = useSession();
   const pathname = usePathname();
@@ -43,6 +74,7 @@ export default function ChatWidget() {
   const [mode, setMode]     = useState<"descriptive" | "predictive">("descriptive");
 
   const [messages, setMessages] = useState<Msg[]>([]);
+  const [summary, setSummary] = useState<Summary | null>(null);
   const [used, setUsed]   = useState(0);
   const [limit, setLimit] = useState(0);
   const [input, setInput] = useState("");
@@ -81,6 +113,16 @@ export default function ChatWidget() {
           setLimit(cd.limit);
           setMessages((cd.messages ?? []).map((m: Msg) => ({ role: m.role, content: m.content })));
         }
+
+        // Financial summary for the instant quick-answer chips (no AI involved)
+        const yr = new Date().getFullYear();
+        const mo = new Date().getMonth() + 1;
+        const [taxR, incMo, expMo] = await Promise.all([
+          fetch(`/api/tax/summary?userId=${d.userId}&year=${yr}`).then((r) => r.json()).catch(() => null),
+          fetch(`/api/income/summary?userId=${d.userId}&year=${yr}&month=${mo}`).then((r) => r.json()).catch(() => null),
+          fetch(`/api/expense/summary?userId=${d.userId}&year=${yr}&month=${mo}`).then((r) => r.json()).catch(() => null),
+        ]);
+        setSummary({ tax: taxR, monthIncome: incMo?.total ?? 0, monthExpense: expMo?.total ?? 0 });
       } catch { /* ignore */ }
       setLoaded(true);
       setLoading(false);
@@ -142,6 +184,75 @@ export default function ChatWidget() {
     } finally {
       setSending(false);
     }
+  }
+
+  // Compute tax both ways (เหมา 60% vs ตามจริง) including salary from localStorage
+  function taxBoth() {
+    const inc = summary?.tax?.totalIncome  ?? 0;
+    const exp = summary?.tax?.totalExpense ?? 0;
+    const yr  = new Date().getFullYear();
+    let extra = 0;
+    try {
+      const ded = JSON.parse(lsGet(`deductions_${yr}`) || "{}");
+      extra = Object.entries(ded as Record<string, number>)
+        .filter(([k]) => k !== "personal")
+        .reduce((s, [, v]) => s + (Number(v) || 0), 0);
+    } catch { /* ignore */ }
+    const salaryComm = (parseFloat(lsGet(`salary_${yr}`) || "0") || 0) + (parseFloat(lsGet(`commission_${yr}`) || "0") || 0);
+    const salaryNet  = salaryComm - Math.min(salaryComm * 0.5, 100_000);
+    const allow      = 60_000 + extra;
+    const t1 = bracketTax(inc * 0.4 + salaryNet - allow);   // หักเหมา 60%
+    const t2 = bracketTax((inc - exp) + salaryNet - allow); // หักตามจริง
+    return { inc, t1, t2, salaryComm };
+  }
+
+  // Instant, deterministic answers — no /api/chat call, no quota used
+  function quickAnswer(key: string): string {
+    if (!summary) return "กำลังโหลดข้อมูล ลองใหม่อีกครั้งค่ะ";
+    const tax = summary.tax;
+    switch (key) {
+      case "monthProfit": {
+        const p = summary.monthIncome - summary.monthExpense;
+        return `เดือนนี้:\n• รายรับ ฿${fmtNum(summary.monthIncome)}\n• รายจ่าย ฿${fmtNum(summary.monthExpense)}\n• ${p >= 0 ? "กำไร" : "ขาดทุน"} ฿${fmtNum(Math.abs(p))}`;
+      }
+      case "yearTotals": {
+        const inc = tax?.totalIncome ?? 0, exp = tax?.totalExpense ?? 0, p = inc - exp;
+        return `ปีนี้ทั้งหมด:\n• รายรับรวม ฿${fmtNum(inc)}\n• รายจ่ายรวม ฿${fmtNum(exp)}\n• ${p >= 0 ? "กำไร" : "ขาดทุน"}สุทธิ ฿${fmtNum(Math.abs(p))}`;
+      }
+      case "topPlatform": {
+        const sorted = Object.entries(tax?.byPlatform ?? {}).sort((a, b) => b[1] - a[1]);
+        if (!sorted.length) return "ปีนี้ยังไม่มียอดขายจากแพลตฟอร์มค่ะ";
+        const name = (k: string) => PLATFORM_LABEL[k] ?? k;
+        let s = `แพลตฟอร์มที่ขายดีสุดปีนี้: ${name(sorted[0][0])} ฿${fmtNum(sorted[0][1])}`;
+        if (sorted.length > 1) s += `\nรองลงมา: ${sorted.slice(1).map(([p, a]) => `${name(p)} ฿${fmtNum(a)}`).join(", ")}`;
+        return s;
+      }
+      case "tax": {
+        const { t1, t2, salaryComm } = taxBoth();
+        const t = Math.min(t1, t2);
+        let s = `ภาษีเงินได้ปีนี้โดยประมาณ ≈ ฿${fmtNum(t)}`;
+        if (salaryComm > 0) s += `\n(รวมเงินเดือน/คอม ฿${fmtNum(salaryComm)} จากหน้าภาษี)`;
+        s += `\nเลือกวิธีถูกกว่าให้แล้ว — เหมา 60%: ฿${fmtNum(t1)} / ตามจริง: ฿${fmtNum(t2)}`;
+        if (t === 0) s += `\nตอนนี้ยังไม่ถึงเกณฑ์ต้องเสียภาษีค่ะ`;
+        return s;
+      }
+      case "vat": {
+        const inc = tax?.totalIncome ?? 0;
+        if (inc >= 1_800_000) return `รายได้ธุรกิจปีนี้ ฿${fmtNum(inc)}\n⚠️ ถึงเกณฑ์แล้ว — ต้องจดทะเบียน VAT (เกิน 1.8 ล้าน)`;
+        return `รายได้ธุรกิจปีนี้ ฿${fmtNum(inc)}\nยังไม่ถึงเกณฑ์ VAT — เหลืออีก ฿${fmtNum(1_800_000 - inc)} จะถึง 1.8 ล้าน`;
+      }
+      case "method": {
+        const { t1, t2 } = taxBoth();
+        const better = t1 <= t2 ? "หักเหมา 60%" : "หักตามจริง";
+        const save = Math.abs(t1 - t2);
+        return `เปรียบเทียบวิธีหักค่าใช้จ่าย (ภาษีปีนี้):\n• หักเหมา 60% → ฿${fmtNum(t1)}\n• หักตามจริง → ฿${fmtNum(t2)}\n👉 แนะนำ "${better}"${save > 0 ? ` ประหยัดกว่า ฿${fmtNum(save)}` : " (เท่ากัน)"}`;
+      }
+      default: return "ขออภัย ไม่พบคำตอบค่ะ";
+    }
+  }
+
+  function onQuick(item: { q: string; key: string }) {
+    setMessages((m) => [...m, { role: "user", content: item.q }, { role: "assistant", content: quickAnswer(item.key) }]);
   }
 
   if (!shouldShow) return null;
@@ -257,6 +368,15 @@ export default function ChatWidget() {
 
             {/* Input */}
             <div className="border-t border-gray-100 bg-white px-3 py-3 flex-shrink-0">
+              {/* Instant quick answers — no AI, no quota */}
+              <div className="flex gap-2 overflow-x-auto pb-2 mb-1">
+                {QUICK.map((item) => (
+                  <button key={item.key} type="button" onClick={() => onQuick(item)} disabled={!summary}
+                    className="flex-shrink-0 text-xs font-medium text-[#0A192F] bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-full px-3 py-1.5 whitespace-nowrap disabled:opacity-50 transition-colors">
+                    {item.q}
+                  </button>
+                ))}
+              </div>
               {error && <p className="text-xs text-rose-500 mb-2 text-center">{error}</p>}
               {atLimit && plan !== "platinum" && (
                 <Link href="/settings?upgrade=pro" onClick={() => setOpen(false)}
