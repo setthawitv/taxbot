@@ -5,8 +5,9 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import {
-  IconHome, IconIncome, IconExpense, IconTax, IconSettings, VendeeLogo, IconInbox, IconSparkle,
+  IconHome, IconIncome, IconExpense, IconTax, IconSettings, VendeeLogo, IconInbox,
 } from "@/components/icons";
+import ChatWidget from "@/components/ChatWidget";
 import type { ComponentType, ReactNode } from "react";
 
 type NavItem = { href: string; Icon: ComponentType<{ className?: string }>; labelTh: string; labelEn: string };
@@ -16,7 +17,6 @@ const NAV: NavItem[] = [
   { href: "/rairab",   Icon: IconIncome,  labelTh: "รายรับ",   labelEn: "Income"    },
   { href: "/raijhai",  Icon: IconExpense, labelTh: "รายจ่าย",  labelEn: "Expense"   },
   { href: "/phasi",    Icon: IconTax,     labelTh: "ภาษี",     labelEn: "Tax"       },
-  { href: "/chat",     Icon: IconSparkle, labelTh: "ผู้ช่วย AI", labelEn: "AI Chat" },
   { href: "/stock",    Icon: IconInbox,   labelTh: "สต็อก",   labelEn: "Stock"     },
   { href: "/settings", Icon: IconSettings,labelTh: "ตั้งค่า",  labelEn: "Settings"  },
 ];
@@ -183,6 +183,9 @@ export default function AppLayout({
           })}
         </div>
       </nav>
+
+      {/* ── Floating AI assistant (every page) ──────────────────────────────── */}
+      <ChatWidget />
 
     </div>
   );
