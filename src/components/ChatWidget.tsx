@@ -13,7 +13,7 @@ type Msg = { role: "user" | "assistant"; content: string };
 const NAVY = "#0A192F";
 
 // Only show the assistant on the authenticated app pages (not landing/onboarding/etc.)
-const SHOW_ON = ["/home", "/rairab", "/raijhai", "/phasi", "/stock", "/settings", "/scan", "/drive", "/sheets"];
+const SHOW_ON = ["/home", "/rairab", "/raijhai", "/phasi", "/stock", "/settings", "/scan", "/drive", "/sheets", "/shopee-fee"];
 
 const SUGGESTIONS: Record<string, string[]> = {
   pro: [
