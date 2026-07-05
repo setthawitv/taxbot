@@ -18,12 +18,10 @@ const PROGRAMS = [
   { key: "both", label: "ส่งฟรี ร้านโค้ดคุ้ม",  rate: 5.35 },
 ];
 const CATEGORIES = [
-  { label: "อิเล็กทรอนิกส์ กล้อง/โดรน/คอม/เกม/มือถือ/เครื่องใช้ไฟฟ้า", rate: 5.35 },
-  { label: "แฟชั่น เสื้อผ้า กระเป๋า รองเท้า", rate: 5.35 },
-  { label: "ความงาม & สุขภาพ",                rate: 5.35 },
-  { label: "บ้าน & ไลฟ์สไตล์",                rate: 5.35 },
-  { label: "แม่ & เด็ก / ของเล่น",            rate: 5.35 },
-  { label: "อื่นๆ",                          rate: 5.35 },
+  { label: "สินค้าแฟชั่น, เสื้อผ้าผู้หญิง, นาฬิกา", rate: 8.56 },
+  { label: "อิเล็กทรอนิกส์ กล้องและโดรน, คอมพิวเตอร์, เกม, มือถือ, เครื่องใช้ไฟฟ้า", rate: 5.35 },
+  { label: "อิเล็กทรอนิกส์ อื่นๆ", rate: 7.49 },
+  { label: "ไลฟ์สไตล์, อุปโภคบริโภค, ต่างหู และอื่นๆ", rate: 7.49 },
 ];
 
 const fmt = (n: number) =>
@@ -33,7 +31,7 @@ export default function ShopeeFeePage() {
   const [v, setV] = useState<Record<string, string>>({
     price: "110", cost: "30", custDiscount: "10", shipping: "10",
     shopeeDiscount: "10", coin: "20", otherCost: "2",
-    commissionPct: "5.35", partnerPct: "4",
+    commissionPct: "8.56", partnerPct: "4",
   });
   const [paymentKey, setPaymentKey] = useState("shopeepay");
   const [programKey, setProgramKey] = useState("both");
