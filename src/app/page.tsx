@@ -31,34 +31,34 @@ const SEGMENT_FIELDS = [
 const FEATURES: { slug: string; Icon: IconC; title: string; desc: string; color: string; iconColor: string; chipBg: string }[] = [
   { slug: "scan",           Icon: IconScan,          title: "สแกนใบเสร็จด้วย AI",
     desc: "ถ่ายรูปสลิปหรืออัปโหลดใบเสร็จ AI อ่านยอด วันที่ ร้านค้า และบันทึกให้อัตโนมัติ",
-    color: "from-purple-500/15 to-purple-600/5 border-purple-500/30",
-    iconColor: "text-purple-300",
-    chipBg: "bg-purple-500/15" },
+    color: "from-purple-50 to-white border-purple-100",
+    iconColor: "text-purple-600",
+    chipBg: "bg-purple-100" },
   { slug: "income-expense", Icon: IconIncome,        title: "ติดตามรายรับ-รายจ่าย",
     desc: "ดูยอดเดือนนี้ ทั้งปี กำไร-ขาดทุน พร้อมแยกแพลตฟอร์ม TikTok / Shopee / Lazada",
-    color: "from-emerald-500/15 to-emerald-600/5 border-emerald-500/30",
-    iconColor: "text-emerald-300",
-    chipBg: "bg-emerald-500/15" },
+    color: "from-emerald-50 to-white border-emerald-100",
+    iconColor: "text-emerald-600",
+    chipBg: "bg-emerald-100" },
   { slug: "tax",            Icon: IconTax,           title: "คำนวณภาษีอัตโนมัติ",
     desc: "ประมาณภาษีเงินได้บุคคลธรรมดา ตามอัตราของไทย พร้อมแนะนำวิธีหักค่าใช้จ่าย",
-    color: "from-blue-500/15 to-blue-600/5 border-blue-500/30",
-    iconColor: "text-blue-300",
-    chipBg: "bg-blue-500/15" },
+    color: "from-blue-50 to-white border-blue-100",
+    iconColor: "text-blue-600",
+    chipBg: "bg-blue-100" },
   { slug: "sheets",         Icon: IconGoogleSheets,  title: "ซิงค์ Google Sheets",
     desc: "ทุกรายการบันทึกลง Google Sheets ของคุณอัตโนมัติ ดาวน์โหลดหรือแชร์กับนักบัญชีได้ทันที",
-    color: "from-green-500/15 to-green-600/5 border-green-500/30",
-    iconColor: "text-green-300",
-    chipBg: "bg-green-500/15" },
+    color: "from-green-50 to-white border-green-100",
+    iconColor: "text-green-600",
+    chipBg: "bg-green-100" },
   { slug: "import",         Icon: IconUpload,        title: "นำเข้ายอดแพลตฟอร์ม",
     desc: "อัปโหลดไฟล์ Excel จาก TikTok Shop, Shopee, Lazada — ระบบแยกยอดให้อัตโนมัติ",
-    color: "from-orange-500/15 to-orange-600/5 border-orange-500/30",
-    iconColor: "text-orange-300",
-    chipBg: "bg-orange-500/15" },
+    color: "from-orange-50 to-white border-orange-100",
+    iconColor: "text-orange-600",
+    chipBg: "bg-orange-100" },
   { slug: "team",           Icon: IconShield,        title: "แชร์ให้ทีมงาน",
     desc: "เพิ่ม Admin ด้วย Google Email หรือสร้างลิงก์ Staff ให้พนักงานบันทึกรายจ่ายแทนได้",
-    color: "from-rose-500/15 to-rose-600/5 border-rose-500/30",
-    iconColor: "text-rose-300",
-    chipBg: "bg-rose-500/15" },
+    color: "from-rose-50 to-white border-rose-100",
+    iconColor: "text-rose-600",
+    chipBg: "bg-rose-100" },
 ];
 
 const PLANS: {
@@ -68,8 +68,8 @@ const PLANS: {
   features: string[]; disabled: number[];
 }[] = [
   { name: "Free", planKey: null, price: "ฟรี", period: "", badge: null,
-    color: "border-white/10 bg-white/5",
-    btnClass: "bg-white/10 hover:bg-white/20 text-white",
+    color: "border-gray-200 bg-white",
+    btnClass: "bg-gray-100 hover:bg-gray-200 text-gray-800",
     features: [
       "ทดลองใช้ฟรี 7 วัน (ทุกฟีเจอร์)",
       "รายจ่าย 10 รายการ/เดือน",
@@ -79,7 +79,7 @@ const PLANS: {
     ],
     disabled: [2, 3] },
   { name: "Eco", planKey: "eco", price: "฿100", period: "/เดือน", badge: null,
-    color: "border-blue-500/40 bg-blue-500/5",
+    color: "border-blue-200 bg-blue-50/40",
     btnClass: "bg-blue-500 hover:bg-blue-400 text-white",
     features: [
       "รายจ่าย 30 รายการ/เดือน",
@@ -91,7 +91,7 @@ const PLANS: {
     disabled: [] },
   { name: "Pro", planKey: "pro", price: "฿200", period: "/เดือน",
     badge: { Icon: IconFire, label: "แนะนำ" },
-    color: "border-emerald-500/60 bg-emerald-500/10 ring-2 ring-emerald-500/30",
+    color: "border-emerald-500 bg-emerald-50/60 ring-2 ring-emerald-500/30",
     btnClass: "bg-emerald-500 hover:bg-emerald-400 text-white shadow-lg shadow-emerald-500/25",
     features: [
       "รายจ่าย 100 รายการ/เดือน",
@@ -103,7 +103,7 @@ const PLANS: {
     disabled: [] },
   { name: "Platinum", planKey: "platinum", price: "฿700", period: "/เดือน",
     badge: { Icon: IconCrown, label: "ครบทุกอย่าง" },
-    color: "border-amber-500/40 bg-amber-500/5",
+    color: "border-amber-200 bg-amber-50/40",
     btnClass: "bg-amber-500 hover:bg-amber-400 text-white",
     features: [
       "รายจ่าย 1,200 รายการ/เดือน",
@@ -133,8 +133,8 @@ const parseInput = (s: string) => {
   return parseFloat(digits) || 0;
 };
 
-// Dark-themed deduction row for landing page
-function DeductionRowDark({
+// Light-themed deduction row for landing page
+function DeductionRow({
   item, value, onChange, income,
 }: {
   item: DeductionItem;
@@ -147,31 +147,31 @@ function DeductionRowDark({
   const pct  = max > 0 ? Math.min(100, (used / max) * 100) : 0;
 
   return (
-    <div className="border border-white/10 rounded-xl p-3 bg-white/5">
+    <div className="border border-gray-200 rounded-xl p-3 bg-gray-50">
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-white">{item.label}</p>
-          {item.desc && <p className="text-xs text-gray-400 mt-0.5 leading-tight">{item.desc}</p>}
+          <p className="text-sm font-medium text-gray-900">{item.label}</p>
+          {item.desc && <p className="text-xs text-gray-500 mt-0.5 leading-tight">{item.desc}</p>}
         </div>
-        <span className="text-xs text-gray-400 flex-shrink-0 font-medium whitespace-nowrap">
+        <span className="text-xs text-gray-500 flex-shrink-0 font-medium whitespace-nowrap">
           สูงสุด ฿{fmtInt(max)}
         </span>
       </div>
 
-      <div className="flex items-center bg-gray-900/50 rounded-lg border border-white/10 focus-within:border-blue-400">
-        <span className="text-gray-500 px-2 text-sm">฿</span>
+      <div className="flex items-center bg-white rounded-lg border border-gray-200 focus-within:border-blue-400">
+        <span className="text-gray-400 px-2 text-sm">฿</span>
         <input type="text" inputMode="decimal"
           value={formatInput(value)}
           onChange={(e) => onChange(Math.min(max, Math.max(0, parseInput(e.target.value))))}
           placeholder="0"
-          className="flex-1 bg-transparent py-2 px-1 text-sm text-white outline-none placeholder-gray-600" />
+          className="flex-1 bg-transparent py-2 px-1 text-sm text-gray-900 outline-none placeholder-gray-400" />
         <button type="button" onClick={() => onChange(max)}
-          className="text-xs font-semibold text-blue-400 hover:text-blue-300 px-2 py-1">
+          className="text-xs font-semibold text-blue-600 hover:text-blue-500 px-2 py-1">
           Max
         </button>
       </div>
 
-      <div className="mt-2 h-1 bg-white/5 rounded-full overflow-hidden">
+      <div className="mt-2 h-1 bg-gray-100 rounded-full overflow-hidden">
         <div className={`h-full rounded-full transition-all ${pct >= 100 ? "bg-emerald-500" : "bg-blue-500"}`}
           style={{ width: `${pct}%` }} />
       </div>
@@ -286,29 +286,29 @@ function PublicTaxCalculator() {
   return (
     <section id="calculator" className="px-6 py-20 max-w-5xl mx-auto">
       <div className="text-center mb-10">
-        <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/30 text-blue-300 text-xs font-semibold px-4 py-1.5 rounded-full mb-4">
+        <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold px-4 py-1.5 rounded-full mb-4">
           <IconTax className="w-3.5 h-3.5" /> ลองคำนวณเลย · ไม่ต้องสมัคร
         </div>
-        <h2 className="text-3xl sm:text-4xl font-bold mb-3">คำนวณภาษีฟรี · ใช้ได้ทันที</h2>
-        <p className="text-gray-400 text-base">กรอกรายได้ → ดูภาษีโดยประมาณตามอัตรากรมสรรพากร</p>
+        <h2 className="text-3xl sm:text-4xl font-bold mb-3 text-gray-900">คำนวณภาษีฟรี · ใช้ได้ทันที</h2>
+        <p className="text-gray-500 text-base">กรอกรายได้ → ดูภาษีโดยประมาณตามอัตรากรมสรรพากร</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 items-start">
 
         {/* LEFT — Inputs */}
-        <div className="lg:col-span-3 bg-white/5 border border-white/10 rounded-2xl p-6 space-y-5">
+        <div className="lg:col-span-3 bg-white border border-gray-200 rounded-2xl p-6 space-y-5 shadow-sm">
 
           {/* Taxpayer toggle */}
-          <div className="bg-white/5 rounded-xl p-1 flex">
+          <div className="bg-gray-100 rounded-xl p-1 flex">
             <button onClick={() => setTaxpayer("individual")}
               className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
-                taxpayer === "individual" ? "bg-blue-500 text-white" : "text-gray-400 hover:text-white"
+                taxpayer === "individual" ? "bg-blue-500 text-white shadow-sm" : "text-gray-500 hover:text-gray-900"
               }`}>
               บุคคลธรรมดา
             </button>
             <button onClick={() => setTaxpayer("corporate")}
               className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
-                taxpayer === "corporate" ? "bg-blue-500 text-white" : "text-gray-400 hover:text-white"
+                taxpayer === "corporate" ? "bg-blue-500 text-white shadow-sm" : "text-gray-500 hover:text-gray-900"
               }`}>
               นิติบุคคล
             </button>
@@ -318,23 +318,23 @@ function PublicTaxCalculator() {
           {taxpayer === "individual" && (
             <>
               <div>
-                <label className="text-sm font-medium text-gray-300 mb-1.5 block">แหล่งรายได้</label>
-                <div className="bg-white/5 rounded-xl p-1 grid grid-cols-3 gap-1">
+                <label className="text-sm font-medium text-gray-700 mb-1.5 block">แหล่งรายได้</label>
+                <div className="bg-gray-100 rounded-xl p-1 grid grid-cols-3 gap-1">
                   <button onClick={() => setIncomeMode("salary")}
                     className={`py-2 rounded-lg text-xs font-semibold transition-all ${
-                      incomeMode === "salary" ? "bg-blue-500 text-white" : "text-gray-400 hover:text-white"
+                      incomeMode === "salary" ? "bg-blue-500 text-white shadow-sm" : "text-gray-500 hover:text-gray-900"
                     }`}>
                     พนักงานเงินเดือน
                   </button>
                   <button onClick={() => setIncomeMode("business")}
                     className={`py-2 rounded-lg text-xs font-semibold transition-all ${
-                      incomeMode === "business" ? "bg-blue-500 text-white" : "text-gray-400 hover:text-white"
+                      incomeMode === "business" ? "bg-blue-500 text-white shadow-sm" : "text-gray-500 hover:text-gray-900"
                     }`}>
                     ขายของ / ธุรกิจ
                   </button>
                   <button onClick={() => setIncomeMode("both")}
                     className={`py-2 rounded-lg text-xs font-semibold transition-all ${
-                      incomeMode === "both" ? "bg-blue-500 text-white" : "text-gray-400 hover:text-white"
+                      incomeMode === "both" ? "bg-blue-500 text-white shadow-sm" : "text-gray-500 hover:text-gray-900"
                     }`}>
                     ทั้งคู่
                   </button>
@@ -349,17 +349,17 @@ function PublicTaxCalculator() {
               {/* Salary income — shown for salary or both */}
               {(incomeMode === "salary" || incomeMode === "both") && (
                 <div>
-                  <label className="text-sm font-medium text-gray-300 mb-1.5 block">
+                  <label className="text-sm font-medium text-gray-700 mb-1.5 block">
                     เงินเดือน / ค่าจ้างต่อปี
-                    <span className="text-gray-500 text-xs ml-1.5">(เงินเดือน × 12 + โบนัส)</span>
+                    <span className="text-gray-400 text-xs ml-1.5">(เงินเดือน × 12 + โบนัส)</span>
                   </label>
-                  <div className="flex items-center bg-gray-900/50 rounded-xl border border-white/10 focus-within:border-blue-400">
-                    <span className="text-gray-500 px-3">฿</span>
+                  <div className="flex items-center bg-gray-50 rounded-xl border border-gray-200 focus-within:border-blue-400">
+                    <span className="text-gray-400 px-3">฿</span>
                     <input type="text" inputMode="decimal"
                       value={formatInput(salary)}
                       onChange={(e) => setSalary(Math.max(0, parseInput(e.target.value)))}
                       placeholder={incomeMode === "salary" ? "360,000" : "0"}
-                      className="flex-1 bg-transparent py-3 pr-3 text-base text-white outline-none placeholder-gray-600" />
+                      className="flex-1 bg-transparent py-3 pr-3 text-base text-gray-900 outline-none placeholder-gray-400" />
                   </div>
                 </div>
               )}
@@ -368,30 +368,30 @@ function PublicTaxCalculator() {
               {(incomeMode === "business" || incomeMode === "both") && (
                 <>
                   <div>
-                    <label className="text-sm font-medium text-gray-300 mb-1.5 block">
+                    <label className="text-sm font-medium text-gray-700 mb-1.5 block">
                       รายได้จากขายของ / ธุรกิจต่อปี
                     </label>
-                    <div className="flex items-center bg-gray-900/50 rounded-xl border border-white/10 focus-within:border-blue-400">
-                      <span className="text-gray-500 px-3">฿</span>
+                    <div className="flex items-center bg-gray-50 rounded-xl border border-gray-200 focus-within:border-blue-400">
+                      <span className="text-gray-400 px-3">฿</span>
                       <input type="text" inputMode="decimal"
                         value={formatInput(income)}
                         onChange={(e) => setIncome(Math.max(0, parseInput(e.target.value)))}
                         placeholder="600,000"
-                        className="flex-1 bg-transparent py-3 pr-3 text-base text-white outline-none placeholder-gray-600" />
+                        className="flex-1 bg-transparent py-3 pr-3 text-base text-gray-900 outline-none placeholder-gray-400" />
                     </div>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-300 mb-1.5 block">วิธีหักค่าใช้จ่าย (ธุรกิจ)</label>
-                    <div className="bg-white/5 rounded-xl p-1 flex">
+                    <label className="text-sm font-medium text-gray-700 mb-1.5 block">วิธีหักค่าใช้จ่าย (ธุรกิจ)</label>
+                    <div className="bg-gray-100 rounded-xl p-1 flex">
                       <button onClick={() => setMethod("flat60")}
                         className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${
-                          method === "flat60" ? "bg-emerald-500 text-white" : "text-gray-400 hover:text-white"
+                          method === "flat60" ? "bg-emerald-500 text-white shadow-sm" : "text-gray-500 hover:text-gray-900"
                         }`}>
                         หักเหมา 60% (แนะนำ)
                       </button>
                       <button onClick={() => setMethod("actual")}
                         className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${
-                          method === "actual" ? "bg-emerald-500 text-white" : "text-gray-400 hover:text-white"
+                          method === "actual" ? "bg-emerald-500 text-white shadow-sm" : "text-gray-500 hover:text-gray-900"
                         }`}>
                         หักตามจริง
                       </button>
@@ -399,14 +399,14 @@ function PublicTaxCalculator() {
                   </div>
                   {method === "actual" && (
                     <div>
-                      <label className="text-sm font-medium text-gray-300 mb-1.5 block">ค่าใช้จ่ายจริงต่อปี</label>
-                      <div className="flex items-center bg-gray-900/50 rounded-xl border border-white/10 focus-within:border-blue-400">
-                        <span className="text-gray-500 px-3">฿</span>
+                      <label className="text-sm font-medium text-gray-700 mb-1.5 block">ค่าใช้จ่ายจริงต่อปี</label>
+                      <div className="flex items-center bg-gray-50 rounded-xl border border-gray-200 focus-within:border-blue-400">
+                        <span className="text-gray-400 px-3">฿</span>
                         <input type="text" inputMode="decimal"
                           value={formatInput(expense)}
                           onChange={(e) => setExpense(Math.max(0, parseInput(e.target.value)))}
                           placeholder="0"
-                          className="flex-1 bg-transparent py-3 pr-3 text-base text-white outline-none placeholder-gray-600" />
+                          className="flex-1 bg-transparent py-3 pr-3 text-base text-gray-900 outline-none placeholder-gray-400" />
                       </div>
                     </div>
                   )}
@@ -414,20 +414,20 @@ function PublicTaxCalculator() {
               )}
 
               {/* ── Deductions panel ──────────────────────────────────── */}
-              <div className="border border-white/10 rounded-xl bg-white/5">
+              <div className="border border-gray-200 rounded-xl bg-gray-50">
                 <button onClick={() => setShowDeductions((v) => !v)}
                   className="w-full flex items-center justify-between text-left p-4">
                   <div>
-                    <p className="font-semibold text-white text-sm">ค่าลดหย่อนภาษี</p>
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <p className="font-semibold text-gray-900 text-sm">ค่าลดหย่อนภาษี</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
                       รวมลดหย่อนแล้ว ฿{fmt2(result.kind === "individual" ? result.deduct : 60_000)}
                     </p>
                   </div>
-                  <span className="text-blue-400 text-xl">{showDeductions ? "−" : "+"}</span>
+                  <span className="text-blue-600 text-xl">{showDeductions ? "−" : "+"}</span>
                 </button>
 
                 {showDeductions && (
-                  <div className="px-4 pb-4 space-y-5 border-t border-white/10 pt-4">
+                  <div className="px-4 pb-4 space-y-5 border-t border-gray-200 pt-4">
                     {(["personal", "insurance", "donation", "stimulus"] as const).map((groupKey) => {
                       // hide locked personal (auto-applied 60k)
                       const items = DEDUCTIONS.filter((d) => d.group === groupKey && d.id !== "personal");
@@ -439,7 +439,7 @@ function PublicTaxCalculator() {
                           </p>
                           <div className="space-y-2">
                             {items.map((item) => (
-                              <DeductionRowDark
+                              <DeductionRow
                                 key={item.id}
                                 item={item}
                                 value={deductions[item.id] ?? 0}
@@ -451,7 +451,7 @@ function PublicTaxCalculator() {
                         </div>
                       );
                     })}
-                    <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 text-xs text-emerald-300 leading-relaxed">
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-xs text-emerald-700 leading-relaxed">
                       <IconCheck className="w-3.5 h-3.5 inline mr-1" /> หักให้อัตโนมัติแล้ว: ค่าลดหย่อนส่วนตัว 60,000 บาท
                     </div>
                   </div>
@@ -464,33 +464,33 @@ function PublicTaxCalculator() {
           {taxpayer === "corporate" && (
             <>
               <div>
-                <label className="text-sm font-medium text-gray-300 mb-1.5 block">รายได้บริษัทต่อปี</label>
-                <div className="flex items-center bg-gray-900/50 rounded-xl border border-white/10 focus-within:border-blue-400">
-                  <span className="text-gray-500 px-3">฿</span>
+                <label className="text-sm font-medium text-gray-700 mb-1.5 block">รายได้บริษัทต่อปี</label>
+                <div className="flex items-center bg-gray-50 rounded-xl border border-gray-200 focus-within:border-blue-400">
+                  <span className="text-gray-400 px-3">฿</span>
                   <input type="text" inputMode="decimal"
                     value={formatInput(income)}
                     onChange={(e) => setIncome(Math.max(0, parseInput(e.target.value)))}
                     placeholder="600,000"
-                    className="flex-1 bg-transparent py-3 pr-3 text-base text-white outline-none placeholder-gray-600" />
+                    className="flex-1 bg-transparent py-3 pr-3 text-base text-gray-900 outline-none placeholder-gray-400" />
                 </div>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-300 mb-1.5 block">ค่าใช้จ่ายธุรกิจต่อปี</label>
-                <div className="flex items-center bg-gray-900/50 rounded-xl border border-white/10 focus-within:border-blue-400">
-                  <span className="text-gray-500 px-3">฿</span>
+                <label className="text-sm font-medium text-gray-700 mb-1.5 block">ค่าใช้จ่ายธุรกิจต่อปี</label>
+                <div className="flex items-center bg-gray-50 rounded-xl border border-gray-200 focus-within:border-blue-400">
+                  <span className="text-gray-400 px-3">฿</span>
                   <input type="text" inputMode="decimal"
                     value={formatInput(expense)}
                     onChange={(e) => setExpense(Math.max(0, parseInput(e.target.value)))}
                     placeholder="0"
-                    className="flex-1 bg-transparent py-3 pr-3 text-base text-white outline-none placeholder-gray-600" />
+                    className="flex-1 bg-transparent py-3 pr-3 text-base text-gray-900 outline-none placeholder-gray-400" />
                 </div>
               </div>
-              <label className="flex items-start gap-3 cursor-pointer bg-white/5 rounded-xl p-3 border border-white/10">
+              <label className="flex items-start gap-3 cursor-pointer bg-gray-50 rounded-xl p-3 border border-gray-200">
                 <input type="checkbox" checked={isSME} onChange={(e) => setIsSME(e.target.checked)}
                   className="mt-0.5 w-4 h-4 accent-blue-500" />
                 <div>
-                  <p className="text-sm font-medium text-white">เป็น SME</p>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p className="text-sm font-medium text-gray-900">เป็น SME</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
                     ทุน ≤ 5M + รายได้ ≤ 30M · ≤300k → 0% · 300k–3M → 15% · &gt;3M → 20%
                   </p>
                 </div>
@@ -500,57 +500,57 @@ function PublicTaxCalculator() {
         </div>
 
         {/* RIGHT — Result */}
-        <div className="lg:col-span-2 bg-gradient-to-br from-blue-500/10 to-emerald-500/10 border border-blue-500/30 rounded-2xl p-6 space-y-4 lg:sticky lg:top-4">
+        <div className="lg:col-span-2 bg-gradient-to-br from-blue-50 to-emerald-50 border border-blue-200 rounded-2xl p-6 space-y-4 lg:sticky lg:top-4 shadow-sm">
           {unlocked ? (
           <>
-          <p className="text-xs text-blue-300 font-semibold uppercase tracking-wide">ภาษีโดยประมาณ</p>
-          <p className="text-4xl font-extrabold text-white">฿{fmt2(result.tax)}</p>
+          <p className="text-xs text-blue-600 font-semibold uppercase tracking-wide">ภาษีโดยประมาณ</p>
+          <p className="text-4xl font-extrabold text-gray-900">฿{fmt2(result.tax)}</p>
           {result.tax === 0 && (
-            <p className="text-xs text-emerald-300">รายได้สุทธิไม่ถึงเกณฑ์เสียภาษี</p>
+            <p className="text-xs text-emerald-600">รายได้สุทธิไม่ถึงเกณฑ์เสียภาษี</p>
           )}
 
-          <div className="border-t border-white/10 pt-4 space-y-2 text-sm">
+          <div className="border-t border-gray-200 pt-4 space-y-2 text-sm">
             {result.kind === "individual" ? (
               <>
                 {result.effectiveSalary > 0 && (
-                  <div className="flex justify-between text-gray-300">
+                  <div className="flex justify-between text-gray-600">
                     <span>เงินเดือน 40(1)</span><span>฿{fmt2(result.effectiveSalary)}</span>
                   </div>
                 )}
                 {result.effectiveIncome > 0 && (
-                  <div className="flex justify-between text-gray-300">
+                  <div className="flex justify-between text-gray-600">
                     <span>รายได้ธุรกิจ 40(8)</span><span>฿{fmt2(result.effectiveIncome)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-gray-300 font-semibold border-t border-white/5 pt-2">
+                <div className="flex justify-between text-gray-800 font-semibold border-t border-gray-200 pt-2">
                   <span>รายได้รวม</span><span>฿{fmt2(result.grand)}</span>
                 </div>
                 {result.businessDed > 0 && (
-                  <div className="flex justify-between text-emerald-300">
+                  <div className="flex justify-between text-emerald-600">
                     <span>หักค่าใช้จ่ายธุรกิจ</span><span>-฿{fmt2(result.businessDed)}</span>
                   </div>
                 )}
                 {result.salaryDed > 0 && (
-                  <div className="flex justify-between text-emerald-300">
+                  <div className="flex justify-between text-emerald-600">
                     <span>หักเหมา 50% (เงินเดือน)</span><span>-฿{fmt2(result.salaryDed)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-emerald-300">
+                <div className="flex justify-between text-emerald-600">
                   <span>ค่าลดหย่อน</span><span>-฿{fmt2(result.deduct)}</span>
                 </div>
-                <div className="flex justify-between text-white font-semibold border-t border-white/10 pt-2">
+                <div className="flex justify-between text-gray-900 font-semibold border-t border-gray-200 pt-2">
                   <span>เงินได้สุทธิ</span><span>฿{fmt2(result.taxable)}</span>
                 </div>
               </>
             ) : (
               <>
-                <div className="flex justify-between text-gray-300">
+                <div className="flex justify-between text-gray-600">
                   <span>รายได้</span><span>฿{fmt2(income)}</span>
                 </div>
-                <div className="flex justify-between text-emerald-300">
+                <div className="flex justify-between text-emerald-600">
                   <span>หักค่าใช้จ่ายจริง</span><span>-฿{fmt2(expense)}</span>
                 </div>
-                <div className="flex justify-between text-white font-semibold border-t border-white/10 pt-2">
+                <div className="flex justify-between text-gray-900 font-semibold border-t border-gray-200 pt-2">
                   <span>กำไรสุทธิ</span><span>฿{fmt2(result.profit)}</span>
                 </div>
               </>
@@ -558,12 +558,12 @@ function PublicTaxCalculator() {
           </div>
 
           {result.breakdown.length > 0 && (
-            <div className="border-t border-white/10 pt-3 space-y-1.5">
-              <p className="text-xs text-gray-400 mb-1">คำนวณแต่ละขั้น</p>
+            <div className="border-t border-gray-200 pt-3 space-y-1.5">
+              <p className="text-xs text-gray-500 mb-1">คำนวณแต่ละขั้น</p>
               {result.breakdown.map((b, i) => (
                 <div key={i} className="flex justify-between text-xs">
-                  <span className="text-gray-400">{(b.rate * 100).toFixed(0)}% × ฿{fmt2(b.amount)}</span>
-                  <span className="text-blue-300 font-semibold">฿{fmt2(b.tax)}</span>
+                  <span className="text-gray-500">{(b.rate * 100).toFixed(0)}% × ฿{fmt2(b.amount)}</span>
+                  <span className="text-blue-600 font-semibold">฿{fmt2(b.tax)}</span>
                 </div>
               ))}
             </div>
@@ -571,7 +571,7 @@ function PublicTaxCalculator() {
 
           {/* Save data CTA */}
           {hasInput && (
-            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-xs text-amber-200 leading-relaxed">
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 leading-relaxed">
               💾 <strong>สมัครฟรี</strong> เพื่อย้ายข้อมูลที่กรอกไว้ (ลดหย่อน + เงินเดือน) ไปบัญชีของคุณอัตโนมัติ
             </div>
           )}
@@ -580,33 +580,33 @@ function PublicTaxCalculator() {
             className="w-full text-center inline-flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold bg-emerald-500 hover:bg-emerald-400 text-white transition-colors">
             <IconRocket className="w-4 h-4" /> {hasInput ? "สมัครฟรี · เก็บข้อมูลให้" : "สมัครฟรี · ใช้ครบทุกฟีเจอร์"}
           </Link>
-          <p className="text-[11px] text-gray-500 text-center leading-relaxed">
+          <p className="text-[11px] text-gray-400 text-center leading-relaxed">
             * ตัวเลขโดยประมาณตามอัตรากรมสรรพากร
           </p>
           </>
           ) : (
           <div className="space-y-4">
             <div className="text-center">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-blue-500/15 text-blue-300 mb-2">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-blue-100 text-blue-600 mb-2">
                 <IconTax className="w-6 h-6" />
               </div>
-              <p className="font-bold text-white text-lg">ดูผลภาษีของคุณ</p>
-              <p className="text-xs text-gray-400 mt-1 leading-relaxed">
+              <p className="font-bold text-gray-900 text-lg">ดูผลภาษีของคุณ</p>
+              <p className="text-xs text-gray-500 mt-1 leading-relaxed">
                 ตอบสั้นๆ 4 ข้อ เพื่อปลดล็อกผลการคำนวณ — ฟรี ไม่ต้องสมัคร
               </p>
             </div>
 
             {SEGMENT_FIELDS.map((f) => (
               <div key={f.key}>
-                <label className="text-sm font-medium text-gray-300 mb-1.5 block">{f.label}</label>
+                <label className="text-sm font-medium text-gray-700 mb-1.5 block">{f.label}</label>
                 <select
                   value={seg[f.key] ?? ""}
                   onChange={(e) => setSeg((p) => ({ ...p, [f.key]: e.target.value }))}
-                  className="w-full bg-gray-900/50 border border-white/10 rounded-xl py-3 px-3 text-base text-white outline-none focus:border-blue-400"
+                  className="w-full bg-white border border-gray-200 rounded-xl py-3 px-3 text-base text-gray-900 outline-none focus:border-blue-400"
                 >
                   <option value="" disabled>เลือก...</option>
                   {f.options.map((o) => (
-                    <option key={o} value={o} className="bg-gray-900">{o}</option>
+                    <option key={o} value={o}>{o}</option>
                   ))}
                 </select>
               </div>
@@ -619,7 +619,7 @@ function PublicTaxCalculator() {
             >
               {savingSeg ? "กำลังโหลด..." : (<><IconTax className="w-4 h-4" /> ดูผลภาษี</>)}
             </button>
-            <p className="text-[11px] text-gray-500 text-center leading-relaxed">
+            <p className="text-[11px] text-gray-400 text-center leading-relaxed">
               เราใช้ข้อมูลนี้เพื่อพัฒนาบริการเท่านั้น · ไม่เปิดเผยต่อบุคคลภายนอก
             </p>
           </div>
@@ -632,17 +632,17 @@ function PublicTaxCalculator() {
 
 export default function LandingPage() {
   return (
-    <main className="min-h-screen bg-gray-950 text-white">
+    <main className="min-h-screen bg-white text-gray-900">
 
       {/* ── Navbar ─────────────────────────────────────────────────────────── */}
       <nav className="flex items-center justify-between px-6 py-4 max-w-6xl mx-auto">
         <div className="flex items-center gap-2.5">
           <VendeeLogo className="w-8 h-8" />
-          <span className="font-bold text-lg tracking-tight">Vendee Finance</span>
+          <span className="font-bold text-lg tracking-tight text-gray-900">Vendee Finance</span>
         </div>
         <Link
           href="/onboarding"
-          className="text-sm font-semibold text-gray-300 hover:text-white transition-colors inline-flex items-center gap-1"
+          className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors inline-flex items-center gap-1"
         >
           เข้าสู่ระบบ <IconArrowRight className="w-4 h-4" />
         </Link>
@@ -650,18 +650,18 @@ export default function LandingPage() {
 
       {/* ── Hero ───────────────────────────────────────────────────────────── */}
       <section className="px-6 pt-16 pb-20 max-w-4xl mx-auto text-center">
-        <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold px-4 py-1.5 rounded-full mb-8">
+        <div className="inline-flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold px-4 py-1.5 rounded-full mb-8">
           <IconSparkle className="w-3.5 h-3.5" /> สำหรับร้านค้าออนไลน์และ SME ไทย
         </div>
 
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight mb-6">
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight mb-6 text-gray-900">
           บัญชีและภาษี{" "}
-          <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-emerald-500 to-cyan-500 bg-clip-text text-transparent">
             ไม่ยากอีกต่อไป
           </span>
         </h1>
 
-        <p className="text-gray-400 text-lg sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
+        <p className="text-gray-600 text-lg sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
           แค่ถ่ายรูปใบเสร็จ Vendee Finance จัดการทุกอย่างให้ — บันทึกรายรับรายจ่าย
           คำนวณภาษี ซิงค์ Google Sheets โดยไม่ต้องมีความรู้บัญชีเลย
         </p>
@@ -675,7 +675,7 @@ export default function LandingPage() {
           </Link>
           <a
             href="#calculator"
-            className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-base font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 transition-colors"
+            className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-base font-semibold bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 transition-colors shadow-sm"
           >
             <IconTax className="w-4 h-4" /> ลองคำนวณภาษีฟรี
           </a>
@@ -689,7 +689,7 @@ export default function LandingPage() {
             { value: "3 แพลตฟอร์ม",   label: "รองรับ TikTok, Shopee, Lazada" },
           ].map((s) => (
             <div key={s.label} className="text-center">
-              <p className="text-2xl font-bold text-white">{s.value}</p>
+              <p className="text-2xl font-bold text-gray-900">{s.value}</p>
               <p className="text-gray-500 text-sm mt-1">{s.label}</p>
             </div>
           ))}
@@ -699,8 +699,8 @@ export default function LandingPage() {
       {/* ── Features ───────────────────────────────────────────────────────── */}
       <section id="features" className="px-6 py-20 max-w-6xl mx-auto">
         <div className="text-center mb-12">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-3">ทุกอย่างที่ร้านค้าออนไลน์ต้องการ</h2>
-          <p className="text-gray-400 text-base">ครบในที่เดียว ใช้งานง่าย ไม่ต้องมีนักบัญชี</p>
+          <h2 className="text-3xl sm:text-4xl font-bold mb-3 text-gray-900">ทุกอย่างที่ร้านค้าออนไลน์ต้องการ</h2>
+          <p className="text-gray-500 text-base">ครบในที่เดียว ใช้งานง่าย ไม่ต้องมีนักบัญชี</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -710,14 +710,14 @@ export default function LandingPage() {
               <Link
                 key={f.slug}
                 href={`/features/${f.slug}`}
-                className={`bg-gradient-to-br ${f.color} border rounded-2xl p-6 group hover:scale-[1.02] transition-transform duration-200 block`}
+                className={`bg-gradient-to-br ${f.color} border rounded-2xl p-6 group hover:scale-[1.02] hover:shadow-md transition-all duration-200 block`}
               >
                 <div className={`inline-flex items-center justify-center w-12 h-12 rounded-xl ${f.chipBg} ${f.iconColor} mb-4`}>
                   <Ic className="w-6 h-6" />
                 </div>
-                <h3 className="text-white font-bold text-base mb-2">{f.title}</h3>
-                <p className="text-gray-400 text-sm leading-relaxed">{f.desc}</p>
-                <p className="text-xs text-gray-500 mt-3 group-hover:text-gray-300 transition-colors inline-flex items-center gap-1">
+                <h3 className="text-gray-900 font-bold text-base mb-2">{f.title}</h3>
+                <p className="text-gray-500 text-sm leading-relaxed">{f.desc}</p>
+                <p className="text-xs text-gray-400 mt-3 group-hover:text-gray-600 transition-colors inline-flex items-center gap-1">
                   อ่านเพิ่มเติม <IconArrowRight className="w-3.5 h-3.5" />
                 </p>
               </Link>
@@ -732,15 +732,15 @@ export default function LandingPage() {
       {/* ── Pricing ────────────────────────────────────────────────────────── */}
       <section id="pricing" className="px-6 py-20 max-w-6xl mx-auto">
         <div className="text-center mb-12">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-3">ราคาที่เหมาะกับทุกขนาดธุรกิจ</h2>
-          <p className="text-gray-400 text-base">ทดลองใช้ฟรี 7 วัน · ไม่ต้องผูกบัตรเครดิต</p>
+          <h2 className="text-3xl sm:text-4xl font-bold mb-3 text-gray-900">ราคาที่เหมาะกับทุกขนาดธุรกิจ</h2>
+          <p className="text-gray-500 text-base">ทดลองใช้ฟรี 7 วัน · ไม่ต้องผูกบัตรเครดิต</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
           {PLANS.map((plan) => {
             const Badge = plan.badge?.Icon;
             return (
-              <div key={plan.name} className={`relative border rounded-2xl p-6 flex flex-col gap-4 ${plan.color}`}>
+              <div key={plan.name} className={`relative border rounded-2xl p-6 flex flex-col gap-4 shadow-sm ${plan.color}`}>
                 {plan.badge && Badge && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs font-bold px-3 py-1 rounded-full bg-emerald-500 text-white shadow inline-flex items-center gap-1">
                     <Badge className="w-3.5 h-3.5" /> {plan.badge.label}
@@ -750,7 +750,7 @@ export default function LandingPage() {
                 <div>
                   <p className="text-gray-400 text-sm font-semibold uppercase tracking-wide mb-1">{plan.name}</p>
                   <div className="flex items-end gap-1">
-                    <span className="text-4xl font-extrabold text-white">{plan.price}</span>
+                    <span className="text-4xl font-extrabold text-gray-900">{plan.price}</span>
                     <span className="text-gray-400 text-sm pb-1">{plan.period}</span>
                   </div>
                 </div>
@@ -759,8 +759,8 @@ export default function LandingPage() {
                   {plan.features.map((f, i) => {
                     const isOff = plan.disabled.includes(i);
                     return (
-                      <li key={i} className={`flex items-start gap-2 text-sm ${isOff ? "text-gray-600 line-through" : "text-gray-300"}`}>
-                        <span className={`mt-0.5 flex-shrink-0 ${isOff ? "text-gray-600" : "text-emerald-400"}`}>
+                      <li key={i} className={`flex items-start gap-2 text-sm ${isOff ? "text-gray-400 line-through" : "text-gray-600"}`}>
+                        <span className={`mt-0.5 flex-shrink-0 ${isOff ? "text-gray-300" : "text-emerald-500"}`}>
                           {isOff ? <IconX className="w-4 h-4" /> : <IconCheck className="w-4 h-4" />}
                         </span>
                         {f}
@@ -780,7 +780,7 @@ export default function LandingPage() {
           })}
         </div>
 
-        <p className="text-center text-gray-600 text-xs mt-6">
+        <p className="text-center text-gray-400 text-xs mt-6">
           * ทุกแพ็กเกจเริ่มต้นด้วยช่วงทดลอง 7 วันเต็ม (ทุกฟีเจอร์)
         </p>
       </section>
@@ -788,22 +788,22 @@ export default function LandingPage() {
       {/* ── How it works ───────────────────────────────────────────────────── */}
       <section className="px-6 py-20 max-w-4xl mx-auto">
         <div className="text-center mb-12">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-3">เริ่มต้นใน 3 ขั้นตอน</h2>
-          <p className="text-gray-400 text-base">ตั้งค่าครั้งเดียว ใช้ได้ทันที</p>
+          <h2 className="text-3xl sm:text-4xl font-bold mb-3 text-gray-900">เริ่มต้นใน 3 ขั้นตอน</h2>
+          <p className="text-gray-500 text-base">ตั้งค่าครั้งเดียว ใช้ได้ทันที</p>
         </div>
 
         <div className="flex flex-col gap-4">
           {STEPS.map((s, i) => (
-            <div key={s.no} className="flex items-start gap-5 bg-white/5 border border-white/10 rounded-2xl p-6">
+            <div key={s.no} className="flex items-start gap-5 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
               <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-[#0A192F] flex items-center justify-center text-[#10B981] font-bold text-lg">
                 {s.no}
               </div>
               <div className="flex-1">
-                <h3 className="font-bold text-white text-lg mb-1">{s.title}</h3>
-                <p className="text-gray-400 text-sm leading-relaxed">{s.desc}</p>
+                <h3 className="font-bold text-gray-900 text-lg mb-1">{s.title}</h3>
+                <p className="text-gray-500 text-sm leading-relaxed">{s.desc}</p>
               </div>
               {i < STEPS.length - 1 && (
-                <div className="hidden sm:flex items-center text-gray-600">
+                <div className="hidden sm:flex items-center text-gray-300">
                   <IconArrowDown className="w-5 h-5" />
                 </div>
               )}
@@ -814,12 +814,12 @@ export default function LandingPage() {
 
       {/* ── Final CTA ──────────────────────────────────────────────────────── */}
       <section className="px-6 py-20">
-        <div className="max-w-2xl mx-auto bg-gradient-to-br from-emerald-500/20 to-cyan-500/10 border border-emerald-500/30 rounded-3xl p-10 text-center">
+        <div className="max-w-2xl mx-auto bg-gradient-to-br from-emerald-50 to-cyan-50 border border-emerald-200 rounded-3xl p-10 text-center shadow-sm">
           <div className="flex justify-center mb-4">
             <VendeeLogo className="w-14 h-14" />
           </div>
-          <h2 className="text-3xl font-bold mb-3">พร้อมเริ่มต้นแล้วหรือยัง?</h2>
-          <p className="text-gray-400 mb-8 leading-relaxed">
+          <h2 className="text-3xl font-bold mb-3 text-gray-900">พร้อมเริ่มต้นแล้วหรือยัง?</h2>
+          <p className="text-gray-600 mb-8 leading-relaxed">
             ไม่ต้องดาวน์โหลดแอป ไม่ต้องสมัครใหม่ — เปิดเว็บแล้วเริ่มได้เลย
           </p>
           <Link
@@ -832,11 +832,11 @@ export default function LandingPage() {
       </section>
 
       {/* ── Footer ─────────────────────────────────────────────────────────── */}
-      <footer className="border-t border-white/10 px-6 py-8 text-center text-gray-600 text-sm space-y-2">
+      <footer className="border-t border-gray-200 px-6 py-8 text-center text-gray-500 text-sm space-y-2">
         <div className="flex justify-center gap-5 text-xs">
-          <Link href="/privacy" className="hover:text-gray-300 transition-colors">Privacy Policy</Link>
-          <Link href="/terms" className="hover:text-gray-300 transition-colors">Terms of Service</Link>
-          <a href="mailto:admin@vendeefinance.com" className="hover:text-gray-300 transition-colors">Contact</a>
+          <Link href="/privacy" className="hover:text-gray-800 transition-colors">Privacy Policy</Link>
+          <Link href="/terms" className="hover:text-gray-800 transition-colors">Terms of Service</Link>
+          <a href="mailto:admin@vendeefinance.com" className="hover:text-gray-800 transition-colors">Contact</a>
         </div>
         <p>© {new Date().getFullYear()} Vendee Finance · สร้างสำหรับร้านค้าออนไลน์ไทย</p>
       </footer>
