@@ -46,6 +46,15 @@ export async function POST(req: NextRequest) {
     // /payment/done?linkRef=… where we confirm PAID and upgrade. No card data
     // touches our servers. QR flow below is left untouched.
     if (method === "card") {
+      // Cards must be unlocked in the Beam Checkout dashboard (upload business
+      // docs) before `card.isEnabled` is accepted — otherwise Beam returns 400
+      // "cannot enable CREDIT_CARD". Gate on an env flag until that's done.
+      if (process.env.NEXT_PUBLIC_BEAM_CARD_ENABLED !== "true") {
+        return NextResponse.json(
+          { error: "การจ่ายด้วยบัตรยังไม่เปิดใช้งาน — กรุณาใช้ PromptPay QR ไปก่อน" },
+          { status: 400 }
+        );
+      }
       const link = await createPaymentLink({
         amount:      chargeSatang,
         referenceId,

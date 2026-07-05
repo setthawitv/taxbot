@@ -927,21 +927,25 @@ function SettingsPageInner() {
                     </button>
                     <p className="text-center text-xs text-gray-400 mt-2">ชำระผ่าน QR PromptPay — ฟรีค่าธรรมเนียม</p>
 
-                    <div className="flex items-center gap-3 my-3">
-                      <div className="flex-1 h-px bg-gray-100" />
-                      <span className="text-xs text-gray-300">หรือ</span>
-                      <div className="flex-1 h-px bg-gray-100" />
-                    </div>
+                    {process.env.NEXT_PUBLIC_BEAM_CARD_ENABLED === "true" && (
+                      <>
+                        <div className="flex items-center gap-3 my-3">
+                          <div className="flex-1 h-px bg-gray-100" />
+                          <span className="text-xs text-gray-300">หรือ</span>
+                          <div className="flex-1 h-px bg-gray-100" />
+                        </div>
 
-                    <button
-                      onClick={startCardPayment}
-                      disabled={paying || !userId}
-                      className="w-full py-3.5 rounded-2xl border-2 border-gray-200 bg-white text-gray-800 font-bold text-sm hover:border-gray-300 disabled:opacity-40 transition-colors flex items-center justify-center gap-2"
-                    >
-                      <IconCard className="w-5 h-5" />
-                      {paying ? "กำลังเปิดหน้าชำระเงิน..." : `จ่ายด้วยบัตรเครดิต/เดบิต ฿${chargeThb}`}
-                    </button>
-                    <p className="text-center text-xs text-gray-400 mt-2">ชำระผ่านบัตร Visa / Mastercard / JCB · ปลอดภัยผ่าน Beam</p>
+                        <button
+                          onClick={startCardPayment}
+                          disabled={paying || !userId}
+                          className="w-full py-3.5 rounded-2xl border-2 border-gray-200 bg-white text-gray-800 font-bold text-sm hover:border-gray-300 disabled:opacity-40 transition-colors flex items-center justify-center gap-2"
+                        >
+                          <IconCard className="w-5 h-5" />
+                          {paying ? "กำลังเปิดหน้าชำระเงิน..." : `จ่ายด้วยบัตรเครดิต/เดบิต ฿${chargeThb}`}
+                        </button>
+                        <p className="text-center text-xs text-gray-400 mt-2">ชำระผ่านบัตร Visa / Mastercard / JCB · ปลอดภัยผ่าน Beam</p>
+                      </>
+                    )}
                   </>
                 );
               })()
