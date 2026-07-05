@@ -1,9 +1,55 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCharge } from "@/lib/beam";
+import { getCharge, getPaymentLink } from "@/lib/beam";
 import { supabaseAdmin } from "@/lib/supabase";
+
+// Upgrade a user's plan for a completed payment (idempotent-ish: safe to re-run).
+async function upgradeFromPayment(chargeId: string) {
+  const { data: payment } = await supabaseAdmin
+    .from("payments")
+    .select("line_user_id, plan")
+    .eq("charge_id", chargeId)
+    .single();
+  if (!payment) return;
+
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 30);
+
+  await supabaseAdmin
+    .from("users")
+    .update({ plan: payment.plan, plan_expires_at: expiresAt.toISOString() })
+    .eq("line_user_id", payment.line_user_id);
+
+  await supabaseAdmin
+    .from("payments")
+    .update({ status: "completed" })
+    .eq("charge_id", chargeId);
+}
 
 export async function GET(req: NextRequest) {
   try {
+    // ── Card / hosted-checkout path: reconcile by payment-link reference ──
+    const linkRef = req.nextUrl.searchParams.get("linkRef");
+    if (linkRef) {
+      const { data: payment } = await supabaseAdmin
+        .from("payments")
+        .select("charge_id, status")
+        .eq("reference_id", linkRef)
+        .single();
+      if (!payment) return NextResponse.json({ status: "PENDING" });
+      if (payment.status === "completed") return NextResponse.json({ status: "COMPLETED" });
+
+      const link = await getPaymentLink(payment.charge_id);
+      const linkStatus = String(link.status ?? "").toUpperCase();
+      const normalisedLink =
+        linkStatus === "PAID"      ? "COMPLETED"
+        : linkStatus === "EXPIRED" || linkStatus === "VOIDED" || linkStatus === "DISABLED" ? "FAILED"
+        : "PENDING";
+
+      if (normalisedLink === "COMPLETED") await upgradeFromPayment(payment.charge_id);
+      console.log("[payment/status] linkRef:", linkRef, "linkStatus:", linkStatus, "→", normalisedLink);
+      return NextResponse.json({ status: normalisedLink });
+    }
+
     const chargeId = req.nextUrl.searchParams.get("chargeId");
     if (!chargeId) {
       return NextResponse.json({ error: "Missing chargeId" }, { status: 400 });

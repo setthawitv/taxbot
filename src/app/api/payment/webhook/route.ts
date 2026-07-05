@@ -39,16 +39,39 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true }); // always 200 to avoid Beam retries
     }
 
+    // Payment-link (card) charges carry the link id as `sourceId`. We store the
+    // link id in payments.charge_id, so fall back to matching on that.
+    const sourceId: string =
+      body.sourceId ??
+      body.source_id ??
+      body.data?.sourceId ??
+      body.data?.source_id ??
+      "";
+
     if (isCompleted) {
-      // Look up payment record
-      const { data: payment } = await supabaseAdmin
-        .from("payments")
-        .select("line_user_id, plan, status")
-        .eq("charge_id", chargeId)
-        .single();
+      // Look up payment record — by charge id (QR flow) or link/source id (card flow)
+      let payment: { line_user_id: string; plan: string; status: string } | null = null;
+      let matchedChargeId = chargeId;
+      {
+        const { data } = await supabaseAdmin
+          .from("payments")
+          .select("line_user_id, plan, status")
+          .eq("charge_id", chargeId)
+          .single();
+        payment = data;
+      }
+      if (!payment && sourceId) {
+        const { data } = await supabaseAdmin
+          .from("payments")
+          .select("line_user_id, plan, status")
+          .eq("charge_id", sourceId)
+          .single();
+        payment = data;
+        if (data) matchedChargeId = sourceId;
+      }
 
       if (!payment) {
-        console.warn("[webhook/beam] no payment record for chargeId:", chargeId);
+        console.warn("[webhook/beam] no payment record for chargeId:", chargeId, "sourceId:", sourceId);
         return NextResponse.json({ ok: true });
       }
 
@@ -72,7 +95,7 @@ export async function POST(req: NextRequest) {
       await supabaseAdmin
         .from("payments")
         .update({ status: "completed" })
-        .eq("charge_id", chargeId);
+        .eq("charge_id", matchedChargeId);
 
       console.log("[webhook/beam] ✅ upgraded", payment.line_user_id, "→", payment.plan);
     }

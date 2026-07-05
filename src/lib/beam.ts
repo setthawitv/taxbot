@@ -76,6 +76,76 @@ export async function createCharge(params: CreateChargeParams): Promise<BeamChar
   return res.json();
 }
 
+// ── Payment Links (hosted checkout: card + QR in one page) ──────────────
+// Docs: POST /api/v1/payment-links → { id, url }.  The buyer is redirected to
+// `url` (Beam-hosted), picks card or PromptPay there, and is sent back to
+// redirectUrl on success. No card data ever touches our servers (no PCI scope).
+
+export interface CreatePaymentLinkParams {
+  amount:      number;   // in satang
+  referenceId: string;
+  redirectUrl: string;
+  description?: string;
+}
+
+export interface BeamPaymentLink {
+  id?:            string;
+  paymentLinkId?: string;   // GET response uses this name
+  url?:           string;
+  status?:        string;   // ACTIVE | PAID | EXPIRED | DISABLED | VOIDED | REFUNDED
+  [key: string]:  unknown;
+}
+
+/** Create a hosted payment link that offers credit/debit card + PromptPay QR */
+export async function createPaymentLink(params: CreatePaymentLinkParams): Promise<BeamPaymentLink> {
+  const body = {
+    order: {
+      currency:    "THB",
+      netAmount:   params.amount,           // satang, min 100
+      referenceId: params.referenceId,
+      description: params.description ?? "Vendee subscription",
+    },
+    linkSettings: {
+      card:        { isEnabled: true },
+      qrPromptPay: { isEnabled: true },
+    },
+    collectPhoneNumber: false,
+    redirectUrl: params.redirectUrl,
+  };
+
+  const res = await fetch(`${BEAM_BASE}/payment-links`, {
+    method:  "POST",
+    headers: {
+      "Authorization": getAuthHeader(),
+      "Content-Type":  "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Beam createPaymentLink failed (${res.status}): ${err.slice(0, 300)}`);
+  }
+
+  return res.json();
+}
+
+/** Get payment link status (PAID means the buyer completed payment) */
+export async function getPaymentLink(paymentLinkId: string): Promise<BeamPaymentLink> {
+  const res = await fetch(`${BEAM_BASE}/payment-links/${paymentLinkId}`, {
+    headers: { "Authorization": getAuthHeader() },
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Beam getPaymentLink failed (${res.status}): ${err.slice(0, 300)}`);
+  }
+
+  const data = await res.json();
+  console.log("[beam] getPaymentLink response:", JSON.stringify(data).slice(0, 300));
+  return data;
+}
+
 /** Get charge status */
 export async function getCharge(chargeId: string): Promise<BeamCharge> {
   const res = await fetch(`${BEAM_BASE}/charges/${chargeId}`, {

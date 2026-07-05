@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createCharge, PLANS, PlanKey } from "@/lib/beam";
+import { createCharge, createPaymentLink, PLANS, PlanKey } from "@/lib/beam";
 import { supabaseAdmin } from "@/lib/supabase";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { plan, currentPlan } = body;
+    const method: "qr" | "card" = body.method === "card" ? "card" : "qr";
 
     // Web (Google) users send their users.id as `userId`; LINE users may send
     // `lineUserId` directly. We always settle on the row's line_user_id, since
@@ -37,7 +38,46 @@ export async function POST(req: NextRequest) {
     const chargeSatang   = chargeThb * 100;  // Beam uses satang
 
     const referenceId = `vendee_${plan}_${lineUserId}_${Date.now()}`;
-    const returnUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://www.vendeefinance.com"}/payment/done`;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.vendeefinance.com";
+    const returnUrl = `${appUrl}/payment/done`;
+
+    // ── Card / hosted-checkout path (Beam Payment Links) ──────────────────
+    // Buyer is redirected to a Beam-hosted page (card + QR), then back to
+    // /payment/done?linkRef=… where we confirm PAID and upgrade. No card data
+    // touches our servers. QR flow below is left untouched.
+    if (method === "card") {
+      const link = await createPaymentLink({
+        amount:      chargeSatang,
+        referenceId,
+        description: `Vendee ${planInfo.name} (${chargeThb} THB)`,
+        redirectUrl: `${returnUrl}?linkRef=${encodeURIComponent(referenceId)}`,
+      });
+      console.log("[payment/create] Beam payment link:", JSON.stringify(link).slice(0, 300));
+
+      const linkId  = link.id ?? link.paymentLinkId;
+      const payUrl  = link.url;
+      if (!linkId || !payUrl) {
+        throw new Error("Beam did not return a payment link id/url");
+      }
+
+      // Store pending payment — charge_id holds the link id for reconciliation.
+      await supabaseAdmin.from("payments").insert({
+        line_user_id: lineUserId,
+        charge_id:    linkId,
+        plan,
+        amount_thb:   chargeThb,
+        status:       "pending",
+        reference_id: referenceId,
+      });
+
+      return NextResponse.json({
+        method:      "card",
+        paymentUrl:  payUrl,
+        referenceId,
+        amount:      chargeThb,
+        planName:    planInfo.name,
+      });
+    }
 
     const charge = await createCharge({
       amount:      chargeSatang,
