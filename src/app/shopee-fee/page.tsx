@@ -5,17 +5,27 @@ import AppLayout from "@/components/AppLayout";
 import { IconCart } from "@/components/icons";
 
 // อัตราค่าธรรมเนียม (โดยประมาณ, รวม VAT แล้วสำหรับค่าธุรกรรม) — แก้ได้ตามจริงของ Shopee
+// rate = ค่าธรรมเนียม (%) — อ้างอิงค่าฟีที่ราคาขาย 100 บาท
 const PAYMENTS = [
-  { key: "shopeepay", label: "ShopeePay Wallet",          rate: 3.21 },
-  { key: "card",      label: "บัตรเครดิต / เดบิต",         rate: 3.21 },
-  { key: "bank",      label: "โอนผ่านธนาคาร / อื่นๆ",       rate: 3.21 },
-  { key: "cod",       label: "เก็บเงินปลายทาง (COD)",       rate: 3.21 },
+  { key: "cod",       label: "เก็บเงินปลายทาง",                          rate: 3.53 },
+  { key: "ibanking",  label: "iBanking/ATM/Mobile และโอนเงินผ่านธนาคาร", rate: 3.53 },
+  { key: "card",      label: "บัตรเครดิต/เดบิต",                          rate: 3.53 },
+  { key: "shopeepay", label: "ShopeePay Wallet",                         rate: 3.53 },
+  { key: "spaylater", label: "SPayLater ช้อปก่อนจ่ายทีหลัง และแบบผ่อนชำระ", rate: 3.53 },
+  { key: "inst3",     label: "ผ่อนผ่านบัตรเครดิต 3 เดือน",                rate: 4.71 },
+  { key: "inst6",     label: "ผ่อนผ่านบัตรเครดิต 6 เดือน",                rate: 6.48 },
+  { key: "inst10",    label: "ผ่อนผ่านบัตรเครดิต 10 เดือนขึ้นไป",          rate: 7.06 },
+  { key: "sp12",      label: "ผ่อน Special SPayLater 1-2 เดือน",          rate: 3.53 },
+  { key: "sp3",       label: "ผ่อน Special SPayLater 3 เดือน",            rate: 4.71 },
+  { key: "sp6",       label: "ผ่อน Special SPayLater 6 เดือน",            rate: 7.06 },
+  { key: "sp12m",     label: "ผ่อน Special SPayLater 12 เดือน",           rate: 7.06 },
+  { key: "sp5",       label: "ผ่อน Special SPayLater 5 เดือน",            rate: 6.48 },
 ];
 const PROGRAMS = [
-  { key: "none", label: "ไม่เข้าร่วมโปรแกรม",  rate: 0 },
-  { key: "free", label: "ส่งฟรีXtra",          rate: 5.35 },
-  { key: "coin", label: "ร้านโค้ดคุ้ม",         rate: 5.35 },
-  { key: "both", label: "ส่งฟรี ร้านโค้ดคุ้ม",  rate: 5.35 },
+  { key: "none",      label: "ไม่เข้าร่วมโปรแกรมใดๆ",       rate: 0 },
+  { key: "ship_code", label: "ส่งฟรี ร้านโค้ดคุ้ม",          rate: 5.88 },
+  { key: "disc_code", label: "ส่วนลด ร้านโค้ดคุ้ม",          rate: 3.53 },
+  { key: "both",      label: "ส่งฟรี + ส่วนลด ร้านโค้ดคุ้ม", rate: 7.06 },
 ];
 const CATEGORIES = [
   { label: "สินค้าแฟชั่น, เสื้อผ้าผู้หญิง, นาฬิกา", rate: 8.56 },
@@ -34,7 +44,7 @@ export default function ShopeeFeePage() {
     commissionPct: "8.56", partnerPct: "4",
   });
   const [paymentKey, setPaymentKey] = useState("shopeepay");
-  const [programKey, setProgramKey] = useState("both");
+  const [programKey, setProgramKey] = useState("ship_code");
   const [catIdx, setCatIdx]         = useState(0);
   const [isMall, setIsMall]         = useState(false);
   const [vat, setVat]               = useState(false);
@@ -50,22 +60,22 @@ export default function ShopeeFeePage() {
     const paymentRate = PAYMENTS.find((p) => p.key === paymentKey)?.rate ?? 0;
     const programRate = PROGRAMS.find((p) => p.key === programKey)?.rate ?? 0;
 
-    const base    = price - cd + ship;                // ยอดที่คิดค่าธรรมเนียม
-    const vatMult = vat ? 1.07 : 1;
-    const txnFee        = (base * paymentRate) / 100; // ค่าธุรกรรม (รวม VAT แล้ว)
-    const serviceFee    = (base * programRate) / 100 * vatMult;
-    const commissionFee = (base * commissionPct) / 100 * vatMult;
+    const base = price - cd + ship;                          // ยอดที่คิดค่าธรรมเนียม
+    const txnFee        = (base * paymentRate) / 100;        // ค่าธุรกรรมการชำระเงิน
+    const serviceFee    = (base * programRate) / 100;        // ค่าบริการ (โปรแกรม)
+    const commissionFee = isMall ? 0 : (base * commissionPct) / 100; // MALL = ไม่คิดค่าธรรมเนียมการขาย
     const partnerFee    = (base * partnerPct) / 100;
-    const totalFees     = txnFee + serviceFee + commissionFee + partnerFee;
+    const vatFee        = vat ? base * 0.07 : 0;             // VAT 7% ของฐาน (หักกำไรตรงๆ)
+    const totalFees     = txnFee + serviceFee + commissionFee + partnerFee + vatFee;
     const feePct        = base > 0 ? (totalFees / base) * 100 : 0;
-    const sellerReceived = base - totalFees + sd;     // ร้านได้รับ (บวกส่วนลด Shopee ที่ได้คืน)
+    const sellerReceived = base - totalFees + sd;            // ร้านได้รับ (บวกส่วนลด Shopee ที่ได้คืน)
     const profit        = sellerReceived - cost - other;
     const marginPct     = cost > 0 ? (profit / cost) * 100 : 0;
 
     return { price, cost, cd, ship, sd, coin, other, base,
-      txnFee, serviceFee, commissionFee, partnerFee, totalFees, feePct, sellerReceived, profit, marginPct };
+      txnFee, serviceFee, commissionFee, partnerFee, vatFee, totalFees, feePct, sellerReceived, profit, marginPct };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [v, paymentKey, programKey, vat]);
+  }, [v, paymentKey, programKey, isMall, vat]);
 
   const programLabel = PROGRAMS.find((p) => p.key === programKey)?.label ?? "";
 
@@ -137,8 +147,9 @@ export default function ShopeeFeePage() {
 
             <Row label="ค่าธุรกรรมการชำระเงิน" val={r.txnFee}        labelClass="text-blue-600" valClass="text-blue-600" />
             <Row label={`ค่าบริการ`}            val={r.serviceFee}    labelClass="text-blue-600" valClass="text-blue-600" note={programLabel} />
-            <Row label="ค่าธรรมเนียมการขาย"     val={r.commissionFee} labelClass="text-blue-600" valClass="text-blue-600" />
+            <Row label="ค่าธรรมเนียมการขาย"     val={r.commissionFee} labelClass="text-blue-600" valClass="text-blue-600" note={isMall ? "MALL ไม่คิด" : undefined} />
             <Row label="ค่าโปรโมทผ่านพาร์ทเนอร์" val={r.partnerFee}    labelClass="text-blue-600" valClass="text-blue-600" />
+            {vat && <Row label="VAT 7%" val={r.vatFee} labelClass="text-blue-600" valClass="text-blue-600" />}
             <Row label="รวมหักค่าธรรมเนียม"      val={r.totalFees}     labelClass="text-purple-600 font-bold" valClass="text-purple-600 font-bold" note={`${r.feePct.toFixed(2)}%`} />
 
             <hr className="my-3 border-gray-100" />
@@ -160,7 +171,7 @@ export default function ShopeeFeePage() {
 
             <p className="text-[11px] text-gray-400 mt-5 leading-relaxed">
               * ตัวเลขโดยประมาณ · อัตราค่าธรรมเนียมจริงอาจต่างตามประเภทสินค้า/โปรแกรม/ประเภทร้าน
-              {isMall ? " (ร้าน MALL อัตราค่าคอมมิชชั่นมักสูงกว่าปกติ — ปรับ % ได้เอง)" : ""}
+              {isMall ? " · ร้าน Shopee MALL: ไม่คิดค่าธรรมเนียมการขาย" : ""}
             </p>
           </div>
         </div>
