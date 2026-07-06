@@ -70,13 +70,17 @@ export async function GET(req: NextRequest) {
   // ── Fetch income/expense from transactions ──────────────────────────────────
   const { data: txns } = await supabaseAdmin
     .from("transactions")
-    .select("type, amount")
+    .select("type, amount, vat_amount, withholding_tax")
     .eq("user_id", user.id)
     .gte("transaction_date", dateFrom)
     .lte("transaction_date", dateTo);
 
   const manualIncome = (txns ?? []).filter((t) => t.type === "income") .reduce((s, t) => s + Number(t.amount), 0);
   const totalExpense = (txns ?? []).filter((t) => t.type === "expense").reduce((s, t) => s + Number(t.amount), 0);
+
+  // Recorded VAT / WHT this year (from expense entries)
+  const vatRecorded = (txns ?? []).reduce((s, t) => s + Number(t.vat_amount      ?? 0), 0);
+  const whtRecorded = (txns ?? []).reduce((s, t) => s + Number(t.withholding_tax ?? 0), 0);
 
   // ── Totals ──────────────────────────────────────────────────────────────────
   const totalIncome       = platformIncome + manualIncome;
@@ -104,6 +108,8 @@ export async function GET(req: NextRequest) {
     platformIncome,
     manualIncome,
     totalExpense,
+    vatRecorded,
+    whtRecorded,
     byPlatform,
     personalAllowance,
     method1: {

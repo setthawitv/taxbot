@@ -24,8 +24,17 @@ type RawSummary = {
   platformIncome: number;
   manualIncome:   number;
   totalExpense:   number;
+  vatRecorded:    number;
+  whtRecorded:    number;
   byPlatform:     Record<string, number>;
   vatWarning:     boolean;
+};
+
+const VAT_THRESHOLD = 1_800_000;
+// Upper bound of each PIT bracket (for the "about to cross a bracket" tip)
+const BRACKET_TOPS = [150_000, 300_000, 500_000, 750_000, 1_000_000, 2_000_000, 5_000_000];
+const BRACKET_RATE: Record<number, number> = {
+  150_000: 5, 300_000: 10, 500_000: 15, 750_000: 20, 1_000_000: 25, 2_000_000: 30, 5_000_000: 35,
 };
 
 type TaxpayerType = "individual" | "corporate";
@@ -115,6 +124,7 @@ export default function PhasiPage() {
   const [year,       setYear]       = useState(CURRENT_YEAR);
   const [raw,        setRaw]        = useState<RawSummary | null>(null);
   const [loading,    setLoading]    = useState(true);
+  const [view,       setView]       = useState<"dashboard" | "calculator">("dashboard");
 
   // Tax payer type
   const [taxpayer, setTaxpayer] = useState<TaxpayerType>("individual");
@@ -256,6 +266,26 @@ export default function PhasiPage() {
     return { kind: "corporate" as const, netProfit, tax, breakdown };
   }, [raw, deductions, taxpayer, isSME, salaryIncome, commissionIncome]);
 
+  // ── Dashboard metrics (normalized across individual/corporate) ─────────────
+  const dash = useMemo(() => {
+    if (!raw || !compute) return null;
+    const netProfit = Math.max(0, raw.totalIncome - raw.totalExpense);
+    let taxToSetAside = 0, taxable = 0;
+    if (compute.kind === "individual") {
+      const m = compute.recommended === 1 ? compute.method1 : compute.method2;
+      taxToSetAside = m.tax; taxable = m.taxable;
+    } else {
+      taxToSetAside = compute.tax; taxable = compute.netProfit;
+    }
+    const effRate      = taxable > 0 ? (taxToSetAside / taxable) * 100 : 0;
+    const vatPct       = Math.min(100, (raw.totalIncome / VAT_THRESHOLD) * 100);
+    const vatRemaining = Math.max(0, VAT_THRESHOLD - raw.totalIncome);
+    const nextTop      = BRACKET_TOPS.find((t) => taxable < t) ?? null;
+    const nextRate     = nextTop ? BRACKET_RATE[nextTop] : null;
+    const distToNext   = nextTop ? nextTop - taxable : null;
+    return { netProfit, taxToSetAside, taxable, effRate, vatPct, vatRemaining, nextTop, nextRate, distToNext };
+  }, [raw, compute]);
+
   return (
     <AppLayout title="ภาษี">
     <main className="min-h-screen bg-[#F8FAFC]">
@@ -284,6 +314,140 @@ export default function PhasiPage() {
           </select>
         </div>
 
+        {/* View tabs */}
+        <div className="bg-white rounded-2xl border border-blue-100 p-1.5 mb-5 flex gap-1">
+          <button onClick={() => setView("dashboard")}
+            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+              view === "dashboard" ? "bg-blue-600 text-white shadow-sm" : "text-gray-500 hover:bg-gray-50"
+            }`}>
+            📊 แดชบอร์ด
+          </button>
+          <button onClick={() => setView("calculator")}
+            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+              view === "calculator" ? "bg-blue-600 text-white shadow-sm" : "text-gray-500 hover:bg-gray-50"
+            }`}>
+            🧮 คำนวณเอง
+          </button>
+        </div>
+
+        {/* ── DASHBOARD VIEW ────────────────────────────────────────────────── */}
+        {view === "dashboard" && (
+          loading ? (
+            <p className="text-center text-gray-400 py-16">กำลังคำนวณ...</p>
+          ) : !raw || !compute || !dash ? (
+            <p className="text-center text-gray-400 py-16">ไม่พบข้อมูล</p>
+          ) : (
+            <div className="space-y-4">
+
+              {/* ภาษีที่ควรกันไว้ */}
+              <div className="bg-white rounded-2xl border border-blue-100 p-6">
+                <p className="text-sm font-semibold text-gray-500 flex items-center gap-1.5 mb-4">💰 ภาษีที่ควรกันไว้</p>
+                <p className="text-4xl font-extrabold text-blue-700">฿{fmtInt(dash.taxToSetAside)}</p>
+                <p className="text-xs text-gray-400 mt-1">ประมาณการ ณ วันนี้ · ปี {year}</p>
+                <div className="border-t border-gray-100 mt-4 pt-4 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">กำไรสุทธิสะสม YTD</span>
+                    <span className="font-semibold text-gray-800">฿{fmtInt(dash.netProfit)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">อัตราภาษีที่แท้จริง</span>
+                    <span className="font-semibold text-gray-800">~{dash.effRate.toFixed(1)}%</span>
+                  </div>
+                </div>
+                <button onClick={() => setView("calculator")}
+                  className="mt-4 text-sm font-semibold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1">
+                  ดูรายละเอียด / ปรับลดหย่อน →
+                </button>
+              </div>
+
+              {/* VAT + WHT row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* VAT status */}
+                <div className="bg-white rounded-2xl border border-blue-100 p-5">
+                  <p className="text-sm font-semibold text-gray-500 flex items-center gap-1.5 mb-3">📊 สถานะ VAT</p>
+                  <p className="text-2xl font-bold text-gray-800">฿{fmtInt(raw.totalIncome)}</p>
+                  <p className="text-xs text-gray-400 mb-3">จาก ฿{fmtInt(VAT_THRESHOLD)} (เกณฑ์จด VAT)</p>
+                  <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full transition-all ${
+                      dash.vatPct >= 100 ? "bg-red-500" : dash.vatPct >= 80 ? "bg-amber-500" : "bg-blue-500"
+                    }`} style={{ width: `${dash.vatPct}%` }} />
+                  </div>
+                  <p className="text-xs mt-2 font-medium text-gray-500">
+                    {dash.vatPct >= 100
+                      ? <span className="text-red-600">เกินเกณฑ์แล้ว — ต้องจด VAT</span>
+                      : <>{dash.vatPct.toFixed(0)}% ของเกณฑ์ · เหลืออีก ฿{fmtInt(dash.vatRemaining)}</>}
+                  </p>
+                </div>
+
+                {/* WHT recorded */}
+                <div className="bg-white rounded-2xl border border-blue-100 p-5">
+                  <p className="text-sm font-semibold text-gray-500 flex items-center gap-1.5 mb-3">✂️ ภาษีหัก ณ ที่จ่าย</p>
+                  <p className="text-2xl font-bold text-gray-800">฿{fmtInt(raw.whtRecorded)}</p>
+                  <p className="text-xs text-gray-400 mb-3">หักไว้สะสมปีนี้ (จากรายจ่ายที่บันทึก)</p>
+                  <div className="bg-blue-50 rounded-lg p-2.5 text-xs text-blue-700 leading-relaxed">
+                    ยอดที่หัก ณ ที่จ่ายไว้ ต้องนำส่งสรรพากร (ภ.ง.ด.3/53) — เก็บใบ 50 ทวิ ไว้เป็นหลักฐาน
+                  </div>
+                </div>
+              </div>
+
+              {/* What to do next */}
+              <div className="bg-white rounded-2xl border border-blue-100 p-5">
+                <p className="text-sm font-semibold text-gray-500 flex items-center gap-1.5 mb-3">📋 สิ่งที่ควรทำต่อ</p>
+                <ul className="space-y-2.5 text-sm">
+                  {/* VAT */}
+                  {dash.vatPct >= 100 ? (
+                    <li className="flex items-start gap-2.5">
+                      <span className="flex-shrink-0">🔴</span>
+                      <span className="text-gray-700">รายได้เกิน ฿{fmtInt(VAT_THRESHOLD)} — <strong>ต้องจดทะเบียน VAT ภายใน 30 วัน</strong></span>
+                    </li>
+                  ) : dash.vatPct >= 80 ? (
+                    <li className="flex items-start gap-2.5">
+                      <span className="flex-shrink-0">⚠️</span>
+                      <span className="text-gray-700">VAT ใกล้เกณฑ์ — อีก ฿{fmtInt(dash.vatRemaining)} ต้องจด VAT เตรียมตัวไว้</span>
+                    </li>
+                  ) : (
+                    <li className="flex items-start gap-2.5">
+                      <span className="flex-shrink-0">✅</span>
+                      <span className="text-gray-700">รายได้ยังไม่ถึงเกณฑ์ VAT (ใช้ไป {dash.vatPct.toFixed(0)}%)</span>
+                    </li>
+                  )}
+                  {/* WHT */}
+                  {raw.whtRecorded > 0 && (
+                    <li className="flex items-start gap-2.5">
+                      <span className="flex-shrink-0">✅</span>
+                      <span className="text-gray-700">หัก ณ ที่จ่ายไว้ ฿{fmtInt(raw.whtRecorded)} — อย่าลืมนำส่ง ภ.ง.ด.3/53</span>
+                    </li>
+                  )}
+                  {/* Bracket */}
+                  {dash.nextTop && dash.distToNext !== null && dash.distToNext <= 100_000 && dash.taxable > 0 && (
+                    <li className="flex items-start gap-2.5">
+                      <span className="flex-shrink-0">💡</span>
+                      <span className="text-gray-700">
+                        กำไรกำลังจะข้าม bracket {dash.nextRate}% (อีก ฿{fmtInt(dash.distToNext)}) — วางแผนซื้อลดหย่อนเพิ่มช่วยได้
+                      </span>
+                    </li>
+                  )}
+                  {/* Deduction nudge (individual) */}
+                  {compute.kind === "individual" && (
+                    <li className="flex items-start gap-2.5">
+                      <span className="flex-shrink-0">💡</span>
+                      <span className="text-gray-700">
+                        ตอนนี้ลดหย่อนรวม ฿{fmtInt(compute.totalDeductions)} — เพิ่มประกัน/กองทุนช่วยลดภาษีได้ (<button onClick={() => setView("calculator")} className="text-blue-600 font-semibold underline">ปรับลดหย่อน</button>)
+                      </span>
+                    </li>
+                  )}
+                </ul>
+              </div>
+
+              <p className="text-xs text-gray-400 text-center pb-2">
+                * ประมาณการเบื้องต้น อ้างอิงข้อมูลที่บันทึกในระบบ · ควรปรึกษานักบัญชีก่อนยื่นจริง
+              </p>
+            </div>
+          )
+        )}
+
+        {/* ── CALCULATOR VIEW ───────────────────────────────────────────────── */}
+        {view === "calculator" && (<>
         {/* Taxpayer-type toggle */}
         <div className="bg-white rounded-2xl border border-blue-100 p-2 mb-5 flex">
           <button onClick={() => setTaxpayer("individual")}
@@ -588,6 +752,7 @@ export default function PhasiPage() {
 
           </div>
         )}
+        </>)}
       </div>
     </main>
     </AppLayout>
