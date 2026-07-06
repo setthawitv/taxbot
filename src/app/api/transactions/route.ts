@@ -91,7 +91,7 @@ export async function GET(req: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let query: any = supabaseAdmin
       .from("transactions")
-      .select("id, type, amount, vendor, description, transaction_date, created_at, staff_name")
+      .select("id, type, amount, vendor, description, transaction_date, created_at, staff_name, vat_amount, withholding_tax")
       .eq("user_id", userId)
       .order("transaction_date", { ascending: false });
 
@@ -240,8 +240,8 @@ export async function POST(req: NextRequest) {
       expenseCategory: category,
       quantity:        1,
       unitPrice:       amount,
-      vatAmount:       0,
-      withholdingTax:  0,
+      vatAmount:       vatAmount || 0,
+      withholdingTax:  withholdingTax || 0,
       invoiceNo:       "",
       invoiceName:     vendor,
       taxId:           "",
@@ -373,6 +373,8 @@ export async function PATCH(req: NextRequest) {
     const body2 = await req.json();
     const { id, amount, vendor, description, date } = body2;
     const lineUserId = body2.userId ?? body2.lineUserId;
+    const hasVat = body2.vatAmount      !== undefined;
+    const hasWht = body2.withholdingTax !== undefined;
     if (!id || !lineUserId) return NextResponse.json({ error: "Missing id or userId" }, { status: 400 });
 
     const { data: user } = await supabaseAdmin
@@ -394,6 +396,8 @@ export async function PATCH(req: NextRequest) {
         vendor:           newVendor,
         description:      newDescription,
         transaction_date: newDate,
+        ...(hasVat ? { vat_amount:      Math.max(0, Number(body2.vatAmount)      || 0) } : {}),
+        ...(hasWht ? { withholding_tax: Math.max(0, Number(body2.withholdingTax) || 0) } : {}),
       })
       .eq("id", id)
       .eq("user_id", user.id);

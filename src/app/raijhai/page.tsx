@@ -12,6 +12,28 @@ const EXPENSE_CATEGORIES = [
   "ค่าอุปกรณ์", "ค่าเช่า", "ค่าสาธารณูปโภค", "อื่นๆ",
 ];
 
+// Withholding-tax types & rates (อ้างอิง ttb: ภาษีหัก ณ ที่จ่าย)
+// https://www.ttbbank.com/th/fin-tips/detail/pl-withholding-tax
+const WHT_TYPES: { key: string; label: string; rate: number }[] = [
+  { key: "none",         label: "ไม่มีภาษีหัก ณ ที่จ่าย", rate: 0    },
+  { key: "transport",    label: "ค่าขนส่ง (1%)",           rate: 0.01 },
+  { key: "ads",          label: "ค่าโฆษณา (2%)",           rate: 0.02 },
+  { key: "service",      label: "ค่าบริการ / รับจ้างทำของ (3%)", rate: 0.03 },
+  { key: "professional", label: "ค่าวิชาชีพอิสระ (3%)",     rate: 0.03 },
+  { key: "rent",         label: "ค่าเช่าอสังหาฯ (5%)",      rate: 0.05 },
+  { key: "dividend",     label: "เงินปันผล (10%)",          rate: 0.10 },
+  { key: "interest",     label: "ดอกเบี้ย (15%)",           rate: 0.15 },
+];
+const VAT_RATE = 0.07;
+const round2 = (n: number) => Math.round(n * 100) / 100;
+// Guess a sensible WHT type from the expense category (used for auto-fill)
+function whtTypeForCategory(cat: string): string {
+  if (cat === "ค่าขนส่ง")   return "transport";
+  if (cat === "ค่าโฆษณา")   return "ads";
+  if (cat === "ค่าเช่า")     return "rent";
+  return "none";
+}
+
 const MONTHS = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 const CURRENT_YEAR  = new Date().getFullYear();
 const CURRENT_MONTH = new Date().getMonth() + 1;
@@ -24,6 +46,8 @@ type Transaction = {
   description: string;
   transaction_date: string;
   staff_name?: string;
+  vat_amount?: number;
+  withholding_tax?: number;
 };
 
 const fmt = (n: number) => n.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -49,6 +73,13 @@ export default function RaiJhai() {
   const [category,   setCategory]   = useState("อื่นๆ");
   const [saving,     setSaving]     = useState(false);
   const [saveMsg,    setSaveMsg]    = useState<{ ok: boolean; text: string } | null>(null);
+
+  // Tax (VAT / WHT). Auto-derived from amount unless the user turns on manual edit.
+  const [vatOn,      setVatOn]      = useState(false);       // include 7% VAT
+  const [whtType,    setWhtType]    = useState("none");      // WHT category → rate
+  const [vatManual,  setVatManual]  = useState("0.00");      // VAT amount when editing by hand
+  const [whtManual,  setWhtManual]  = useState("0.00");      // WHT amount when editing by hand
+  const [manualTax,  setManualTax]  = useState(false);       // edit VAT/WHT by hand
 
   // Delete confirmation
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -104,12 +135,14 @@ export default function RaiJhai() {
     else setLoading(false);
   }, [authReady, userId, year, month]);
 
+
   // ── Open form for add ─────────────────────────────────────────────────────
   function openAddForm() {
     setEditId(null);
     setVendor(""); setAmount(""); setDesc(""); setCategory("อื่นๆ");
     setDate(new Date().toISOString().slice(0, 10));
     setScannedImageBase64(null);
+    setVatOn(false); setWhtType("none"); setVatManual("0.00"); setWhtManual("0.00"); setManualTax(false);
     setSaveMsg(null);
     setShowForm(true);
   }
@@ -122,6 +155,14 @@ export default function RaiJhai() {
     setDesc(t.description);
     setDate(t.transaction_date);
     setCategory("อื่นๆ");
+    // Load saved tax values; if any exist, open in manual mode so they're preserved
+    const vatVal = Number(t.vat_amount) || 0;
+    const whtVal = Number(t.withholding_tax) || 0;
+    setVatManual(vatVal.toFixed(2));
+    setWhtManual(whtVal.toFixed(2));
+    setVatOn(vatVal > 0);
+    setWhtType("none");
+    setManualTax(vatVal > 0 || whtVal > 0);
     setSaveMsg(null);
     setShowForm(true);
   }
@@ -133,6 +174,12 @@ export default function RaiJhai() {
     setSaving(true);
     setSaveMsg(null);
 
+    // Re-derive effective VAT/WHT (same rule as the render summary)
+    const base           = parseFloat(amount) || 0;
+    const rate           = WHT_TYPES.find((w) => w.key === whtType)?.rate ?? 0;
+    const vatAmount      = manualTax ? Math.max(0, parseFloat(vatManual) || 0) : (vatOn ? round2(base * VAT_RATE) : 0);
+    const withholdingTax = manualTax ? Math.max(0, parseFloat(whtManual) || 0) : round2(base * rate);
+
     try {
       let res: Response;
       if (editId) {
@@ -140,7 +187,7 @@ export default function RaiJhai() {
         res = await fetch("/api/transactions", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: editId, userId, amount: parseFloat(amount), vendor: vendor.trim(), description: desc.trim(), date }),
+          body: JSON.stringify({ id: editId, userId, amount: parseFloat(amount), vendor: vendor.trim(), description: desc.trim(), date, vatAmount, withholdingTax }),
         });
       } else {
         // POST — new
@@ -154,6 +201,8 @@ export default function RaiJhai() {
             description:      desc.trim(),
             date,
             expenseCategory:  category,
+            vatAmount,
+            withholdingTax,
             source:           scannedImageBase64 ? "slip_photo" : "manual",
             imageBase64:      scannedImageBase64 ?? undefined,
           }),
@@ -238,7 +287,22 @@ export default function RaiJhai() {
       setAmount(String(data.receipt.amount ?? ""));
       setDate(data.receipt.date ?? new Date().toISOString().slice(0, 10));
       setDesc(data.receipt.description ?? "");
-      setCategory(data.receipt.expenseCategory ?? "อื่นๆ");
+      const scanCat = data.receipt.expenseCategory ?? "อื่นๆ";
+      setCategory(scanCat);
+      // Tax: use scanned VAT/WHT if present (manual), else auto-fill from category
+      const scanVat = Number(data.receipt.vatAmount)     || 0;
+      const scanWht = Number(data.receipt.withholdingTax) || 0;
+      if (scanVat > 0 || scanWht > 0) {
+        setManualTax(true);
+        setVatManual(scanVat.toFixed(2));
+        setWhtManual(scanWht.toFixed(2));
+        setVatOn(scanVat > 0);
+        setWhtType("none");
+      } else {
+        setManualTax(false);
+        setVatOn(false);
+        setWhtType(whtTypeForCategory(scanCat));
+      }
       setScannedImageBase64(scanPreview); // keep for Drive รวมหลักฐาน upload
       setEditId(null);
       setShowScan(false);
@@ -250,6 +314,15 @@ export default function RaiJhai() {
       setScanning(false);
     }
   }
+
+  // Tax breakdown for the form summary — derived during render (no effect).
+  const taxBase   = parseFloat(amount) || 0;
+  const whtRate   = WHT_TYPES.find((w) => w.key === whtType)?.rate ?? 0;
+  const vatAuto   = vatOn ? round2(taxBase * VAT_RATE) : 0;
+  const whtAuto   = round2(taxBase * whtRate);
+  const vatNum    = manualTax ? Math.max(0, parseFloat(vatManual) || 0) : vatAuto;
+  const whtNum    = manualTax ? Math.max(0, parseFloat(whtManual) || 0) : whtAuto;
+  const netPaid   = round2(taxBase + vatNum - whtNum);
 
   return (
     <AppLayout title="รายจ่าย">
@@ -362,6 +435,79 @@ export default function RaiJhai() {
                   <input value={desc} onChange={(e) => setDesc(e.target.value)}
                     placeholder="รายละเอียดเพิ่มเติม (ไม่บังคับ)"
                     className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-200" />
+                </div>
+
+                {/* ── VAT / WHT ─────────────────────────────────────────── */}
+                <div className="border border-gray-200 rounded-xl p-3 space-y-3 bg-gray-50/50">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold text-gray-700">ภาษี (VAT / หัก ณ ที่จ่าย)</p>
+                    <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                      <span className="text-xs text-gray-500">แก้ไขยอดเอง</span>
+                      <input type="checkbox" checked={manualTax}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            // Seed manual fields with the current auto values
+                            setVatManual(vatAuto.toFixed(2));
+                            setWhtManual(whtAuto.toFixed(2));
+                          }
+                          setManualTax(e.target.checked);
+                        }}
+                        className="w-4 h-4 accent-rose-500" />
+                    </label>
+                  </div>
+
+                  {/* Auto-fill controls (hidden when editing manually) */}
+                  {!manualTax && (
+                    <div className="space-y-2.5">
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input type="checkbox" checked={vatOn}
+                          onChange={(e) => setVatOn(e.target.checked)}
+                          className="w-4 h-4 accent-rose-500" />
+                        <span className="text-sm text-gray-600">มีภาษีมูลค่าเพิ่ม (VAT 7%)</span>
+                      </label>
+                      <div>
+                        <label className="text-xs text-gray-500 mb-1 block">ประเภทภาษีหัก ณ ที่จ่าย</label>
+                        <select value={whtType} onChange={(e) => setWhtType(e.target.value)}
+                          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rose-200">
+                          {WHT_TYPES.map((w) => <option key={w.key} value={w.key}>{w.label}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Manual amount inputs */}
+                  {manualTax && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs text-gray-500 mb-1 block">VAT (บาท)</label>
+                        <input value={vatManual} onChange={(e) => setVatManual(e.target.value)}
+                          type="number" min="0" step="0.01" placeholder="0.00"
+                          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-200" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 mb-1 block">หัก ณ ที่จ่าย (บาท)</label>
+                        <input value={whtManual} onChange={(e) => setWhtManual(e.target.value)}
+                          type="number" min="0" step="0.01" placeholder="0.00"
+                          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-200" />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Summary */}
+                  <div className="border-t border-gray-200 pt-2.5 space-y-1 text-sm">
+                    <div className="flex justify-between text-gray-500">
+                      <span>ยอดรวมก่อนภาษี</span><span>฿{fmt(taxBase)}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-500">
+                      <span>VAT 7%</span><span>+฿{fmt(vatNum)}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-500">
+                      <span>หัก ณ ที่จ่าย</span><span>-฿{fmt(whtNum)}</span>
+                    </div>
+                    <div className="flex justify-between font-semibold text-gray-800 border-t border-gray-200 pt-1.5">
+                      <span>ยอดชำระสุทธิ</span><span>฿{fmt(netPaid)}</span>
+                    </div>
+                  </div>
                 </div>
 
                 {!editId && (
