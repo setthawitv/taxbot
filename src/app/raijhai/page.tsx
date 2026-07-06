@@ -6,6 +6,7 @@ import ThaiDateInput from "@/components/ThaiDateInput";
 import { useSession } from "next-auth/react";
 import { IconExpense, IconScan, IconPlus, IconInbox } from "@/components/icons";
 import AppLayout from "@/components/AppLayout";
+import { lsGet, lsSet } from "@/lib/storage";
 
 const EXPENSE_CATEGORIES = [
   "ค่าสินค้า", "ค่าขนส่ง", "ค่าแพ็คเกจ", "ค่าโฆษณา",
@@ -80,6 +81,8 @@ export default function RaiJhai() {
   const [vatManual,  setVatManual]  = useState("0.00");      // VAT amount when editing by hand
   const [whtManual,  setWhtManual]  = useState("0.00");      // WHT amount when editing by hand
   const [manualTax,  setManualTax]  = useState(false);       // edit VAT/WHT by hand
+  const [showTaxWarn, setShowTaxWarn] = useState(false);     // warn before enabling manual
+  const [warnAck,     setWarnAck]     = useState(false);     // "don't show again" checkbox
 
   // Delete confirmation
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -165,6 +168,31 @@ export default function RaiJhai() {
     setManualTax(vatVal > 0 || whtVal > 0);
     setSaveMsg(null);
     setShowForm(true);
+  }
+
+  // ── Manual tax edit: seed fields from the current auto values, then unlock ──
+  function enableManualTax() {
+    const g    = parseFloat(amount) || 0;
+    const vAuto = vatOn ? round2(g - g / (1 + VAT_RATE)) : 0;
+    const rate  = WHT_TYPES.find((w) => w.key === whtType)?.rate ?? 0;
+    const wAuto = round2((g - vAuto) * rate);
+    setVatManual(vAuto.toFixed(2));
+    setWhtManual(wAuto.toFixed(2));
+    setManualTax(true);
+  }
+
+  // Toggle handler — warn the first time (unless the user opted out)
+  function onToggleManual(checked: boolean) {
+    if (!checked) { setManualTax(false); return; }
+    if (lsGet("vendee_tax_manual_ack") === "1") { enableManualTax(); return; }
+    setWarnAck(false);
+    setShowTaxWarn(true);
+  }
+
+  function confirmManualEdit() {
+    if (warnAck) lsSet("vendee_tax_manual_ack", "1");
+    enableManualTax();
+    setShowTaxWarn(false);
   }
 
   // ── Save (add or edit) ────────────────────────────────────────────────────
@@ -448,14 +476,7 @@ export default function RaiJhai() {
                     <label className="flex items-center gap-1.5 cursor-pointer select-none">
                       <span className="text-xs text-gray-500">แก้ไขยอดเอง</span>
                       <input type="checkbox" checked={manualTax}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            // Seed manual fields with the current auto values
-                            setVatManual(vatAuto.toFixed(2));
-                            setWhtManual(whtAuto.toFixed(2));
-                          }
-                          setManualTax(e.target.checked);
-                        }}
+                        onChange={(e) => onToggleManual(e.target.checked)}
                         className="w-4 h-4 accent-rose-500" />
                     </label>
                   </div>
@@ -637,6 +658,75 @@ export default function RaiJhai() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Warn before enabling manual tax edit ────────────────────────────── */}
+      {showTaxWarn && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm max-h-[88vh] overflow-y-auto p-5 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-500 flex items-center justify-center flex-shrink-0 text-xl">⚠️</div>
+              <h2 className="font-bold text-gray-800 text-lg flex-1 leading-snug">ข้อควรระวังก่อนแก้ไขยอดเอง</h2>
+              <button onClick={() => setShowTaxWarn(false)}
+                className="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
+            </div>
+
+            {/* Before → After */}
+            <div className="flex items-center gap-2">
+              {[{ title: "ตอนนี้ (คำนวณอัตโนมัติ)", locked: true }, { title: "หลังกดแก้ไข (พิมพ์เอง)", locked: false }].map((c, idx) => (
+                <div key={idx} className="contents">
+                  <div className="flex-1 border border-gray-200 rounded-xl p-2.5 space-y-1.5">
+                    <p className="text-[11px] font-semibold text-gray-500 leading-tight">{c.title}</p>
+                    {[{ l: "VAT", v: vatNum }, { l: "หัก ณ ที่จ่าย", v: whtNum }].map((f) => (
+                      <div key={f.l}>
+                        <p className="text-[10px] text-gray-400">{f.l}</p>
+                        <div className={`rounded-lg px-2 py-1.5 text-xs font-medium ${c.locked ? "bg-gray-100 text-gray-400" : "bg-white border border-rose-200 text-gray-700"}`}>
+                          ฿{fmt(f.v)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {idx === 0 && <span className="text-rose-400 text-lg flex-shrink-0">→</span>}
+                </div>
+              ))}
+            </div>
+
+            <p className="text-sm text-gray-600 leading-relaxed">
+              หากกดแก้ไขยอด ช่อง VAT และหัก ณ ที่จ่าย จะเปลี่ยนเป็นพิมพ์เองได้
+              โดยระบบ<strong>จะไม่คำนวณให้อัตโนมัติ</strong> ซึ่งอาจทำให้ยอดคลาดเคลื่อนได้
+            </p>
+
+            <div className="bg-blue-50 rounded-xl p-3 text-sm text-gray-600 flex gap-2.5">
+              <span className="text-base">✏️</span>
+              <div>
+                <p className="font-semibold text-gray-700 mb-1">สิ่งที่แก้ไขได้:</p>
+                <ul className="list-disc pl-4 space-y-0.5">
+                  <li>ยอด VAT และ ภาษีหัก ณ ที่จ่าย (WHT)</li>
+                  <li>สรุปยอดชำระสุทธิ</li>
+                </ul>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-400 italic">คุณกลับไปใช้ค่าที่คำนวณอัตโนมัติได้ทุกเมื่อ (ปิดสวิตช์ &quot;แก้ไขยอดเอง&quot;)</p>
+
+            <label className="flex items-center gap-2 cursor-pointer select-none border-t border-gray-100 pt-3">
+              <input type="checkbox" checked={warnAck} onChange={(e) => setWarnAck(e.target.checked)}
+                className="w-4 h-4 accent-rose-500" />
+              <span className="text-sm text-gray-600">เข้าใจแล้ว และไม่ต้องแสดงข้อความนี้อีก</span>
+            </label>
+
+            <div className="space-y-2 pt-1">
+              <button onClick={confirmManualEdit}
+                className="w-full py-3 rounded-xl bg-gray-900 hover:bg-black text-white text-sm font-bold transition-colors">
+                ยืนยัน แก้ไขยอดเอง
+              </button>
+              <button onClick={() => setShowTaxWarn(false)}
+                className="w-full py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50 transition-colors">
+                ยกเลิก
+              </button>
+            </div>
           </div>
         </div>
       )}
