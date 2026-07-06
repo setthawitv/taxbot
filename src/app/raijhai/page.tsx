@@ -174,11 +174,13 @@ export default function RaiJhai() {
     setSaving(true);
     setSaveMsg(null);
 
-    // Re-derive effective VAT/WHT (same rule as the render summary)
-    const base           = parseFloat(amount) || 0;
+    // Re-derive effective VAT/WHT (same rule as the render summary).
+    // Entered amount = GROSS total; VAT is extracted from it, WHT is on the net base.
+    const grossAmt       = parseFloat(amount) || 0;
     const rate           = WHT_TYPES.find((w) => w.key === whtType)?.rate ?? 0;
-    const vatAmount      = manualTax ? Math.max(0, parseFloat(vatManual) || 0) : (vatOn ? round2(base * VAT_RATE) : 0);
-    const withholdingTax = manualTax ? Math.max(0, parseFloat(whtManual) || 0) : round2(base * rate);
+    const vatAmount      = manualTax ? Math.max(0, parseFloat(vatManual) || 0) : (vatOn ? round2(grossAmt - grossAmt / (1 + VAT_RATE)) : 0);
+    const netBase        = round2(grossAmt - vatAmount);
+    const withholdingTax = manualTax ? Math.max(0, parseFloat(whtManual) || 0) : round2(netBase * rate);
 
     try {
       let res: Response;
@@ -316,13 +318,15 @@ export default function RaiJhai() {
   }
 
   // Tax breakdown for the form summary — derived during render (no effect).
-  const taxBase   = parseFloat(amount) || 0;
+  // The entered amount is the GROSS total (VAT already included when vatOn).
+  const gross     = parseFloat(amount) || 0;
   const whtRate   = WHT_TYPES.find((w) => w.key === whtType)?.rate ?? 0;
-  const vatAuto   = vatOn ? round2(taxBase * VAT_RATE) : 0;
-  const whtAuto   = round2(taxBase * whtRate);
+  const vatAuto   = vatOn ? round2(gross - gross / (1 + VAT_RATE)) : 0; // VAT ถอดออกจากยอดรวม
   const vatNum    = manualTax ? Math.max(0, parseFloat(vatManual) || 0) : vatAuto;
+  const baseNet   = round2(gross - vatNum);                            // เงินต้นก่อน VAT
+  const whtAuto   = round2(baseNet * whtRate);                         // WHT คิดจากเงินต้น
   const whtNum    = manualTax ? Math.max(0, parseFloat(whtManual) || 0) : whtAuto;
-  const netPaid   = round2(taxBase + vatNum - whtNum);
+  const netPaid   = round2(gross - whtNum);                            // ยอดจ่ายจริงให้ผู้ขาย
 
   return (
     <AppLayout title="รายจ่าย">
@@ -493,19 +497,22 @@ export default function RaiJhai() {
                     </div>
                   )}
 
-                  {/* Summary */}
+                  {/* Summary — entered amount is the gross total (incl VAT) */}
                   <div className="border-t border-gray-200 pt-2.5 space-y-1 text-sm">
                     <div className="flex justify-between text-gray-500">
-                      <span>ยอดรวมก่อนภาษี</span><span>฿{fmt(taxBase)}</span>
+                      <span>ยอดรวม{vatNum > 0 ? " (รวม VAT)" : ""}</span><span>฿{fmt(gross)}</span>
                     </div>
                     <div className="flex justify-between text-gray-500">
-                      <span>VAT 7%</span><span>+฿{fmt(vatNum)}</span>
+                      <span>เงินต้นก่อน VAT</span><span>฿{fmt(baseNet)}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-500">
+                      <span>VAT 7% (รวมในยอด)</span><span>฿{fmt(vatNum)}</span>
                     </div>
                     <div className="flex justify-between text-gray-500">
                       <span>หัก ณ ที่จ่าย</span><span>-฿{fmt(whtNum)}</span>
                     </div>
                     <div className="flex justify-between font-semibold text-gray-800 border-t border-gray-200 pt-1.5">
-                      <span>ยอดชำระสุทธิ</span><span>฿{fmt(netPaid)}</span>
+                      <span>ยอดจ่ายให้ผู้ขาย</span><span>฿{fmt(netPaid)}</span>
                     </div>
                   </div>
                 </div>
