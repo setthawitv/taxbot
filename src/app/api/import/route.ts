@@ -3,6 +3,7 @@ import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { supabaseAdmin } from "@/lib/supabase";
 import { parseFile, parseShopeeSummaryReport } from "@/lib/platform-import";
+import { authorizeUserId } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -11,11 +12,12 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const file      = formData.get("file")     as File   | null;
     const platform  = formData.get("platform") as string | null;
-    const lineUserId = (formData.get("userId") ?? formData.get("lineUserId")) as string | null;
+    const lineUserId = await authorizeUserId((formData.get("userId") ?? formData.get("lineUserId")) as string | null);
     const preview   = formData.get("preview")  === "true"; // true = parse only, false = save
 
-    if (!file || !platform || !lineUserId) {
-      return NextResponse.json({ error: "Missing file, platform, or userId" }, { status: 400 });
+    if (!lineUserId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!file || !platform) {
+      return NextResponse.json({ error: "Missing file or platform" }, { status: 400 });
     }
     if (!["tiktok", "shopee", "lazada"].includes(platform)) {
       return NextResponse.json({ error: "Unknown platform" }, { status: 400 });

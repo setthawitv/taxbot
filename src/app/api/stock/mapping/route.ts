@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { authorizeUserId } from "@/lib/auth";
 
-async function resolveUserId(userId: string) {
-  const { data } = await supabaseAdmin
-    .from("users").select("id").eq("id", userId).single();
-  return data?.id ?? null;
+async function resolveUserId(userId: string | null | undefined) {
+  return authorizeUserId(userId);
 }
 
 // POST /api/stock/mapping — add platform name mapping

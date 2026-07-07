@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { authorizeUserId } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
-  const lid = req.nextUrl.searchParams.get("lid");
-  if (!lid) return NextResponse.json({ error: "Missing lid" }, { status: 400 });
+  const lid = await authorizeUserId(req.nextUrl.searchParams.get("lid"));
+  if (!lid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { data } = await supabaseAdmin
     .from("users")

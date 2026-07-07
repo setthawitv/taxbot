@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { authorizeUserId } from "@/lib/auth";
 
 // GET /api/stock/summary?lineUserId=xxx
 // Returns each product with sold qty per platform + remaining stock
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const lineUserId = searchParams.get("userId") ?? searchParams.get("lineUserId");
-  if (!lineUserId) return NextResponse.json({ error: "missing userId" }, { status: 400 });
+  const lineUserId = await authorizeUserId(searchParams.get("userId") ?? searchParams.get("lineUserId"));
+  if (!lineUserId) return NextResponse.json({ summary: [] });
 
   const { data: user } = await supabaseAdmin
     .from("users").select("id").eq("id", lineUserId).single();

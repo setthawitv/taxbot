@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { authorizeUserId } from "@/lib/auth";
 
 // PATCH /api/user/profile — save LINE display_name + picture_url + business_name
 export async function PATCH(req: NextRequest) {
   try {
     const { userId, lineUserId, displayName, pictureUrl, businessName } = await req.json();
-    const resolvedId = userId ?? lineUserId;
-    if (!resolvedId) return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+    const resolvedId = await authorizeUserId(userId ?? lineUserId);
+    if (!resolvedId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updates: Record<string, any> = {};
@@ -19,10 +20,9 @@ export async function PATCH(req: NextRequest) {
       .update(updates)
       .eq("id", resolvedId);
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return NextResponse.json({ error: "Database error" }, { status: 500 });
     return NextResponse.json({ ok: true });
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

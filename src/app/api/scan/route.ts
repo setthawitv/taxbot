@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readReceipt as datalabRead } from "@/lib/datalab";
 import { readReceipt as groqRead }    from "@/lib/groq";
+import { authorizeUserId } from "@/lib/auth";
 
 // POST /api/scan  { lineUserId, imageBase64, forceType? }
 // Returns OCR data only — does NOT save to DB or Sheets.
@@ -9,6 +10,11 @@ import { readReceipt as groqRead }    from "@/lib/groq";
 // Priority:  Datalab OCR → Groq vision (fallback)
 export async function POST(req: NextRequest) {
   try {
+    // Require an authenticated session — OCR/AI calls cost money, so this must
+    // not be open to anonymous callers.
+    const authed = await authorizeUserId();
+    if (!authed) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
     const { imageBase64, forceType } = await req.json();
     if (!imageBase64)
       return NextResponse.json({ error: "Missing imageBase64" }, { status: 400 });

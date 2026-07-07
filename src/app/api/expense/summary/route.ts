@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { authorizeUserId } from "@/lib/auth";
 
 // GET /api/expense/summary?lineUserId=xxx&year=2026&month=5
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const userId     = searchParams.get("userId") ?? searchParams.get("lineUserId");
+  const userId     = await authorizeUserId(searchParams.get("userId") ?? searchParams.get("lineUserId"));
   const year       = parseInt(searchParams.get("year")  ?? String(new Date().getFullYear()));
   const month      = parseInt(searchParams.get("month") ?? "0"); // 0 = full year
 
-  if (!userId) return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { data: user } = await supabaseAdmin
     .from("users")

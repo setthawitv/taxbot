@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { supabaseAdmin } from "@/lib/supabase";
+import { authorizeUserId } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -9,11 +10,11 @@ export const runtime = "nodejs";
 export async function POST(req: NextRequest) {
   const form = await req.formData();
   const file       = form.get("file")       as File   | null;
-  const lineUserId = (form.get("userId") ?? form.get("lineUserId")) as string | null;
+  const lineUserId = await authorizeUserId((form.get("userId") ?? form.get("lineUserId")) as string | null);
   const previewOnly = form.get("preview") === "true";
 
   if (!file || !lineUserId)
-    return NextResponse.json({ error: "missing file or userId" }, { status: 400 });
+    return NextResponse.json({ error: "missing file or unauthorized" }, { status: 401 });
 
   // Resolve user
   const { data: user } = await supabaseAdmin

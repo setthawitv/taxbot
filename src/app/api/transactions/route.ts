@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { supabaseAdmin } from "@/lib/supabase";
+import { authorizeUserId } from "@/lib/auth";
 import { appendTransaction, deleteRowByTxId, updateRowByTxId } from "@/lib/sheets";
 import { ensureReceiptFolder, uploadFileToDrive } from "@/lib/drive";
 import { generateReceiptPdf } from "@/lib/receipt-pdf";
@@ -30,32 +30,6 @@ function platformLabel(platform: string): string {
   return platform;
 }
 
-/** Resolve user.id + google tokens from either userId (UUID) or Google session email */
-async function resolveUser(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const userId = searchParams.get("userId") ?? searchParams.get("lineUserId");
-
-  if (userId) {
-    const { data } = await supabaseAdmin
-      .from("users")
-      .select("id, google_access_token, sheet_id")
-      .eq("id", userId)
-      .single();
-    return data ?? null;
-  }
-
-  // Fallback: Google session
-  const session = await getServerSession();
-  if (!session?.user?.email) return null;
-
-  const { data } = await supabaseAdmin
-    .from("users")
-    .select("id, google_access_token, sheet_id")
-    .eq("google_email", session.user.email)
-    .single();
-  return data ?? null;
-}
-
 // ── GET /api/transactions?type=income|expense&userId=&year=&month= ────────────
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -64,21 +38,8 @@ export async function GET(req: NextRequest) {
   const year           = searchParams.get("year");
   const month          = searchParams.get("month"); // "0" or null = all months
 
-  let userId: string | null = null;
-
-  if (paramUserId) {
-    const { data } = await supabaseAdmin
-      .from("users").select("id").eq("id", paramUserId).single();
-    userId = data?.id ?? null;
-  } else {
-    const session = await getServerSession();
-    if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const { data } = await supabaseAdmin
-      .from("users").select("id").eq("google_email", session.user.email).single();
-    userId = data?.id ?? null;
-  }
-
-  if (!userId) return NextResponse.json({ transactions: [] });
+  const userId = await authorizeUserId(paramUserId);
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   // Build date range strings
   const yr = year && year !== "0" ? parseInt(year) : null;
@@ -197,10 +158,13 @@ export async function POST(req: NextRequest) {
         .single();
       user = owner;
     } else {
+      // Non-staff callers must own (or admin) the target account.
+      const authedId = await authorizeUserId(lineUserId);
+      if (!authedId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       const { data: owner } = await supabaseAdmin
         .from("users")
         .select("id, google_access_token, google_refresh_token, sheet_id, drive_folder_id, business_name")
-        .eq("id", lineUserId!)
+        .eq("id", authedId)
         .single();
       user = owner;
     }
@@ -330,10 +294,13 @@ export async function DELETE(req: NextRequest) {
     const lineUserId = body.userId ?? body.lineUserId;
     if (!id || !lineUserId) return NextResponse.json({ error: "Missing id or userId" }, { status: 400 });
 
+    const authedId = await authorizeUserId(lineUserId);
+    if (!authedId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
     const { data: user } = await supabaseAdmin
       .from("users")
       .select("id, google_access_token, google_refresh_token, sheet_id")
-      .eq("id", lineUserId)
+      .eq("id", authedId)
       .single();
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
@@ -377,10 +344,13 @@ export async function PATCH(req: NextRequest) {
     const hasWht = body2.withholdingTax !== undefined;
     if (!id || !lineUserId) return NextResponse.json({ error: "Missing id or userId" }, { status: 400 });
 
+    const authedId = await authorizeUserId(lineUserId);
+    if (!authedId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
     const { data: user } = await supabaseAdmin
       .from("users")
       .select("id, google_access_token, google_refresh_token, sheet_id")
-      .eq("id", lineUserId)
+      .eq("id", authedId)
       .single();
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 

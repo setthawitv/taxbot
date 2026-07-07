@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { createSheet } from "@/lib/sheets";
 import { createRootFolder } from "@/lib/drive";
+import { authorizeUserId, getSessionEmail } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,24 +20,33 @@ export async function POST(req: NextRequest) {
       googleEmail,
     } = await req.json();
 
-    // If a Supabase UUID is provided directly (e.g. from settings reconnect flow), update by id
+    // If a Supabase UUID is provided directly (e.g. from settings reconnect flow), update by id.
+    // The caller must own (or admin) that account — otherwise anyone could
+    // overwrite another user's Google tokens and hijack their Drive/Sheets.
     if (bodyUserId && !lineUserId) {
+      const authedId = await authorizeUserId(bodyUserId);
+      if (!authedId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       const updates: Record<string, unknown> = {};
       if (googleAccessToken  !== undefined) updates.google_access_token  = googleAccessToken;
       if (googleRefreshToken !== undefined) updates.google_refresh_token = googleRefreshToken;
       if (googleEmail        !== undefined) updates.google_email         = googleEmail;
-      const { error } = await supabaseAdmin.from("users").update(updates).eq("id", bodyUserId);
+      const { error } = await supabaseAdmin.from("users").update(updates).eq("id", authedId);
       if (error) throw error;
       return NextResponse.json({ ok: true });
     }
 
-    // For Google-only users (no LINE), generate a synthetic LINE user ID from email
+    // For Google-only users (no LINE), derive identity from the AUTHENTICATED
+    // session — never trust a client-supplied email, or one user could create
+    // or overwrite another account's row by passing someone else's email.
+    const sessionEmail = await getSessionEmail();
     let resolvedLineUserId: string = lineUserId;
+    let effectiveGoogleEmail: string | null = googleEmail ?? null;
     if (!resolvedLineUserId) {
-      if (!googleEmail) {
-        return NextResponse.json({ error: "Missing lineUserId or googleEmail" }, { status: 400 });
+      if (!sessionEmail) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
-      resolvedLineUserId = `google_${googleEmail.toLowerCase().replace(/[@.+]/g, "_")}`;
+      effectiveGoogleEmail = sessionEmail;
+      resolvedLineUserId = `google_${sessionEmail.replace(/[@.+]/g, "_")}`;
     }
 
     // Check if user already exists (preserve sheet_id and drive_folder_id)
@@ -73,7 +83,7 @@ export async function POST(req: NextRequest) {
       phone:                 phone          ?? null,
       vat_registered:        vatRegistered  ?? false,
       google_access_token:   googleAccessToken  ?? null,
-      google_email:          googleEmail        ?? null,
+      google_email:          effectiveGoogleEmail,
       sheet_id:              sheetId        ?? null,
       drive_folder_id:       driveFolderId  ?? null,
     };

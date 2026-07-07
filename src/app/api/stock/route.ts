@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { authorizeUserId } from "@/lib/auth";
 
-async function resolveUserId(userId: string) {
-  const { data } = await supabaseAdmin
-    .from("users").select("id").eq("id", userId).single();
-  return data?.id ?? null;
+// Authorize the client-supplied id against the caller's session (own/admin).
+async function resolveUserId(userId: string | null | undefined) {
+  return authorizeUserId(userId);
 }
 
 // GET /api/stock?userId=xxx&productId=xxx  — movement history

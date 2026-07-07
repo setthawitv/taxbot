@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { authorizeUserId } from "@/lib/auth";
 
 // Composite key: "ชื่อสินค้า | ชื่อตัวเลือก" (variant part is optional)
 function compositeKey(productName: string, variant: string | null): string {
@@ -10,7 +11,7 @@ function compositeKey(productName: string, variant: string | null): string {
 // GET /api/stock/unmatched?lineUserId=xxx&platform=shopee&batchId=xxx
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const lineUserId = searchParams.get("userId") ?? searchParams.get("lineUserId");
+  const lineUserId = await authorizeUserId(searchParams.get("userId") ?? searchParams.get("lineUserId"));
   const platform   = searchParams.get("platform");
   const batchId    = searchParams.get("batchId");
 

@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { appendTransaction } from "@/lib/sheets";
 import { google } from "googleapis";
 import type { ReceiptData } from "@/lib/groq";
+import { authorizeUserId } from "@/lib/auth";
 
 // ── Refresh Google access token (same pattern as webhook) ────────────────────
 async function getFreshGoogleToken(
@@ -56,8 +57,8 @@ async function getExistingSheetIds(accessToken: string, sheetId: string): Promis
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const lineUserId = body.userId ?? body.lineUserId;
-    if (!lineUserId) return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+    const lineUserId = await authorizeUserId(body.userId ?? body.lineUserId);
+    if (!lineUserId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     // Get user with Google tokens
     const { data: user } = await supabaseAdmin

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { authorizeUserId } from "@/lib/auth";
 
 // Thai personal income tax brackets 2025
 const BRACKETS = [
@@ -35,10 +36,10 @@ function calcTax(taxable: number): { tax: number; breakdown: { rate: number; amo
 // GET /api/tax/summary?lineUserId=xxx&year=2026
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const userId     = searchParams.get("userId") ?? searchParams.get("lineUserId");
+  const userId     = await authorizeUserId(searchParams.get("userId") ?? searchParams.get("lineUserId"));
   const year       = parseInt(searchParams.get("year") ?? String(new Date().getFullYear()));
 
-  if (!userId) return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { data: user } = await supabaseAdmin
     .from("users")

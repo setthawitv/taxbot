@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { authorizeUserId } from "@/lib/auth";
 
 // Generate a short alphanumeric invite code
 function genCode(): string {
@@ -10,8 +11,8 @@ function genCode(): string {
 // Returns the owner's current active invite (creates one if none exists)
 export async function GET(req: NextRequest) {
   const sp = new URL(req.url).searchParams;
-  const lineUserId = sp.get("userId") ?? sp.get("lineUserId");
-  if (!lineUserId) return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+  const lineUserId = await authorizeUserId(sp.get("userId") ?? sp.get("lineUserId"));
+  if (!lineUserId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { data: user } = await supabaseAdmin
     .from("users").select("id").eq("id", lineUserId).single();
@@ -44,8 +45,8 @@ export async function GET(req: NextRequest) {
 // ── POST /api/staff/invite — reset (deactivate old + create new) ─────────────
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const lineUserId = body.userId ?? body.lineUserId;
-  if (!lineUserId) return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+  const lineUserId = await authorizeUserId(body.userId ?? body.lineUserId);
+  if (!lineUserId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { data: user } = await supabaseAdmin
     .from("users").select("id").eq("id", lineUserId).single();
@@ -72,8 +73,8 @@ export async function POST(req: NextRequest) {
 // ── DELETE /api/staff/invite — disable invite ────────────────────────────────
 export async function DELETE(req: NextRequest) {
   const body = await req.json();
-  const lineUserId = body.userId ?? body.lineUserId;
-  if (!lineUserId) return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+  const lineUserId = await authorizeUserId(body.userId ?? body.lineUserId);
+  if (!lineUserId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { data: user } = await supabaseAdmin
     .from("users").select("id").eq("id", lineUserId).single();

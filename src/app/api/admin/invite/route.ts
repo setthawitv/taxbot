@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { authorizeUserId } from "@/lib/auth";
 
 // GET /api/admin/invite?userId=xxx  — list all admins for owner
 export async function GET(req: NextRequest) {
   const sp = new URL(req.url).searchParams;
-  const lineUserId = sp.get("userId") ?? sp.get("lineUserId");
-  if (!lineUserId) return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+  const lineUserId = await authorizeUserId(sp.get("userId") ?? sp.get("lineUserId"));
+  if (!lineUserId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { data: user } = await supabaseAdmin
     .from("users").select("id").eq("id", lineUserId).single();
@@ -24,9 +25,10 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const { adminEmail } = body;
-  const lineUserId = body.userId ?? body.lineUserId;
-  if (!lineUserId || !adminEmail)
-    return NextResponse.json({ error: "Missing userId or adminEmail" }, { status: 400 });
+  const lineUserId = await authorizeUserId(body.userId ?? body.lineUserId);
+  if (!lineUserId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!adminEmail)
+    return NextResponse.json({ error: "Missing adminEmail" }, { status: 400 });
 
   const email = adminEmail.trim().toLowerCase();
 
@@ -56,9 +58,10 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const body = await req.json();
   const { adminId } = body;
-  const lineUserId = body.userId ?? body.lineUserId;
-  if (!lineUserId || !adminId)
-    return NextResponse.json({ error: "Missing userId or adminId" }, { status: 400 });
+  const lineUserId = await authorizeUserId(body.userId ?? body.lineUserId);
+  if (!lineUserId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!adminId)
+    return NextResponse.json({ error: "Missing adminId" }, { status: 400 });
 
   const { data: user } = await supabaseAdmin
     .from("users").select("id").eq("id", lineUserId).single();

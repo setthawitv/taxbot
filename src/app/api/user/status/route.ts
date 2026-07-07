@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { authorizeUserId } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
-  const userId = req.nextUrl.searchParams.get("userId") ?? req.nextUrl.searchParams.get("lineUserId");
+  const userId = await authorizeUserId(req.nextUrl.searchParams.get("userId") ?? req.nextUrl.searchParams.get("lineUserId"));
   if (!userId) {
     return NextResponse.json({ connected: false, onboarded: false });
   }

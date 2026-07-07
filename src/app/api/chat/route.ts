@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { buildUserContext, chat, CHAT_PLANS, type ChatPlan } from "@/lib/chat";
+import { authorizeUserId } from "@/lib/auth";
 
 const HISTORY_TURNS = 8; // last 8 messages (~4 turns) sent back to the model
 
@@ -43,8 +44,8 @@ async function usedThisPeriod(userId: string, period: "week" | "month"): Promise
 
 // GET /api/chat?userId=xxx  →  history + usage
 export async function GET(req: NextRequest) {
-  const userId = req.nextUrl.searchParams.get("userId");
-  if (!userId) return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+  const userId = await authorizeUserId(req.nextUrl.searchParams.get("userId"));
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const plan = await resolvePlan(userId);
   if (!plan) return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -71,9 +72,11 @@ export async function GET(req: NextRequest) {
 // POST /api/chat  { userId, message, clientData }
 export async function POST(req: NextRequest) {
   try {
-    const { userId, message, clientData } = await req.json();
-    if (!userId || !message?.trim()) {
-      return NextResponse.json({ error: "Missing userId or message" }, { status: 400 });
+    const { userId: reqUserId, message, clientData } = await req.json();
+    const userId = await authorizeUserId(reqUserId);
+    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!message?.trim()) {
+      return NextResponse.json({ error: "Missing message" }, { status: 400 });
     }
 
     const plan = await resolvePlan(userId);
