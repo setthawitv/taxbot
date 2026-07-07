@@ -640,12 +640,21 @@ export default function LandingPage() {
           <VendeeLogo className="w-8 h-8" />
           <span className="font-bold text-lg tracking-tight text-gray-900">Vendee Finance</span>
         </div>
-        <Link
-          href="/onboarding"
-          className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors inline-flex items-center gap-1"
-        >
-          เข้าสู่ระบบ <IconArrowRight className="w-4 h-4" />
-        </Link>
+        <div className="flex items-center gap-4">
+          {/* Reviewer / demo access (username + password) for platform approvers */}
+          <Link
+            href="/demo-login"
+            className="text-xs font-medium text-gray-400 hover:text-gray-700 transition-colors border border-gray-200 rounded-full px-3 py-1.5"
+          >
+            Demo
+          </Link>
+          <Link
+            href="/onboarding"
+            className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors inline-flex items-center gap-1"
+          >
+            เข้าสู่ระบบ <IconArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
       </nav>
 
       {/* ── Hero ───────────────────────────────────────────────────────────── */}
