@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
       .eq("type", "expense")
       .order("transaction_date", { ascending: true });
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return NextResponse.json({ error: "Database error" }, { status: 500 });
 
     // Get IDs already in the Sheet to avoid duplicates
     const existingIds = await getExistingSheetIds(gToken, user.sheet_id);
@@ -151,7 +151,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : JSON.stringify(err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[sync/sheets] error:", err);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

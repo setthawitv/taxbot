@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ receipt });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[scan] error:", err);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

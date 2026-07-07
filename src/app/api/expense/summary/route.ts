@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
     .gte("transaction_date", dateFrom)
     .lte("transaction_date", dateTo);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: "Database error"}, { status: 500 });
 
   const total = (data ?? []).reduce((s, r) => s + Number(r.amount), 0);
   const count = (data ?? []).length;

@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
       .lte("order_date", dateTo);
     if (platform !== "all") poQuery = poQuery.eq("platform", platform);
     const { data, error } = await poQuery;
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return NextResponse.json({ error: "Database error" }, { status: 500 });
     platformRows = data ?? [];
   }
 
@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
       .eq("type", "income")
       .gte("transaction_date", dateFrom)
       .lte("transaction_date", dateTo);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return NextResponse.json({ error: "Database error" }, { status: 500 });
     manualRows = data ?? [];
   }
 

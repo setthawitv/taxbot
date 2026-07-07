@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   if (productId) query = query.eq("product_id", productId);
 
   const { data, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: "Database error" }, { status: 500 });
   return NextResponse.json({ movements: data ?? [] });
 }
 

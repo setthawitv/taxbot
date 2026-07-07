@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: "Database error" }, { status: 500 });
   return NextResponse.json({ invite });
 }
 
@@ -73,6 +73,6 @@ export async function DELETE(req: NextRequest) {
     .eq("id", adminId)
     .eq("owner_user_id", user.id);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: "Database error" }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

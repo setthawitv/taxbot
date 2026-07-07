@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
     if (dateFrom) query = query.gte("transaction_date", dateFrom).lte("transaction_date", dateTo);
 
     const { data, error } = await query;
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return NextResponse.json({ error: "Database error"}, { status: 500 });
     return NextResponse.json({ transactions: data ?? [] });
   }
 
@@ -281,8 +281,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, id: tx.id, sheetSynced, driveSynced, sheetError, driveError });
 
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : JSON.stringify(err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[transactions] error:", err);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
 
@@ -307,11 +307,11 @@ export async function DELETE(req: NextRequest) {
     if (table === "platform_orders") {
       const { error } = await supabaseAdmin
         .from("platform_orders").delete().eq("id", id).eq("user_id", user.id);
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) return NextResponse.json({ error: "Database error"}, { status: 500 });
     } else {
       const { error } = await supabaseAdmin
         .from("transactions").delete().eq("id", id).eq("user_id", user.id);
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) return NextResponse.json({ error: "Database error"}, { status: 500 });
 
       // Sync deletion to Google Sheets
       let sheetDeleted = false;
@@ -329,8 +329,8 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ ok: true });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : JSON.stringify(err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[transactions] error:", err);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
 
@@ -372,7 +372,7 @@ export async function PATCH(req: NextRequest) {
       .eq("id", id)
       .eq("user_id", user.id);
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return NextResponse.json({ error: "Database error"}, { status: 500 });
 
     // Sync update to Google Sheets
     if (user.google_access_token && user.sheet_id) {
@@ -391,7 +391,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ ok: true });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : JSON.stringify(err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error("[transactions] error:", err);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

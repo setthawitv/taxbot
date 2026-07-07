@@ -111,7 +111,7 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     console.error("[payment/status]", err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Status check failed" },
+      { error: "Status check failed" },
       { status: 500 }
     );
   }

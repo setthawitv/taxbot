@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: "Database error" }, { status: 500 });
   return NextResponse.json({ vendor: data });
 }
 
@@ -56,6 +56,6 @@ export async function DELETE(req: NextRequest) {
 
   const { id } = await req.json();
   const { error } = await supabaseAdmin.from("vendor_rules").delete().eq("id", id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: "Database error" }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

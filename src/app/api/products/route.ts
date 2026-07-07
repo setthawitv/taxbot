@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   if (search) query = query.ilike("name", `%${search}%`);
 
   const { data, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: "Database error" }, { status: 500 });
   return NextResponse.json({ products: data ?? [] });
 }
 
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     .select("*")
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: "Database error" }, { status: 500 });
 
   // Record opening stock movement if stock_qty > 0
   if ((fields.stock_qty ?? 0) > 0) {
@@ -81,7 +81,7 @@ export async function PATCH(req: NextRequest) {
     .eq("id", id)
     .eq("user_id", userId);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: "Database error" }, { status: 500 });
   return NextResponse.json({ ok: true });
 }
 

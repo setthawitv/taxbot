@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ImageResponse } from "next/og";
+import { authorizeUserId } from "@/lib/auth";
 
 const TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN!;
 const APP_URL = "https://www.vendeefinance.com";
@@ -99,6 +100,12 @@ const RICH_MENU = {
 
 export async function POST() {
   try {
+    // Admin-only setup op that mutates LINE state with the channel token —
+    // require an authenticated session so it can't be triggered anonymously.
+    if (!(await authorizeUserId())) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     // 1. Create Rich Menu structure
     const createRes = await fetch("https://api.line.me/v2/bot/richmenu", {
       method: "POST",

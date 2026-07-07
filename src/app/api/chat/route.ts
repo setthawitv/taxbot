@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error("[chat]", err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Chat failed" },
+      { error: "Chat failed" },
       { status: 500 }
     );
   }
