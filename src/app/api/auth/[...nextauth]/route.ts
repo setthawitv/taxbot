@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import CredentialsProvider from "next-auth/providers/credentials";
 
 const handler = NextAuth({
   providers: [
@@ -16,6 +17,27 @@ const handler = NextAuth({
           access_type: "offline",
           prompt: "consent",
         },
+      },
+    }),
+    // Single demo account for platform reviewers (e.g. Shopee) to log in with a
+    // username/password, since normal users sign in with Google. Enabled only
+    // when both env vars are set; grants access to a seeded demo account only.
+    CredentialsProvider({
+      id: "demo",
+      name: "Demo",
+      credentials: {
+        email:    { label: "Email",    type: "text" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        const demoEmail = process.env.DEMO_LOGIN_EMAIL?.toLowerCase().trim();
+        const demoPass  = process.env.DEMO_LOGIN_PASSWORD;
+        if (!demoEmail || !demoPass) return null;
+        const email = credentials?.email?.toLowerCase().trim();
+        if (email === demoEmail && credentials?.password === demoPass) {
+          return { id: demoEmail, email: demoEmail, name: "Shopee Reviewer (Demo)" };
+        }
+        return null;
       },
     }),
   ],

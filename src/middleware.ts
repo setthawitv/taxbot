@@ -9,6 +9,7 @@ const PUBLIC_PATHS = [
   "/intro",             // Feature intro slides (first-time users land here)
   "/onboarding",        // 3-step onboarding wizard
   "/connect-google",    // Google OAuth flow opened in external browser
+  "/demo-login",        // Reviewer (Shopee) username/password login
   "/staff",             // Staff expense entry (invite-code based, no auth)
   "/admin/join",        // Admin invite acceptance (requires Google sign-in, not LINE)
   "/api/auth",
