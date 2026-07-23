@@ -6,6 +6,7 @@ import ThaiDateInput from "@/components/ThaiDateInput";
 import { useSession } from "next-auth/react";
 import { IconExpense, IconScan, IconPlus, IconInbox } from "@/components/icons";
 import AppLayout from "@/components/AppLayout";
+import DateRangePicker, { presetRange, type DateRange } from "@/components/DateRangePicker";
 import { lsGet, lsSet } from "@/lib/storage";
 
 const EXPENSE_CATEGORIES = [
@@ -57,8 +58,12 @@ export default function RaiJhai() {
   const [userId, setUserId] = useState("");
   const [authReady,  setAuthReady]  = useState(false);
 
-  const [year,  setYear]  = useState(CURRENT_YEAR);
-  const [month, setMonth] = useState(CURRENT_MONTH);
+  const [range, setRange] = useState<DateRange>(() => {
+    if (typeof window === "undefined") return presetRange("thisMonth");
+    try { const s = lsGet("expense_range"); if (s) { const r = JSON.parse(s); if (r?.from && r?.to) return r as DateRange; } } catch { /* ignore */ }
+    return presetRange("thisMonth");
+  });
+  function pickRange(r: DateRange) { setRange(r); lsSet("expense_range", JSON.stringify(r)); }
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading,      setLoading]      = useState(true);
@@ -119,8 +124,8 @@ export default function RaiJhai() {
     const params = new URLSearchParams({
       type: "expense",
       userId: uid,
-      year:  String(year),
-      month: String(month),
+      from: range.from,
+      to:   range.to,
     });
     fetch(`/api/transactions?${params}`)
       .then((r) => r.json())
@@ -136,7 +141,7 @@ export default function RaiJhai() {
     if (!authReady) return;
     if (userId) loadTxns(userId);
     else setLoading(false);
-  }, [authReady, userId, year, month]);
+  }, [authReady, userId, range.from, range.to]);
 
 
   // ── Open form for add ─────────────────────────────────────────────────────
@@ -397,32 +402,12 @@ export default function RaiJhai() {
           {/* LEFT — Filters + Summary + Form */}
           <div className="lg:col-span-2 space-y-4 mb-6 lg:mb-0">
 
-            {/* Year + Month dropdowns */}
-            <div className="flex gap-2">
-              <select
-                value={year}
-                onChange={(e) => setYear(Number(e.target.value))}
-                className="flex-1 bg-white border border-rose-200 rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-rose-300"
-              >
-                {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
-              </select>
-              <select
-                value={month}
-                onChange={(e) => setMonth(Number(e.target.value))}
-                className="flex-[2] bg-white border border-rose-200 rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-rose-300"
-              >
-                <option value={0}>ทั้งปี</option>
-                {MONTHS.map((label, i) => (
-                  <option key={i} value={i + 1}>{label}</option>
-                ))}
-              </select>
-            </div>
+            {/* Date range */}
+            <DateRangePicker value={range} onChange={pickRange} className="w-full" />
 
             {/* Total card */}
             <div className="bg-rose-500 text-white rounded-2xl p-5">
-              <p className="text-sm opacity-80">
-                {month === 0 ? `รายจ่ายทั้งปี ${year}` : `${MONTHS[month - 1]} ${year}`}
-              </p>
+              <p className="text-sm opacity-80">รายจ่ายช่วงที่เลือก</p>
               <p className="text-3xl font-bold mt-1">฿{fmt(total)}</p>
               {!loading && <p className="text-sm opacity-70 mt-1">{transactions.length} รายการ</p>}
             </div>

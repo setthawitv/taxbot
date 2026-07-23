@@ -19,11 +19,15 @@ export async function GET(req: NextRequest) {
 
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-  const dateFrom = month
+  const qFrom = searchParams.get("from");
+  const qTo   = searchParams.get("to");
+  const isDate = (s: string | null): s is string => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s);
+
+  const dateFrom = isDate(qFrom) ? qFrom : month
     ? `${year}-${String(month).padStart(2, "0")}-01`
     : `${year}-01-01`;
   const lastDay = month ? new Date(year, month, 0).getDate() : 31;
-  const dateTo = month
+  const dateTo = isDate(qTo) ? qTo : month
     ? `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`
     : `${year}-12-31`;
 

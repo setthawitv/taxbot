@@ -10,6 +10,7 @@ import {
   IconScan, IconShield, IconCheckCircle, IconWave, IconLightbulb, IconUser, IconRocket,
 } from "@/components/icons";
 import AppLayout from "@/components/AppLayout";
+import DateRangePicker, { presetRange, type DateRange } from "@/components/DateRangePicker";
 import { lsGet, lsSet } from "@/lib/storage";
 import type { ComponentType } from "react";
 
@@ -298,23 +299,20 @@ export default function Home() {
   const [links,        setLinks]        = useState<Links>({ sheetUrl: null, driveUrl: null });
   const [loadingStats, setLoadingStats] = useState(true);
   const [showTour,      setShowTour]      = useState(false);
-  const [selectedYear,  setSelectedYear]  = useState<number>(() => {
-    if (typeof window === "undefined") return CURRENT_YEAR;
-    return parseInt(lsGet("year") || String(CURRENT_YEAR), 10);
+  const [range, setRange] = useState<DateRange>(() => {
+    if (typeof window === "undefined") return presetRange("thisYear");
+    try {
+      const s = lsGet("home_range");
+      if (s) { const r = JSON.parse(s); if (r?.from && r?.to) return r as DateRange; }
+    } catch { /* ignore */ }
+    return presetRange("thisYear");
   });
-  const [selectedMonth, setSelectedMonth] = useState<number>(() => {
-    if (typeof window === "undefined") return CURRENT_MONTH;
-    return parseInt(lsGet("month") || String(CURRENT_MONTH), 10);
-  });
-
-  function pickYear(y: number) {
-    setSelectedYear(y);
-    lsSet("year", String(y));
+  function pickRange(r: DateRange) {
+    setRange(r);
+    lsSet("home_range", JSON.stringify(r));
   }
-  function pickMonth(m: number) {
-    setSelectedMonth(m);
-    lsSet("month", String(m));
-  }
+  // Tax is annual, so tax/summary and the localStorage tax keys use the range's year.
+  const rangeYear = parseInt(range.to.slice(0, 4), 10) || CURRENT_YEAR;
 
   const { data: session, status: sessionStatus } = useSession();
 
@@ -361,19 +359,17 @@ export default function Home() {
     if (!authReady || !userId) { if (authReady) setLoadingStats(false); return; }
     setLoadingStats(true);
     const uid = userId;
-    const yr  = selectedYear;
-    const mo  = selectedMonth;
+    const yr  = rangeYear;
+    const dr  = `from=${range.from}&to=${range.to}`;
 
     Promise.all([
-      fetch(`/api/income/summary?userId=${uid}&year=${yr}&month=${mo}`).then((r) => r.json()),
-      fetch(`/api/income/summary?userId=${uid}&year=${yr}`).then((r) => r.json()),
-      fetch(`/api/expense/summary?userId=${uid}&year=${yr}&month=${mo}`).then((r) => r.json()),
-      fetch(`/api/expense/summary?userId=${uid}&year=${yr}`).then((r) => r.json()),
+      fetch(`/api/income/summary?userId=${uid}&${dr}`).then((r) => r.json()),
+      fetch(`/api/expense/summary?userId=${uid}&${dr}`).then((r) => r.json()),
       fetch(`/api/tax/summary?userId=${uid}&year=${yr}`).then((r) => r.json()),
       fetch(`/api/user/status?userId=${uid}`).then((r) => r.json()),
       fetch(`/api/user/links?lid=${uid}`).then((r) => r.json()),
 
-    ]).then(([moIncome, yrIncome, moExpense, yrExpense, tax, status, lnks]) => {
+    ]).then(([rangeIncome, rangeExpense, tax, status, lnks]) => {
       // Compute two tax estimates that differ ONLY by salary. Business income
       // is from the DB (tax summary); salary/commission/extra deductions live in
       // the tax page's localStorage. Pick the lower of หักเหมา 60% vs หักตามจริง.
@@ -402,10 +398,10 @@ export default function Home() {
       };
 
       setStats({
-        monthIncome:   moIncome.total  ?? 0,
-        yearIncome:    yrIncome.total  ?? 0,
-        monthExpense:  moExpense.total ?? 0,
-        yearExpense:   yrExpense.total ?? 0,
+        monthIncome:   rangeIncome.total  ?? 0,
+        yearIncome:    rangeIncome.total  ?? 0,
+        monthExpense:  rangeExpense.total ?? 0,
+        yearExpense:   rangeExpense.total ?? 0,
         estimatedTax:  taxFor(0),
         taxWithSalary: taxFor(salaryComm),
       });
@@ -428,7 +424,7 @@ export default function Home() {
       });
       setLinks({ sheetUrl: lnks.sheet_url ?? null, driveUrl: lnks.drive_url ?? null });
     }).finally(() => setLoadingStats(false));
-  }, [authReady, userId, selectedYear, selectedMonth]);
+  }, [authReady, userId, range.from, range.to, rangeYear]);
 
   function openExternal(url: string | null, fallback: string) {
     // Always open in new tab — use URL if ready, otherwise fallback page
@@ -447,40 +443,13 @@ export default function Home() {
       <div className="px-4 lg:px-6 py-6 max-w-5xl mx-auto space-y-6">
 
 
-        {/* ── Date controls (year + month, side by side) ───────────────────── */}
-        <div className="flex items-center gap-3">
-          <select
-            value={selectedYear}
-            onChange={(e) => pickYear(Number(e.target.value))}
-            className="flex-1 sm:flex-none sm:w-44 border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-white text-[#0A192F] font-semibold focus:outline-none focus:ring-2 focus:ring-[#0A192F]/20 cursor-pointer"
-          >
-            {Array.from({ length: 4 }, (_, i) => CURRENT_YEAR - i).map((y) => (
-              <option key={y} value={y}>{y}</option>
-            ))}
-          </select>
-          <select
-            value={selectedMonth}
-            onChange={(e) => pickMonth(Number(e.target.value))}
-            className="flex-1 sm:flex-none sm:w-44 border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-white text-[#0A192F] font-semibold focus:outline-none focus:ring-2 focus:ring-[#0A192F]/20 cursor-pointer"
-          >
-            {MONTH_TH.slice(1).map((label, i) => (
-              <option key={i + 1} value={i + 1}>{label}</option>
-            ))}
-          </select>
-          {(selectedMonth !== CURRENT_MONTH || selectedYear !== CURRENT_YEAR) && (
-            <button
-              onClick={() => { pickYear(CURRENT_YEAR); pickMonth(CURRENT_MONTH); }}
-              className="text-xs text-[#4A5568] hover:text-[#0A192F] underline underline-offset-2 transition-colors whitespace-nowrap"
-            >
-              เดือนนี้
-            </button>
-          )}
-        </div>
+        {/* ── Date range control ───────────────────────────────────────────── */}
+        <DateRangePicker value={range} onChange={pickRange} />
 
-        {/* ── Big stat cards (year) ─────────────────────────────────────────── */}
+        {/* ── Big stat cards (selected range) ───────────────────────────────── */}
         <div>
           <div className="w-full flex items-center justify-between mb-3">
-            <p className="text-xs font-semibold text-[#4A5568] uppercase tracking-widest">ภาพรวมทั้งปี {selectedYear}</p>
+            <p className="text-xs font-semibold text-[#4A5568] uppercase tracking-widest">ภาพรวมช่วงที่เลือก</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
@@ -497,7 +466,7 @@ export default function Home() {
               ) : (
                 <p className="text-2xl font-bold text-[#0A192F]">฿{fmtInt(stats?.yearIncome ?? 0)}</p>
               )}
-              <p className="text-xs text-gray-400 mt-1">Income · {selectedYear}</p>
+              <p className="text-xs text-gray-400 mt-1">Income</p>
             </div>
 
             {/* Expense */}
@@ -513,7 +482,7 @@ export default function Home() {
               ) : (
                 <p className="text-2xl font-bold text-[#0A192F]">฿{fmtInt(stats?.yearExpense ?? 0)}</p>
               )}
-              <p className="text-xs text-gray-400 mt-1">Expense · {selectedYear}</p>
+              <p className="text-xs text-gray-400 mt-1">Expense</p>
             </div>
 
             {/* Net */}
@@ -532,7 +501,7 @@ export default function Home() {
                 </p>
               )}
               <p className={`text-xs mt-1 ${netYear >= 0 ? "text-white/40" : "text-amber-400"}`}>
-                {netYear < 0 ? "ขาดทุน" : "Net Profit"} · {selectedYear}
+                {netYear < 0 ? "ขาดทุน" : "Net Profit"}
               </p>
             </div>
 
@@ -546,8 +515,7 @@ export default function Home() {
           <div className="lg:col-span-3 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             {/* Card header — reflects the month chosen in the top date controls */}
             <div className="flex items-center justify-between mb-4">
-              <p className="text-xs font-semibold text-[#4A5568] uppercase tracking-widest">เดือน</p>
-              <span className="text-sm font-semibold text-[#0A192F]">{MONTH_TH[selectedMonth]} {selectedYear}</span>
+              <p className="text-xs font-semibold text-[#4A5568] uppercase tracking-widest">สัดส่วนรายรับ-รายจ่าย</p>
             </div>
 
             <div className="flex items-center gap-0">
@@ -558,7 +526,7 @@ export default function Home() {
                 ) : (
                   <>
                     <PieChart income={stats?.monthIncome ?? 0} expense={stats?.monthExpense ?? 0} />
-                    <p className="text-[10px] text-gray-400">{MONTH_TH[selectedMonth]} {selectedYear}</p>
+                    <p className="text-[10px] text-gray-400">ช่วงที่เลือก</p>
                   </>
                 )}
               </div>
@@ -638,7 +606,7 @@ export default function Home() {
                   )}
                 </>
               )}
-              <p className="text-white/30 text-xs mt-2">ปี {selectedYear}</p>
+              <p className="text-white/30 text-xs mt-2">ปี {rangeYear}</p>
             </div>
             <Link href="/phasi"
               className="mt-6 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#10B981] hover:bg-[#0ea572] transition-colors text-white text-sm font-semibold">

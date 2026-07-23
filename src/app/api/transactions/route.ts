@@ -41,11 +41,14 @@ export async function GET(req: NextRequest) {
   const userId = await authorizeUserId(paramUserId);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // Build date range strings
+  // Build date range strings — explicit from/to wins over year/month
+  const qFrom = searchParams.get("from");
+  const qTo   = searchParams.get("to");
+  const isDate = (s: string | null): s is string => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s);
   const yr = year && year !== "0" ? parseInt(year) : null;
   const mo = month && month !== "0" ? parseInt(month) : null;
-  const dateFrom = yr ? (mo ? `${yr}-${String(mo).padStart(2,"0")}-01` : `${yr}-01-01`) : null;
-  const dateTo   = yr ? (mo ? `${yr}-${String(mo).padStart(2,"0")}-${String(new Date(yr, mo!, 0).getDate()).padStart(2,"0")}` : `${yr}-12-31`) : null;
+  const dateFrom = isDate(qFrom) ? qFrom : yr ? (mo ? `${yr}-${String(mo).padStart(2,"0")}-01` : `${yr}-01-01`) : null;
+  const dateTo   = isDate(qTo)   ? qTo   : yr ? (mo ? `${yr}-${String(mo).padStart(2,"0")}-${String(new Date(yr, mo!, 0).getDate()).padStart(2,"0")}` : `${yr}-12-31`) : null;
 
   // ── expense / all: query transactions table only ──────────────────────────
   if (type !== "income") {

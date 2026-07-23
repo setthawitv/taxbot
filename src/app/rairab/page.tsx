@@ -9,6 +9,8 @@ import {
   IconAll, IconMusic, IconCart, IconBag, IconNote, IconInbox,
 } from "@/components/icons";
 import AppLayout from "@/components/AppLayout";
+import DateRangePicker, { presetRange, type DateRange } from "@/components/DateRangePicker";
+import { lsGet, lsSet } from "@/lib/storage";
 
 type Platform = "all" | "tiktok" | "shopee" | "lazada" | "manual";
 
@@ -47,6 +49,13 @@ const PLATFORM_OPTIONS: { id: Platform; label: string; emoji: string; color: str
 ];
 
 const MONTHS = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+
+// Build a {from,to} range covering one calendar month.
+function monthRangeOf(y: number, m: number): DateRange {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const last = new Date(y, m, 0).getDate();
+  return { from: `${y}-${pad(m)}-01`, to: `${y}-${pad(m)}-${pad(last)}` };
+}
 const CURRENT_YEAR  = new Date().getFullYear();
 const CURRENT_MONTH = new Date().getMonth() + 1;
 const YEARS = Array.from({ length: 6 }, (_, i) => CURRENT_YEAR - i);
@@ -125,8 +134,13 @@ function PlatformDonut({ byPlatform, total }: { byPlatform: Record<string, numbe
 export default function RaiRab() {
   const [userId, setUserId] = useState("");
   const [authReady,  setAuthReady]  = useState(false);
-  const [year,       setYear]       = useState(CURRENT_YEAR);
-  const [month,      setMonth]      = useState(0);
+  const [range, setRange] = useState<DateRange>(() => {
+    if (typeof window === "undefined") return presetRange("thisYear");
+    try { const s = lsGet("income_range"); if (s) { const r = JSON.parse(s); if (r?.from && r?.to) return r as DateRange; } } catch { /* ignore */ }
+    return presetRange("thisYear");
+  });
+  function pickRange(r: DateRange) { setRange(r); lsSet("income_range", JSON.stringify(r)); }
+  const rangeYear = parseInt(range.to.slice(0, 4), 10) || CURRENT_YEAR;
   const [platform,   setPlatform]   = useState<Platform>("all");
   const [summary,    setSummary]    = useState<Summary | null>(null);
   const [loading,    setLoading]    = useState(true);
@@ -192,15 +206,15 @@ export default function RaiRab() {
     setLoading(true);
 
     // Summary
-    const params = new URLSearchParams({ userId, year: String(year), month: String(month), platform });
+    const params = new URLSearchParams({ userId, from: range.from, to: range.to, platform });
     fetch(`/api/income/summary?${params}`, { signal: ctrl.signal })
       .then((r) => r.json())
       .then((d) => { if (!d.error) setSummary(d); })
       .catch((e) => { if (e.name !== "AbortError") console.error(e); })
       .finally(() => setLoading(false));
 
-    // All transactions (year-wide, no platform filter)
-    fetch(`/api/transactions?type=income&userId=${userId}&year=${year}`, { signal: ctrl.signal })
+    // All transactions in range (no platform filter)
+    fetch(`/api/transactions?type=income&userId=${userId}&from=${range.from}&to=${range.to}`, { signal: ctrl.signal })
       .then((r) => r.json())
       .then((d) => {
         const all: (AdjustEntry & { source?: string; description?: string })[] = d.transactions ?? [];
@@ -213,18 +227,18 @@ export default function RaiRab() {
       .catch((e) => { if (e.name !== "AbortError") console.error(e); });
 
     return () => ctrl.abort();
-  }, [authReady, userId, year, month, platform]);
+  }, [authReady, userId, range.from, range.to, platform]);
 
   // Helpers to refresh after save/delete
   function refreshSummary(uid: string) {
-    const params = new URLSearchParams({ userId: uid, year: String(year), month: String(month), platform });
+    const params = new URLSearchParams({ userId: uid, from: range.from, to: range.to, platform });
     fetch(`/api/income/summary?${params}`)
       .then((r) => r.json())
       .then((d) => { if (!d.error) setSummary(d); });
   }
 
   function loadAdjusts(uid: string) {
-    fetch(`/api/transactions?type=income&userId=${uid}&year=${year}`)
+    fetch(`/api/transactions?type=income&userId=${uid}&from=${range.from}&to=${range.to}`)
       .then((r) => r.json())
       .then((d) => {
         const all: (AdjustEntry & { source?: string; description?: string })[] = d.transactions ?? [];
@@ -278,7 +292,7 @@ export default function RaiRab() {
     const amt = parseFloat(adjAmount);
     const finalAmt = adjDir === "-" ? -amt : amt;
     const mo = String(adjMonth).padStart(2, "0");
-    const date = `${year}-${mo}-15`; // mid-month
+    const date = `${rangeYear}-${mo}-15`; // mid-month
     const vendor = adjNote.trim() || (adjDir === "+" ? "ปรับยอดเพิ่ม" : "ปรับยอดลด");
 
     try {
@@ -404,26 +418,8 @@ export default function RaiRab() {
           {/* LEFT — Charts, filters, summary (2 cols) */}
           <div className="lg:col-span-2 space-y-4 mb-6 lg:mb-0">
 
-            {/* Year + Month dropdowns */}
-            <div className="flex gap-2">
-              <select
-                value={year}
-                onChange={(e) => { setYear(Number(e.target.value)); setMonth(0); }}
-                className="flex-1 bg-white border border-emerald-200 rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-300"
-              >
-                {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
-              </select>
-              <select
-                value={month}
-                onChange={(e) => setMonth(Number(e.target.value))}
-                className="flex-[2] bg-white border border-emerald-200 rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-300"
-              >
-                <option value={0}>ทุกเดือน</option>
-                {MONTHS.map((label, i) => (
-                  <option key={i} value={i + 1}>{label}</option>
-                ))}
-              </select>
-            </div>
+            {/* Date range */}
+            <DateRangePicker value={range} onChange={pickRange} className="w-full" />
 
             {/* Platform filter */}
             <div className="flex gap-2 overflow-x-auto pb-1">
@@ -443,8 +439,7 @@ export default function RaiRab() {
             {/* Total card */}
             <div className={`${pl.color} text-white rounded-2xl p-5`}>
               <p className="text-sm opacity-80">
-                {month ? `${MONTHS[month - 1]} ${year}` : `ทั้งปี ${year}`}
-                {platform !== "all" ? ` · ${pl.label}` : ""}
+                รายรับช่วงที่เลือก{platform !== "all" ? ` · ${pl.label}` : ""}
               </p>
               {loading ? (
                 <p className="text-3xl font-bold mt-1 opacity-60">กำลังโหลด...</p>
@@ -485,16 +480,16 @@ export default function RaiRab() {
               </div>
             )}
 
-            {/* Monthly bar chart */}
-            {month === 0 && summary && !loading && (
+            {/* Monthly bar chart — shown for multi-month ranges */}
+            {summary && !loading && summary.byMonth.length > 1 && (
               <div className="bg-white rounded-2xl border border-emerald-100 p-4">
-                <p className="text-xs text-gray-500 font-semibold mb-3">รายได้รายเดือน {year}</p>
+                <p className="text-xs text-gray-500 font-semibold mb-3">รายได้รายเดือน {rangeYear}</p>
                 <div className="flex items-end gap-1 h-32">
                   {summary.byMonth.map((m, i) => {
                     const h = maxMonthTotal > 0 ? (m.total / maxMonthTotal) * 100 : 0;
-                    const isCurrentMonth = year === CURRENT_YEAR && m.month === CURRENT_MONTH;
+                    const isCurrentMonth = rangeYear === CURRENT_YEAR && m.month === CURRENT_MONTH;
                     return (
-                      <button key={i} onClick={() => setMonth(m.month)} className="flex-1 flex flex-col items-center gap-1 group">
+                      <button key={i} onClick={() => pickRange(monthRangeOf(rangeYear, m.month))} className="flex-1 flex flex-col items-center gap-1 group">
                         <div className="w-full relative flex items-end justify-center" style={{ height: 100 }}>
                           <div className={`w-full rounded-t-sm transition-all ${isCurrentMonth ? "bg-emerald-400" : "bg-emerald-200 group-hover:bg-emerald-300"}`}
                             style={{ height: `${Math.max(h, 4)}%` }} />
@@ -504,24 +499,7 @@ export default function RaiRab() {
                     );
                   })}
                 </div>
-                <p className="text-xs text-gray-400 text-center mt-2">กดเดือนเพื่อดูรายละเอียด</p>
-              </div>
-            )}
-
-            {/* Month filter pills */}
-            {month !== 0 && (
-              <div className="flex flex-wrap gap-2">
-                <button onClick={() => setMonth(0)} className="px-3 py-1.5 rounded-full text-xs font-semibold bg-white border border-gray-200 text-gray-500">
-                  ← ทั้งปี
-                </button>
-                {MONTHS.map((label, i) => (
-                  <button key={i} onClick={() => setMonth(i + 1)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                      month === i + 1 ? "bg-emerald-500 text-white" : "bg-white border border-gray-200 text-gray-500"
-                    }`}>
-                    {label}
-                  </button>
-                ))}
+                <p className="text-xs text-gray-400 text-center mt-2">กดแท่งเพื่อดูเฉพาะเดือนนั้น</p>
               </div>
             )}
           </div>
