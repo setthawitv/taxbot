@@ -77,6 +77,7 @@ export default function RaiJhai() {
   const [date,       setDate]       = useState(new Date().toISOString().slice(0, 10));
   const [desc,       setDesc]       = useState("");
   const [category,   setCategory]   = useState("อื่นๆ");
+  const [customCategory, setCustomCategory] = useState(""); // free-text when "อื่นๆ" is picked
   const [saving,     setSaving]     = useState(false);
   const [saveMsg,    setSaveMsg]    = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -147,7 +148,7 @@ export default function RaiJhai() {
   // ── Open form for add ─────────────────────────────────────────────────────
   function openAddForm() {
     setEditId(null);
-    setVendor(""); setAmount(""); setDesc(""); setCategory("อื่นๆ");
+    setVendor(""); setAmount(""); setDesc(""); setCategory("อื่นๆ"); setCustomCategory("");
     setDate(new Date().toISOString().slice(0, 10));
     setScannedImageBase64(null);
     setVatOn(false); setWhtType("none"); setVatManual("0.00"); setWhtManual("0.00"); setManualTax(false);
@@ -235,7 +236,7 @@ export default function RaiJhai() {
             vendor:           vendor.trim(),
             description:      desc.trim(),
             date,
-            expenseCategory:  category,
+            expenseCategory:  category === "อื่นๆ" && customCategory.trim() ? customCategory.trim() : category,
             vatAmount,
             withholdingTax,
             source:           scannedImageBase64 ? "slip_photo" : "manual",
@@ -536,6 +537,14 @@ export default function RaiJhai() {
                         </button>
                       ))}
                     </div>
+                    {category === "อื่นๆ" && (
+                      <input
+                        value={customCategory}
+                        onChange={(e) => setCustomCategory(e.target.value)}
+                        placeholder="ระบุหมวดหมู่เอง (เช่น ค่าคอมมิชชั่น, ค่าที่ปรึกษา)"
+                        className="mt-2 w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-200"
+                      />
+                    )}
                   </div>
                 )}
 
