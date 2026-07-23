@@ -115,3 +115,34 @@ export async function uploadFileToDrive(
     res.data.webViewLink ?? `https://drive.google.com/file/d/${res.data.id}/view`
   );
 }
+
+/**
+ * Delete the receipt files (original image + accounting PDF) belonging to a
+ * transaction. Files were uploaded with the transaction's receipt number in
+ * their name (`<date>_<vendor>_<receiptNo>.<ext>`). The app uses drive.file
+ * scope, so `name contains` only ever matches files this app created.
+ * Returns the number of files removed.
+ */
+export async function deleteReceiptFiles(accessToken: string, receiptNo: string): Promise<number> {
+  if (!receiptNo) return 0;
+  const drive = getDriveClient(accessToken);
+  const safe = receiptNo.replace(/'/g, "\\'");
+  const res = await drive.files.list({
+    q: `name contains '${safe}' and trashed=false`,
+    fields: "files(id,name)",
+    spaces: "drive",
+  });
+  const files = res.data.files ?? [];
+  let deleted = 0;
+  for (const f of files) {
+    if (!f.id) continue;
+    try {
+      await drive.files.delete({ fileId: f.id });
+      deleted++;
+    } catch {
+      // Fall back to trashing if hard-delete is not permitted.
+      try { await drive.files.update({ fileId: f.id, requestBody: { trashed: true } }); deleted++; } catch { /* ignore */ }
+    }
+  }
+  return deleted;
+}

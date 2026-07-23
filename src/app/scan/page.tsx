@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, Suspense } from "react";
 import ThaiDateInput from "@/components/ThaiDateInput";
+import CameraCapture from "@/components/CameraCapture";
 import { useSession } from "next-auth/react";
 
 type OcrReceipt = {
@@ -47,7 +48,7 @@ function ScanPageInner() {
   const [saved, setSaved] = useState<SavedResult | null>(null);
 
   const fileRef   = useRef<HTMLInputElement>(null);
-  const cameraRef = useRef<HTMLInputElement>(null);
+  const [showCamera, setShowCamera] = useState(false);
 
   // ── Auth ─────────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -171,7 +172,7 @@ function ScanPageInner() {
         {/* ── Step 1: Upload ──────────────────────────────────────────────────── */}
         {step === "upload" && (
           <div className="space-y-3">
-            <button onClick={() => cameraRef.current?.click()}
+            <button onClick={() => setShowCamera(true)}
               className="w-full flex items-center justify-center gap-3 py-5 rounded-2xl border-2 border-dashed border-gray-600 bg-gray-800 text-white hover:border-gray-400 hover:bg-gray-700 transition-colors">
               <span className="text-3xl">📷</span>
               <div className="text-left">
@@ -179,8 +180,6 @@ function ScanPageInner() {
                 <p className="text-xs text-gray-400">เปิดกล้องเพื่อถ่ายใบเสร็จ</p>
               </div>
             </button>
-            <input ref={cameraRef} type="file" accept="image/*" capture="environment"
-              className="hidden" onChange={(e) => handleFile(e.target.files?.[0] ?? null)} />
 
             <button onClick={() => fileRef.current?.click()}
               className="w-full flex items-center justify-center gap-3 py-5 rounded-2xl border-2 border-dashed border-gray-600 bg-gray-800 text-white hover:border-gray-400 hover:bg-gray-700 transition-colors">
@@ -192,6 +191,13 @@ function ScanPageInner() {
             </button>
             <input ref={fileRef} type="file" accept="image/*"
               className="hidden" onChange={(e) => handleFile(e.target.files?.[0] ?? null)} />
+
+            {showCamera && (
+              <CameraCapture
+                onCapture={(dataUrl) => { setPreview(dataUrl); setStep("preview"); setShowCamera(false); }}
+                onClose={() => setShowCamera(false)}
+              />
+            )}
           </div>
         )}
 

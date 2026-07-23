@@ -10,6 +10,7 @@ import {
 } from "@/components/icons";
 import AppLayout from "@/components/AppLayout";
 import DateRangePicker, { presetRange, type DateRange } from "@/components/DateRangePicker";
+import CameraCapture from "@/components/CameraCapture";
 import { lsGet, lsSet } from "@/lib/storage";
 
 type Platform = "all" | "tiktok" | "shopee" | "lazada" | "manual";
@@ -175,8 +176,8 @@ export default function RaiRab() {
   const [scanPreview, setScanPreview] = useState<string | null>(null);
   const [scanning,    setScanning]    = useState(false);
   const [scanError,   setScanError]   = useState("");
+  const [showCamera,  setShowCamera]  = useState(false);
   const scanFileRef   = useRef<HTMLInputElement>(null);
-  const scanCamRef    = useRef<HTMLInputElement>(null);
 
   const { data: session, status: sessionStatus } = useSession();
 
@@ -741,7 +742,7 @@ export default function RaiRab() {
 
             {!scanPreview ? (
               <div className="space-y-3">
-                <button onClick={() => scanCamRef.current?.click()}
+                <button onClick={() => setShowCamera(true)}
                   className="w-full flex items-center gap-3 py-4 rounded-xl border-2 border-dashed border-gray-200 hover:border-emerald-300 hover:bg-emerald-50 transition-colors">
                   <span className="text-2xl ml-3">📷</span>
                   <div className="text-left">
@@ -749,8 +750,6 @@ export default function RaiRab() {
                     <p className="text-xs text-gray-400">เปิดกล้อง</p>
                   </div>
                 </button>
-                <input ref={scanCamRef} type="file" accept="image/*" capture="environment" className="hidden"
-                  onChange={(e) => handleScanFile(e.target.files?.[0] ?? null)} />
 
                 <button onClick={() => scanFileRef.current?.click()}
                   className="w-full flex items-center gap-3 py-4 rounded-xl border-2 border-dashed border-gray-200 hover:border-emerald-300 hover:bg-emerald-50 transition-colors">
@@ -780,6 +779,14 @@ export default function RaiRab() {
             )}
           </div>
         </div>
+      )}
+
+      {/* ── Live camera capture ─────────────────────────────────────────────── */}
+      {showCamera && (
+        <CameraCapture
+          onCapture={(dataUrl) => { setScanPreview(dataUrl); setShowCamera(false); }}
+          onClose={() => setShowCamera(false)}
+        />
       )}
     </main>
     </AppLayout>

@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react";
 import { IconExpense, IconScan, IconPlus, IconInbox } from "@/components/icons";
 import AppLayout from "@/components/AppLayout";
 import DateRangePicker, { presetRange, type DateRange } from "@/components/DateRangePicker";
+import CameraCapture from "@/components/CameraCapture";
 import { lsGet, lsSet } from "@/lib/storage";
 
 const EXPENSE_CATEGORIES = [
@@ -99,8 +100,8 @@ export default function RaiJhai() {
   const [scanning,           setScanning]           = useState(false);
   const [scanError,          setScanError]          = useState("");
   const [scannedImageBase64, setScannedImageBase64] = useState<string | null>(null); // persists for upload
+  const [showCamera,         setShowCamera]         = useState(false);
   const scanFileRef   = useRef<HTMLInputElement>(null);
-  const scanCamRef    = useRef<HTMLInputElement>(null);
 
   const { data: session, status: sessionStatus } = useSession();
 
@@ -615,16 +616,14 @@ export default function RaiJhai() {
 
             {!scanPreview ? (
               <div className="space-y-3">
-                <label htmlFor="raijhai-scan-cam"
+                <button type="button" onClick={() => setShowCamera(true)}
                   className="w-full flex items-center gap-3 py-4 rounded-xl border-2 border-dashed border-gray-200 hover:border-rose-300 hover:bg-rose-50 transition-colors cursor-pointer">
                   <span className="text-2xl ml-3">📷</span>
                   <div className="text-left">
                     <p className="text-sm font-semibold text-gray-700">ถ่ายรูป</p>
                     <p className="text-xs text-gray-400">เปิดกล้อง</p>
                   </div>
-                </label>
-                <input id="raijhai-scan-cam" ref={scanCamRef} type="file" accept="image/*" capture="environment" className="hidden"
-                  onChange={(e) => handleScanFile(e.target.files?.[0] ?? null)} />
+                </button>
 
                 <label htmlFor="raijhai-scan-file"
                   className="w-full flex items-center gap-3 py-4 rounded-xl border-2 border-dashed border-gray-200 hover:border-rose-300 hover:bg-rose-50 transition-colors cursor-pointer">
@@ -654,6 +653,14 @@ export default function RaiJhai() {
             )}
           </div>
         </div>
+      )}
+
+      {/* ── Live camera capture ─────────────────────────────────────────────── */}
+      {showCamera && (
+        <CameraCapture
+          onCapture={(dataUrl) => { setScanPreview(dataUrl); setShowCamera(false); }}
+          onClose={() => setShowCamera(false)}
+        />
       )}
 
       {/* ── Warn before enabling manual tax edit ────────────────────────────── */}

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { authorizeUserId } from "@/lib/auth";
 import { appendTransaction, deleteRowByTxId, updateRowByTxId } from "@/lib/sheets";
-import { ensureReceiptFolder, uploadFileToDrive } from "@/lib/drive";
+import { ensureReceiptFolder, uploadFileToDrive, deleteReceiptFiles } from "@/lib/drive";
 import { generateReceiptPdf } from "@/lib/receipt-pdf";
 import { google } from "googleapis";
 import type { ReceiptData } from "@/lib/groq";
@@ -316,15 +316,20 @@ export async function DELETE(req: NextRequest) {
         .from("transactions").delete().eq("id", id).eq("user_id", user.id);
       if (error) return NextResponse.json({ error: "Database error"}, { status: 500 });
 
-      // Sync deletion to Google Sheets
+      // Sync deletion to Google Sheets + remove the receipt files from Drive.
       let sheetDeleted = false;
-      if (user.google_access_token && user.sheet_id) {
+      if (user.google_access_token) {
         try {
           const gToken = await getFreshGoogleToken(user.id, user.google_access_token, user.google_refresh_token ?? null);
-          await deleteRowByTxId(gToken, user.sheet_id, id);
-          sheetDeleted = true;
+          if (user.sheet_id) {
+            try { await deleteRowByTxId(gToken, user.sheet_id, id); sheetDeleted = true; }
+            catch (e) { console.error("[transactions DELETE] sheet sync failed:", e); }
+          }
+          // Receipt files were named with the tx's receipt number (id first 8 chars).
+          try { await deleteReceiptFiles(gToken, String(id).slice(0, 8).toUpperCase()); }
+          catch (e) { console.error("[transactions DELETE] drive delete failed:", e); }
         } catch (e) {
-          console.error("[transactions DELETE] sheet sync failed:", e);
+          console.error("[transactions DELETE] google token refresh failed:", e);
         }
       }
       return NextResponse.json({ ok: true, sheetDeleted });
