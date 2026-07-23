@@ -36,70 +36,73 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    // For Google-only users (no LINE), derive identity from the AUTHENTICATED
-    // session — never trust a client-supplied email, or one user could create
-    // or overwrite another account's row by passing someone else's email.
+    // Resolve identity. Prefer the authenticated session email; fall back to the
+    // client-supplied email. Always lowercase so it matches by-email / auth lookups.
     const sessionEmail = await getSessionEmail();
-    // Canonical email is always lowercased, so it matches by-email / auth lookups.
-    let effectiveGoogleEmail: string | null =
-      typeof googleEmail === "string" ? googleEmail.toLowerCase().trim() : null;
+    const email =
+      (typeof googleEmail === "string" ? googleEmail.toLowerCase().trim() : "") ||
+      sessionEmail || "";
+
+    // Find the existing account FIRST by email (canonical), then by the provided
+    // line id. This prevents creating a duplicate row for a user who already
+    // exists under a different line_user_id (e.g. legacy LINE accounts), which
+    // would break the by-email lookup and bounce them back to onboarding.
+    let existing: { id: string; sheet_id: string | null; drive_folder_id: string | null } | null = null;
+    if (email) {
+      const { data } = await supabaseAdmin
+        .from("users").select("id, sheet_id, drive_folder_id")
+        .eq("google_email", email)
+        .order("created_at", { ascending: true })
+        .limit(1);
+      existing = data?.[0] ?? null;
+    }
     let resolvedLineUserId: string = lineUserId;
-    if (!resolvedLineUserId) {
-      if (!sessionEmail) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!existing) {
+      if (!resolvedLineUserId) {
+        if (!email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        resolvedLineUserId = `google_${email.replace(/[@.+]/g, "_")}`;
       }
-      effectiveGoogleEmail = sessionEmail;
-      resolvedLineUserId = `google_${sessionEmail.replace(/[@.+]/g, "_")}`;
+      const { data } = await supabaseAdmin
+        .from("users").select("id, sheet_id, drive_folder_id")
+        .eq("line_user_id", resolvedLineUserId)
+        .limit(1);
+      existing = data?.[0] ?? null;
     }
 
-    // Check if user already exists (preserve sheet_id and drive_folder_id)
-    const { data: existing } = await supabaseAdmin
-      .from("users")
-      .select("id, sheet_id, drive_folder_id")
-      .eq("line_user_id", resolvedLineUserId)
-      .single();
-
-    let sheetId       = existing?.sheet_id;
-    let driveFolderId = existing?.drive_folder_id;
+    let sheetId       = existing?.sheet_id ?? null;
+    let driveFolderId = existing?.drive_folder_id ?? null;
 
     if (googleAccessToken) {
-      // Create Google Sheet if not yet created
-      if (!sheetId) {
-        sheetId = await createSheet(googleAccessToken, businessName || "ธุรกิจของฉัน");
-      }
-      // Create root Drive folder (Vendee Finance/{businessName}) if not yet created
-      if (!driveFolderId) {
-        driveFolderId = await createRootFolder(
-          googleAccessToken,
-          businessName || "ธุรกิจของฉัน"
-        );
-      }
+      if (!sheetId)       sheetId       = await createSheet(googleAccessToken, businessName || "ธุรกิจของฉัน");
+      if (!driveFolderId) driveFolderId = await createRootFolder(googleAccessToken, businessName || "ธุรกิจของฉัน");
     }
 
-    // Upsert user — try with refresh token first, fall back without if column missing
-    const basePayload = {
-      line_user_id:          resolvedLineUserId,
-      first_name:            firstName      ?? null,
-      last_name:             lastName       ?? null,
-      business_type:         businessType   ?? null,
-      business_name:         businessName   ?? null,
-      phone:                 phone          ?? null,
-      vat_registered:        vatRegistered  ?? false,
-      google_access_token:   googleAccessToken  ?? null,
-      google_email:          effectiveGoogleEmail,
-      sheet_id:              sheetId        ?? null,
-      drive_folder_id:       driveFolderId  ?? null,
+    // Fields to write. For an existing row we update by id and never change its
+    // line_user_id; for a new row we insert with the derived line id.
+    const fields = {
+      first_name:          firstName      ?? null,
+      last_name:           lastName       ?? null,
+      business_type:       businessType   ?? null,
+      business_name:       businessName   ?? null,
+      phone:               phone          ?? null,
+      vat_registered:      vatRegistered  ?? false,
+      google_access_token: googleAccessToken ?? null,
+      google_email:        email || null,
+      sheet_id:            sheetId,
+      drive_folder_id:     driveFolderId,
     };
 
-    let { error } = await supabaseAdmin.from("users").upsert(
-      { ...basePayload, google_refresh_token: googleRefreshToken ?? null },
-      { onConflict: "line_user_id" }
-    );
+    const write = (payload: Record<string, unknown>) =>
+      existing
+        ? supabaseAdmin.from("users").update(payload).eq("id", existing.id)
+        : supabaseAdmin.from("users").insert({ line_user_id: resolvedLineUserId, ...payload });
+
+    let { error } = await write({ ...fields, google_refresh_token: googleRefreshToken ?? null });
 
     // If google_refresh_token column doesn't exist yet, retry without it
     if (error && (String(error.message ?? "").includes("google_refresh_token") || String(error.code ?? "") === "PGRST204")) {
       console.warn("[user/save] google_refresh_token column missing, saving without it");
-      ({ error } = await supabaseAdmin.from("users").upsert(basePayload, { onConflict: "line_user_id" }));
+      ({ error } = await write(fields));
     }
 
     if (error) throw error;
