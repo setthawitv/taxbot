@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
 
   const { data: user } = await supabaseAdmin
     .from("users")
-    .select("id, business_type")
+    .select("id, business_type, vat_registered")
     .eq("id", userId)
     .single();
 
@@ -111,6 +111,7 @@ export async function GET(req: NextRequest) {
     totalExpense,
     vatRecorded,
     whtRecorded,
+    vatRegistered: !!user.vat_registered,
     byPlatform,
     personalAllowance,
     method1: {

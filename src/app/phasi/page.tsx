@@ -26,11 +26,13 @@ type RawSummary = {
   totalExpense:   number;
   vatRecorded:    number;
   whtRecorded:    number;
+  vatRegistered:  boolean;
   byPlatform:     Record<string, number>;
   vatWarning:     boolean;
 };
 
 const VAT_THRESHOLD = 1_800_000;
+const VAT_RATE = 0.07; // 7% — used to strip VAT from a VAT-inclusive amount
 // Upper bound of each PIT bracket (for the "about to cross a bracket" tip)
 const BRACKET_TOPS = [150_000, 300_000, 500_000, 750_000, 1_000_000, 2_000_000, 5_000_000];
 const BRACKET_RATE: Record<number, number> = {
@@ -224,8 +226,15 @@ export default function PhasiPage() {
   // ── Compute taxes ─────────────────────────────────────────────────────────
   const compute = useMemo(() => {
     if (!raw) return null;
-    const businessIncome = raw.totalIncome;                       // 40(8)
-    const totalExpense   = raw.totalExpense;
+    // VAT-registered sellers report income/expense NET of VAT (output VAT is
+    // remitted, input VAT is claimed), so strip it from the income-tax base.
+    const vatReg = raw.vatRegistered;
+    const businessIncome = vatReg                                 // 40(8)
+      ? Math.round(raw.totalIncome / (1 + VAT_RATE))
+      : raw.totalIncome;
+    const totalExpense   = vatReg
+      ? Math.max(0, raw.totalExpense - raw.vatRecorded)
+      : raw.totalExpense;
     const salary40_1     = Math.max(0, salaryIncome);             // 40(1)
     const commission40_2 = Math.max(0, commissionIncome);         // 40(2)
 
@@ -269,7 +278,14 @@ export default function PhasiPage() {
   // ── Dashboard metrics (normalized across individual/corporate) ─────────────
   const dash = useMemo(() => {
     if (!raw || !compute) return null;
-    const netProfit = Math.max(0, raw.totalIncome - raw.totalExpense);
+    const vatReg  = raw.vatRegistered;
+    const bizNet  = vatReg ? raw.totalIncome / (1 + VAT_RATE) : raw.totalIncome;
+    const expNet  = vatReg ? Math.max(0, raw.totalExpense - raw.vatRecorded) : raw.totalExpense;
+    const netProfit = Math.max(0, bizNet - expNet);
+    // VAT filing (ภ.พ.30): output VAT on sales minus claimable input VAT.
+    const outputVat  = vatReg ? Math.round(raw.totalIncome * VAT_RATE / (1 + VAT_RATE)) : 0;
+    const inputVat   = vatReg ? Math.round(raw.vatRecorded) : 0;
+    const vatPayable = outputVat - inputVat;
     let taxToSetAside = 0, taxable = 0;
     if (compute.kind === "individual") {
       const m = compute.recommended === 1 ? compute.method1 : compute.method2;
@@ -283,7 +299,8 @@ export default function PhasiPage() {
     const nextTop      = BRACKET_TOPS.find((t) => taxable < t) ?? null;
     const nextRate     = nextTop ? BRACKET_RATE[nextTop] : null;
     const distToNext   = nextTop ? nextTop - taxable : null;
-    return { netProfit, taxToSetAside, taxable, effRate, vatPct, vatRemaining, nextTop, nextRate, distToNext };
+    return { netProfit, taxToSetAside, taxable, effRate, vatPct, vatRemaining, nextTop, nextRate, distToNext,
+      vatReg, outputVat, inputVat, vatPayable };
   }, [raw, compute]);
 
   return (
@@ -373,7 +390,9 @@ export default function PhasiPage() {
                     }`} style={{ width: `${dash.vatPct}%` }} />
                   </div>
                   <p className="text-xs mt-2 font-medium text-gray-500">
-                    {dash.vatPct >= 100
+                    {dash.vatReg
+                      ? <span className="text-emerald-600">✓ จดทะเบียน VAT แล้ว</span>
+                      : dash.vatPct >= 100
                       ? <span className="text-red-600">เกินเกณฑ์แล้ว — ต้องจด VAT</span>
                       : <>{dash.vatPct.toFixed(0)}% ของเกณฑ์ · เหลืออีก ฿{fmtInt(dash.vatRemaining)}</>}
                   </p>
@@ -389,6 +408,31 @@ export default function PhasiPage() {
                   </div>
                 </div>
               </div>
+
+              {/* VAT payable (ภ.พ.30) — only for VAT-registered sellers */}
+              {dash.vatReg && (
+                <div className="bg-white rounded-2xl border border-blue-100 p-5">
+                  <p className="text-sm font-semibold text-gray-500 flex items-center gap-1.5 mb-3">🧾 ภาษีมูลค่าเพิ่มที่ต้องนำส่ง (ภ.พ.30)</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
+                    <div className="bg-gray-50 rounded-xl p-3">
+                      <p className="text-xs text-gray-400">VAT ขาย (Output)</p>
+                      <p className="text-lg font-bold text-gray-800 mt-0.5">฿{fmtInt(dash.outputVat)}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-xl p-3">
+                      <p className="text-xs text-gray-400">VAT ซื้อ (Input)</p>
+                      <p className="text-lg font-bold text-emerald-600 mt-0.5">-฿{fmtInt(dash.inputVat)}</p>
+                    </div>
+                    <div className={`rounded-xl p-3 ${dash.vatPayable >= 0 ? "bg-blue-600" : "bg-emerald-600"}`}>
+                      <p className="text-xs text-white/80">{dash.vatPayable >= 0 ? "ต้องนำส่ง" : "ขอคืน/เครดิต"}</p>
+                      <p className="text-lg font-bold text-white mt-0.5">฿{fmtInt(Math.abs(dash.vatPayable))}</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-3 leading-relaxed">
+                    VAT ขาย = 7/107 ของยอดขายรวม · VAT ซื้อ = VAT ที่บันทึกในรายจ่าย · ยื่น ภ.พ.30 ทุกเดือน
+                    {dash.vatPayable < 0 && " · เดือนนี้ VAT ซื้อมากกว่าขาย นำไปเครดิตเดือนถัดไปได้"}
+                  </p>
+                </div>
+              )}
 
               {/* What to do next */}
               <div className="bg-white rounded-2xl border border-blue-100 p-5">
@@ -687,6 +731,11 @@ export default function PhasiPage() {
                 </div>
               )}
 
+              {raw.vatRegistered && (
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700 leading-relaxed">
+                  🧾 <strong>จดทะเบียน VAT:</strong> คำนวณภาษีเงินได้จากยอด<strong>หลังหัก VAT</strong> (รายได้ ÷ 1.07, รายจ่ายหัก VAT ซื้อออก) — ดู VAT ที่ต้องนำส่งได้ในแท็บแดชบอร์ด
+                </div>
+              )}
               <p className="text-xs text-gray-400 text-center pb-2">
                 * ประมาณการเบื้องต้น อ้างอิงอัตราภาษี{taxpayer === "individual" ? "บุคคลธรรมดา" : "นิติบุคคล"}ปัจจุบัน <br/>
                 ควรปรึกษานักบัญชีก่อนยื่นภาษีจริง
