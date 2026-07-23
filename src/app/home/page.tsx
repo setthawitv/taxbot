@@ -447,19 +447,40 @@ export default function Home() {
       <div className="px-4 lg:px-6 py-6 max-w-5xl mx-auto space-y-6">
 
 
+        {/* ── Date controls (year + month, side by side) ───────────────────── */}
+        <div className="flex items-center gap-3">
+          <select
+            value={selectedYear}
+            onChange={(e) => pickYear(Number(e.target.value))}
+            className="flex-1 sm:flex-none sm:w-44 border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-white text-[#0A192F] font-semibold focus:outline-none focus:ring-2 focus:ring-[#0A192F]/20 cursor-pointer"
+          >
+            {Array.from({ length: 4 }, (_, i) => CURRENT_YEAR - i).map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+          <select
+            value={selectedMonth}
+            onChange={(e) => pickMonth(Number(e.target.value))}
+            className="flex-1 sm:flex-none sm:w-44 border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-white text-[#0A192F] font-semibold focus:outline-none focus:ring-2 focus:ring-[#0A192F]/20 cursor-pointer"
+          >
+            {MONTH_TH.slice(1).map((label, i) => (
+              <option key={i + 1} value={i + 1}>{label}</option>
+            ))}
+          </select>
+          {(selectedMonth !== CURRENT_MONTH || selectedYear !== CURRENT_YEAR) && (
+            <button
+              onClick={() => { pickYear(CURRENT_YEAR); pickMonth(CURRENT_MONTH); }}
+              className="text-xs text-[#4A5568] hover:text-[#0A192F] underline underline-offset-2 transition-colors whitespace-nowrap"
+            >
+              เดือนนี้
+            </button>
+          )}
+        </div>
+
         {/* ── Big stat cards (year) ─────────────────────────────────────────── */}
         <div>
           <div className="w-full flex items-center justify-between mb-3">
-            <p className="text-xs font-semibold text-[#4A5568] uppercase tracking-widest">ภาพรวมทั้งปี</p>
-            <select
-              value={selectedYear}
-              onChange={(e) => { pickYear(Number(e.target.value)); pickMonth(CURRENT_MONTH); }}
-              className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm bg-white text-[#0A192F] font-medium focus:outline-none focus:ring-2 focus:ring-[#0A192F]/20 cursor-pointer"
-            >
-              {Array.from({ length: 4 }, (_, i) => CURRENT_YEAR - i).map((y) => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
+            <p className="text-xs font-semibold text-[#4A5568] uppercase tracking-widest">ภาพรวมทั้งปี {selectedYear}</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
@@ -523,28 +544,10 @@ export default function Home() {
 
           {/* Month stats */}
           <div className="lg:col-span-3 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            {/* Card header with inline month dropdown */}
+            {/* Card header — reflects the month chosen in the top date controls */}
             <div className="flex items-center justify-between mb-4">
               <p className="text-xs font-semibold text-[#4A5568] uppercase tracking-widest">เดือน</p>
-              <div className="flex items-center gap-2">
-                <select
-                  value={selectedMonth}
-                  onChange={(e) => pickMonth(Number(e.target.value))}
-                  className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm bg-white text-[#0A192F] font-medium focus:outline-none focus:ring-2 focus:ring-[#0A192F]/20 cursor-pointer"
-                >
-                  {MONTH_TH.slice(1).map((label, i) => (
-                    <option key={i + 1} value={i + 1}>{label} {selectedYear}</option>
-                  ))}
-                </select>
-                {(selectedMonth !== CURRENT_MONTH || selectedYear !== CURRENT_YEAR) && (
-                  <button
-                    onClick={() => pickMonth(CURRENT_MONTH)}
-                    className="text-xs text-[#4A5568] hover:text-[#0A192F] underline underline-offset-2 transition-colors whitespace-nowrap"
-                  >
-                    เดือนนี้
-                  </button>
-                )}
-              </div>
+              <span className="text-sm font-semibold text-[#0A192F]">{MONTH_TH[selectedMonth]} {selectedYear}</span>
             </div>
 
             <div className="flex items-center gap-0">
