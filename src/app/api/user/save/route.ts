@@ -29,7 +29,8 @@ export async function POST(req: NextRequest) {
       const updates: Record<string, unknown> = {};
       if (googleAccessToken  !== undefined) updates.google_access_token  = googleAccessToken;
       if (googleRefreshToken !== undefined) updates.google_refresh_token = googleRefreshToken;
-      if (googleEmail        !== undefined) updates.google_email         = googleEmail;
+      // Always store email lowercased so lookups (which lowercase the query) match.
+      if (googleEmail        !== undefined) updates.google_email         = typeof googleEmail === "string" ? googleEmail.toLowerCase().trim() : null;
       const { error } = await supabaseAdmin.from("users").update(updates).eq("id", authedId);
       if (error) throw error;
       return NextResponse.json({ ok: true });
@@ -39,8 +40,10 @@ export async function POST(req: NextRequest) {
     // session — never trust a client-supplied email, or one user could create
     // or overwrite another account's row by passing someone else's email.
     const sessionEmail = await getSessionEmail();
+    // Canonical email is always lowercased, so it matches by-email / auth lookups.
+    let effectiveGoogleEmail: string | null =
+      typeof googleEmail === "string" ? googleEmail.toLowerCase().trim() : null;
     let resolvedLineUserId: string = lineUserId;
-    let effectiveGoogleEmail: string | null = googleEmail ?? null;
     if (!resolvedLineUserId) {
       if (!sessionEmail) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
