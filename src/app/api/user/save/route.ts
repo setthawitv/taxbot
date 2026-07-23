@@ -72,9 +72,18 @@ export async function POST(req: NextRequest) {
     let sheetId       = existing?.sheet_id ?? null;
     let driveFolderId = existing?.drive_folder_id ?? null;
 
+    // Creating the Google Sheet / Drive folder must NOT block onboarding: some
+    // accounts (e.g. Google Workspace with restrictive policies) fail here, and
+    // a failure previously aborted the whole save, leaving the profile unsaved
+    // and bouncing the user back to onboarding forever. Treat it as best-effort;
+    // the sheet/folder can be created later from Settings.
     if (googleAccessToken) {
-      if (!sheetId)       sheetId       = await createSheet(googleAccessToken, businessName || "ธุรกิจของฉัน");
-      if (!driveFolderId) driveFolderId = await createRootFolder(googleAccessToken, businessName || "ธุรกิจของฉัน");
+      try {
+        if (!sheetId)       sheetId       = await createSheet(googleAccessToken, businessName || "ธุรกิจของฉัน");
+        if (!driveFolderId) driveFolderId = await createRootFolder(googleAccessToken, businessName || "ธุรกิจของฉัน");
+      } catch (e) {
+        console.error("[user/save] Google Sheet/Drive creation failed (continuing):", e);
+      }
     }
 
     // Fields to write. For an existing row we update by id and never change its
