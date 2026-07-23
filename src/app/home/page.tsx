@@ -561,22 +561,22 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Quick links */}
+            {/* Quick links — open the user's Google Sheet / Drive */}
             <div className="mt-5 pt-4 border-t border-gray-100 grid grid-cols-2 gap-3">
               <button onClick={() => openExternal(links.sheetUrl, "/sheets")}
-                className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-green-200 hover:bg-green-50 transition-colors text-left">
-                <IconGoogleSheets className="w-6 h-6 flex-shrink-0" />
+                className="flex items-center gap-3 p-4 rounded-2xl border border-green-100 bg-green-50 hover:bg-green-100 active:scale-[0.98] transition-all text-left">
+                <IconGoogleSheets className="w-9 h-9 flex-shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold text-gray-700 truncate">Google Sheets</p>
-                  <p className="text-[10px] text-gray-400 truncate">{links.sheetUrl ? "เปิด ↗" : "ยังไม่มี"}</p>
+                  <p className="text-sm font-bold text-gray-800 truncate">Google Sheets</p>
+                  <p className="text-xs text-gray-500 truncate">{links.sheetUrl ? "เปิดชีต ↗" : "ยังไม่มี"}</p>
                 </div>
               </button>
               <button onClick={() => openExternal(links.driveUrl, "/drive")}
-                className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-yellow-200 hover:bg-yellow-50 transition-colors text-left">
-                <IconGoogleDrive className="w-6 h-6 flex-shrink-0" />
+                className="flex items-center gap-3 p-4 rounded-2xl border border-amber-100 bg-amber-50 hover:bg-amber-100 active:scale-[0.98] transition-all text-left">
+                <IconGoogleDrive className="w-9 h-9 flex-shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold text-gray-700 truncate">Google Drive</p>
-                  <p className="text-[10px] text-gray-400 truncate">{links.driveUrl ? "เปิด ↗" : "ยังไม่มี"}</p>
+                  <p className="text-sm font-bold text-gray-800 truncate">Google Drive</p>
+                  <p className="text-xs text-gray-500 truncate">{links.driveUrl ? "เปิดไดรฟ์ ↗" : "ยังไม่มี"}</p>
                 </div>
               </button>
             </div>

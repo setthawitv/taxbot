@@ -6,7 +6,7 @@ import { useSession, signIn, signOut } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import {
   IconSettings, IconCheck, IconCheckCircle, IconRefresh,
-  IconShield, IconLogout, IconGoogleSheets, IconSparkle,
+  IconShield, IconLogout, IconSparkle,
   IconIncome, IconExpense, IconCard,
 } from "@/components/icons";
 import AppLayout from "@/components/AppLayout";
@@ -53,7 +53,6 @@ function SettingsPageInner() {
   const [userId, setUserId] = useState<string>("");
   const [googleEmail, setGoogleEmail] = useState<string>("");
   const [showLiffLink, setShowLiffLink] = useState(false);
-  const [syncing,      setSyncing]      = useState(false);
   const [syncResult,   setSyncResult]   = useState<SyncResult>(null);
   const [isWebUser,    setIsWebUser]    = useState(false); // true = Google-only, no LINE
   const [reconnecting, setReconnecting] = useState(false);
@@ -243,26 +242,6 @@ function SettingsPageInner() {
     setShowLiffLink(true);
   }
 
-  async function handleSyncSheets() {
-    if (!userId) return;
-    setSyncing(true);
-    setSyncResult(null);
-    try {
-      const res = await fetch("/api/sync/sheets", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "เกิดข้อผิดพลาด");
-      setSyncResult(data);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "เกิดข้อผิดพลาด";
-      setSyncResult({ synced: 0, failed: 0, skipped: 0, message: msg });
-    } finally {
-      setSyncing(false);
-    }
-  }
 
   // Load admin list when userId is available
   useEffect(() => {
@@ -618,6 +597,9 @@ function SettingsPageInner() {
                     className="w-full inline-flex items-center justify-center gap-1.5 bg-gray-100 text-gray-600 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-200 transition-colors disabled:opacity-40">
                     <IconRefresh className="w-4 h-4" /> เชื่อมต่อใหม่อีกครั้ง
                   </button>
+                  {syncResult && (
+                    <p className="text-xs text-center mt-2 text-gray-500">{syncResult.message}</p>
+                  )}
                 </div>
               ) : (
                 <button onClick={handleGoogleConnect} disabled={!userId}
@@ -627,38 +609,6 @@ function SettingsPageInner() {
               )}
             </div>
 
-            {/* Sync to Sheets */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-5">
-              <h2 className="font-semibold text-gray-700 mb-1">ซิงค์รายจ่ายไป Google Sheets</h2>
-              <p className="text-xs text-gray-400 mb-4">
-                นำรายจ่ายทั้งหมดใน database ที่ยังไม่มีใน Sheets ไปเพิ่มอัตโนมัติ
-                (ตรวจสอบ ID ซ้ำให้อัตโนมัติ)
-              </p>
-              {syncResult && (
-                <div className={`mb-3 p-3 rounded-xl text-sm ${
-                  syncResult.failed > 0 && syncResult.synced === 0
-                    ? "bg-red-50 text-red-700"
-                    : syncResult.failed > 0
-                    ? "bg-amber-50 text-amber-700"
-                    : "bg-emerald-50 text-emerald-700"
-                }`}>
-                  <p className="font-medium">{syncResult.message}</p>
-                  {syncResult.skipped > 0 && (
-                    <p className="text-xs mt-1 opacity-70">มีอยู่ใน Sheets แล้ว {syncResult.skipped} รายการ</p>
-                  )}
-                  {syncResult.lastError && (
-                    <p className="text-xs mt-1 opacity-70 break-all">Error: {syncResult.lastError}</p>
-                  )}
-                </div>
-              )}
-              <button onClick={handleSyncSheets} disabled={syncing || !userId || !googleEmail}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold bg-green-500 hover:bg-green-600 text-white disabled:opacity-40 transition-colors">
-                {syncing ? <>กำลังซิงค์...</> : <><IconGoogleSheets className="w-5 h-5" /> Sync รายจ่ายทั้งหมดไป Sheets</>}
-              </button>
-              {!googleEmail && (
-                <p className="text-xs text-gray-400 text-center mt-2">เชื่อมต่อ Google ก่อนจึงจะซิงค์ได้</p>
-              )}
-            </div>
 
           </div>
 
