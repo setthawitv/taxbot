@@ -167,6 +167,7 @@ export default function RaiRab() {
   // Past adjustments list
   const [adjusts,    setAdjusts]    = useState<AdjustEntry[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null); // id pending delete confirmation
 
   // Recent transactions for table
   const [recentTxns, setRecentTxns] = useState<TxnRow[]>([]);
@@ -416,11 +417,8 @@ export default function RaiRab() {
         {/* ── Desktop 2-panel grid ─────────────────────────────────────────── */}
         <div className="lg:grid lg:grid-cols-3 lg:gap-8 lg:items-start">
 
-          {/* LEFT — Charts, filters, summary (2 cols) */}
-          <div className="lg:col-span-2 space-y-4 mb-6 lg:mb-0">
-
-            {/* Date range */}
-            <DateRangePicker value={range} onChange={pickRange} className="w-full" />
+          {/* Charts + platform breakdown (right on desktop) */}
+          <div className="lg:col-span-2 lg:order-2 space-y-4 mb-6 lg:mb-0">
 
             {/* Platform filter */}
             <div className="flex gap-2 overflow-x-auto pb-1">
@@ -435,23 +433,6 @@ export default function RaiRab() {
                   </button>
                 );
               })}
-            </div>
-
-            {/* Total card */}
-            <div className={`${pl.color} text-white rounded-2xl p-5`}>
-              <p className="text-sm opacity-80">
-                รายรับช่วงที่เลือก{platform !== "all" ? ` · ${pl.label}` : ""}
-              </p>
-              {loading ? (
-                <p className="text-3xl font-bold mt-1 opacity-60">กำลังโหลด...</p>
-              ) : (
-                <>
-                  <p className="text-3xl font-bold mt-1">
-                    ฿{(summary?.total ?? 0).toLocaleString("th-TH", { minimumFractionDigits: 2 })}
-                  </p>
-                  <p className="text-sm opacity-70 mt-1">{summary?.count ?? 0} คำสั่งซื้อ</p>
-                </>
-              )}
             </div>
 
             {/* Platform breakdown */}
@@ -505,8 +486,28 @@ export default function RaiRab() {
             )}
           </div>
 
-          {/* RIGHT — Forms + Adjustments (1 col) */}
-          <div className="space-y-4">
+          {/* Filters + forms + adjustments (left on desktop) */}
+          <div className="space-y-4 lg:col-span-1 lg:order-1">
+
+            {/* Date range */}
+            <DateRangePicker value={range} onChange={pickRange} className="w-full" />
+
+            {/* Total card */}
+            <div className={`${pl.color} text-white rounded-2xl p-5`}>
+              <p className="text-sm opacity-80">
+                รายรับช่วงที่เลือก{platform !== "all" ? ` · ${pl.label}` : ""}
+              </p>
+              {loading ? (
+                <p className="text-3xl font-bold mt-1 opacity-60">กำลังโหลด...</p>
+              ) : (
+                <>
+                  <p className="text-3xl font-bold mt-1">
+                    ฿{(summary?.total ?? 0).toLocaleString("th-TH", { minimumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-sm opacity-70 mt-1">{summary?.count ?? 0} คำสั่งซื้อ</p>
+                </>
+              )}
+            </div>
 
             {/* Add manual income form */}
             {showAdd && (
@@ -630,9 +631,9 @@ export default function RaiRab() {
                         <p className={`font-semibold text-sm flex-shrink-0 ${isPlus ? "text-emerald-600" : "text-rose-500"}`}>
                           {isPlus ? "+" : ""}฿{Math.abs(Number(t.amount)).toLocaleString("th-TH")}
                         </p>
-                        <button onClick={() => handleDelete(t.id)} disabled={deletingId === t.id}
-                          className="text-gray-300 hover:text-rose-400 text-xl leading-none transition-colors flex-shrink-0 disabled:opacity-40">
-                          {deletingId === t.id ? "⏳" : "×"}
+                        <button onClick={() => setConfirmDelete(t.id)} disabled={deletingId === t.id}
+                          className="text-gray-300 hover:text-rose-500 text-lg leading-none transition-colors flex-shrink-0 disabled:opacity-40" title="ลบ">
+                          {deletingId === t.id ? "⏳" : "🗑️"}
                         </button>
                       </li>
                     );
@@ -787,6 +788,28 @@ export default function RaiRab() {
           onCapture={(dataUrl) => { setScanPreview(dataUrl); setShowCamera(false); }}
           onClose={() => setShowCamera(false)}
         />
+      )}
+
+      {/* ── Confirm delete ──────────────────────────────────────────────────── */}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4"
+          onClick={() => setConfirmDelete(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-xs p-5 text-center" onClick={(e) => e.stopPropagation()}>
+            <div className="text-4xl mb-2">🗑️</div>
+            <p className="font-bold text-gray-800">ลบรายการปรับยอดนี้?</p>
+            <p className="text-sm text-gray-500 mt-1">การลบไม่สามารถกู้คืนได้</p>
+            <div className="flex gap-2 mt-5">
+              <button onClick={() => setConfirmDelete(null)}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50">
+                ยกเลิก
+              </button>
+              <button onClick={() => { const id = confirmDelete; setConfirmDelete(null); if (id) handleDelete(id); }}
+                className="flex-1 py-2.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-sm font-semibold">
+                ลบ
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </main>
     </AppLayout>

@@ -93,6 +93,7 @@ export default function RaiJhai() {
 
   // Delete confirmation
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null); // id pending delete confirmation
 
   // Scan receipt
   const [showScan,           setShowScan]           = useState(false);
@@ -590,10 +591,10 @@ export default function RaiJhai() {
                       title="แก้ไข">
                       ✏️
                     </button>
-                    <button onClick={() => handleDelete(t.id)} disabled={deletingId === t.id}
-                      className="text-gray-300 hover:text-rose-400 text-xl leading-none transition-colors flex-shrink-0 disabled:opacity-40"
+                    <button onClick={() => setConfirmDelete(t.id)} disabled={deletingId === t.id}
+                      className="text-gray-300 hover:text-rose-500 text-lg leading-none transition-colors flex-shrink-0 disabled:opacity-40"
                       title="ลบ">
-                      {deletingId === t.id ? "⏳" : "×"}
+                      {deletingId === t.id ? "⏳" : "🗑️"}
                     </button>
                   </li>
                 ))}
@@ -661,6 +662,28 @@ export default function RaiJhai() {
           onCapture={(dataUrl) => { setScanPreview(dataUrl); setShowCamera(false); }}
           onClose={() => setShowCamera(false)}
         />
+      )}
+
+      {/* ── Confirm delete ──────────────────────────────────────────────────── */}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4"
+          onClick={() => setConfirmDelete(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-xs p-5 text-center" onClick={(e) => e.stopPropagation()}>
+            <div className="text-4xl mb-2">🗑️</div>
+            <p className="font-bold text-gray-800">ลบรายจ่ายนี้?</p>
+            <p className="text-sm text-gray-500 mt-1">การลบไม่สามารถกู้คืนได้ (ลบไฟล์ใน Drive ด้วย)</p>
+            <div className="flex gap-2 mt-5">
+              <button onClick={() => setConfirmDelete(null)}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50">
+                ยกเลิก
+              </button>
+              <button onClick={() => { const id = confirmDelete; setConfirmDelete(null); if (id) handleDelete(id); }}
+                className="flex-1 py-2.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-sm font-semibold">
+                ลบ
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── Warn before enabling manual tax edit ────────────────────────────── */}
