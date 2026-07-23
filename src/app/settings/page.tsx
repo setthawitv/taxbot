@@ -34,6 +34,16 @@ const PLAN_OPTIONS = [
 
 const PLAN_RANK: Record<string, number> = { trial: 0, free: 0, eco: 1, pro: 2, platinum: 3 };
 
+// Side-by-side feature comparison for the 3 paid plans.
+const PLAN_COMPARE: { label: string; eco: string; pro: string; platinum: string }[] = [
+  { label: "ราคา/เดือน",     eco: "฿100",    pro: "฿200",    platinum: "฿700"      },
+  { label: "รายจ่าย/เดือน",  eco: "30",      pro: "100",     platinum: "1,200"     },
+  { label: "นำเข้า Excel",   eco: "1 ไฟล์",  pro: "5 ไฟล์",  platinum: "12 ไฟล์"   },
+  { label: "สแกน AI/เดือน",  eco: "30",      pro: "100",     platinum: "ไม่จำกัด"  },
+  { label: "รายรับ Manual",  eco: "ไม่จำกัด", pro: "ไม่จำกัด", platinum: "ไม่จำกัด"  },
+  { label: "Google Sheets",  eco: "✓",       pro: "✓",       platinum: "✓"         },
+];
+
 function SettingsPageInner() {
   const [vendors, setVendors] = useState<VendorRule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -906,16 +916,36 @@ function SettingsPageInner() {
                       </div>
                     </div>
 
-                    <div className="bg-gray-50 rounded-2xl p-4 mb-4">
-                      <p className="text-xs font-semibold text-gray-500 mb-2.5">สิ่งที่คุณจะได้รับ</p>
-                      <ul className="space-y-2">
-                        {info.features.map((f) => (
-                          <li key={f} className="flex items-start gap-2 text-sm text-gray-700">
-                            <IconCheck className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-                            {f}
-                          </li>
-                        ))}
-                      </ul>
+                    <div className="bg-gray-50 rounded-2xl p-3 mb-4">
+                      <p className="text-xs font-semibold text-gray-500 mb-2 px-1">เปรียบเทียบทั้ง 3 แพ็กเกจ</p>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs border-collapse">
+                          <thead>
+                            <tr>
+                              <th className="text-left py-1.5 px-1" />
+                              {PLAN_OPTIONS.map((p) => (
+                                <th key={p.key}
+                                  className={`py-1.5 px-1 text-center font-bold rounded-t-lg ${p.key === selectedPlan ? "bg-violet-100 text-violet-700" : "text-gray-500"}`}>
+                                  {p.name}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {PLAN_COMPARE.map((row) => (
+                              <tr key={row.label} className="border-t border-gray-200">
+                                <td className="text-left text-gray-500 py-1.5 px-1 whitespace-nowrap">{row.label}</td>
+                                {(["eco", "pro", "platinum"] as const).map((k) => (
+                                  <td key={k}
+                                    className={`py-1.5 px-1 text-center whitespace-nowrap ${k === selectedPlan ? "bg-violet-50 font-semibold text-violet-700" : "text-gray-700"}`}>
+                                    {row[k]}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
 
                     <button

@@ -254,8 +254,11 @@ export default function RaiJhai() {
         if (data.driveSynced)       msg = "✅ บันทึกแล้ว · ซิงค์ Sheets · อัปโหลด PDF ไป Drive แล้ว";
         else if (data.sheetSynced)  msg = "✅ บันทึกแล้ว · ซิงค์ Sheets แล้ว";
         else if (data.sheetError || data.driveError) {
-          const detail = data.sheetError || data.driveError || "";
-          msg = `⚠️ บันทึกแล้ว แต่ sync ไม่ได้ (${detail})`;
+          const detail = String(data.sheetError || data.driveError || "");
+          // A scopes/auth error means the Google connection needs re-granting.
+          msg = /scope|auth|token|permission|insufficient/i.test(detail)
+            ? "⚠️ บันทึกแล้ว แต่ซิงค์ Google ไม่ได้ — โปรดเชื่อมต่อ Google ใหม่ที่หน้า ตั้งค่า"
+            : `⚠️ บันทึกแล้ว แต่ซิงค์ Google ไม่ได้ (${detail})`;
         }
       } else {
         msg = "✅ แก้ไขแล้ว";
@@ -440,7 +443,7 @@ export default function RaiJhai() {
                   <div>
                     <label className="text-xs text-gray-500 mb-1 block">จำนวนเงิน (บาท) *</label>
                     <input value={amount} onChange={(e) => setAmount(e.target.value)}
-                      type="number" min="0" step="0.01" placeholder="0.00"
+                      type="number" min="0" step="0.01" placeholder="0.00" onWheel={(e) => e.currentTarget.blur()}
                       className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-200" />
                   </div>
                   <div>
@@ -494,13 +497,13 @@ export default function RaiJhai() {
                       <div>
                         <label className="text-xs text-gray-500 mb-1 block">VAT (บาท)</label>
                         <input value={vatManual} onChange={(e) => setVatManual(e.target.value)}
-                          type="number" min="0" step="0.01" placeholder="0.00"
+                          type="number" min="0" step="0.01" placeholder="0.00" onWheel={(e) => e.currentTarget.blur()}
                           className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-200" />
                       </div>
                       <div>
                         <label className="text-xs text-gray-500 mb-1 block">หัก ณ ที่จ่าย (บาท)</label>
                         <input value={whtManual} onChange={(e) => setWhtManual(e.target.value)}
-                          type="number" min="0" step="0.01" placeholder="0.00"
+                          type="number" min="0" step="0.01" placeholder="0.00" onWheel={(e) => e.currentTarget.blur()}
                           className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-200" />
                       </div>
                     </div>

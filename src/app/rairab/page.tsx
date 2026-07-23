@@ -517,7 +517,7 @@ export default function RaiRab() {
                   <div>
                     <label className="text-xs text-gray-500 mb-1 block">จำนวนเงิน (บาท) *</label>
                     <input value={addAmt} onChange={(e) => setAddAmt(e.target.value)}
-                      type="number" min="0.01" step="0.01" placeholder="0.00" required
+                      type="number" min="0.01" step="0.01" placeholder="0.00" onWheel={(e) => e.currentTarget.blur()} required
                       className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200" />
                   </div>
                   <div>
@@ -589,7 +589,7 @@ export default function RaiRab() {
                   <div>
                     <label className="text-xs text-gray-500 mb-1 block">จำนวนเงิน (บาท) *</label>
                     <input value={adjAmount} onChange={(e) => setAdjAmount(e.target.value)}
-                      type="number" min="0.01" step="0.01" placeholder="0.00"
+                      type="number" min="0.01" step="0.01" placeholder="0.00" onWheel={(e) => e.currentTarget.blur()}
                       className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200" />
                   </div>
                   <div>
