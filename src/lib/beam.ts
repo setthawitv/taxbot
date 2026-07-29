@@ -164,9 +164,9 @@ export async function getCharge(chargeId: string): Promise<BeamCharge> {
 
 /** Plan definitions */
 export const PLANS = {
-  eco:      { name: "Eco",      amount: 10000,  thb: 100  },
-  pro:      { name: "Pro",      amount: 20000,  thb: 200  },
-  platinum: { name: "Platinum", amount: 70000,  thb: 700  },
+  eco:      { name: "Eco",      amount: 16900,  thb: 169  },
+  pro:      { name: "Pro",      amount: 34900,  thb: 349  },
+  platinum: { name: "Platinum", amount: 79900,  thb: 799  },
 } as const;
 
 export type PlanKey = keyof typeof PLANS;

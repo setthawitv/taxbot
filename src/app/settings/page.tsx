@@ -24,22 +24,22 @@ type ImportLog = { id: string; platform: string; filename: string; order_count: 
 const PLATFORM_EMOJI: Record<string, string> = { tiktok: "🎵", shopee: "🛒", lazada: "📦" };
 
 const PLAN_OPTIONS = [
-  { key: "eco",      name: "Eco",      thb: 100,  desc: "สำหรับร้านค้าเล็ก",        color: "from-teal-400 to-cyan-500",    rank: 1,
-    features: ["รายจ่าย 30 รายการ/เดือน", "รายรับ Manual ไม่จำกัด", "นำเข้า Excel 1 ไฟล์/เดือน", "Google Sheets sync", "สแกนใบเสร็จด้วย AI 30 ครั้ง/เดือน"] },
-  { key: "pro",      name: "Pro",      thb: 200,  desc: "สำหรับธุรกิจที่กำลังโต",   color: "from-violet-500 to-purple-600", rank: 2,
-    features: ["รายจ่าย 100 รายการ/เดือน", "รายรับ Manual ไม่จำกัด", "นำเข้า Excel 5 ไฟล์/เดือน", "Google Sheets sync", "สแกนใบเสร็จด้วย AI 100 ครั้ง/เดือน"] },
-  { key: "platinum", name: "Platinum", thb: 700,  desc: "ครบทุกฟีเจอร์ ไม่จำกัด",   color: "from-amber-400 to-orange-500",  rank: 3,
-    features: ["รายจ่าย 1,200 รายการ/เดือน", "รายรับ Manual ไม่จำกัด", "นำเข้า Excel 12 ไฟล์/เดือน", "Google Sheets sync", "สแกนใบเสร็จด้วย AI ไม่จำกัด"] },
+  { key: "eco",      name: "Eco",      thb: 169,  desc: "สำหรับร้านค้าเล็ก",        color: "from-teal-400 to-cyan-500",    rank: 1,
+    features: ["นำเข้า Excel 3 ไฟล์/เดือน", "สแกนใบเสร็จด้วย AI 60 ครั้ง/เดือน", "เชื่อม API 1 แพลตฟอร์ม", "รายรับ Manual ไม่จำกัด", "Google Sheets sync"] },
+  { key: "pro",      name: "Pro",      thb: 349,  desc: "สำหรับธุรกิจที่กำลังโต",   color: "from-violet-500 to-purple-600", rank: 2,
+    features: ["นำเข้า Excel 12 ไฟล์/เดือน", "สแกนใบเสร็จด้วย AI 200 ครั้ง/เดือน", "เชื่อม API 2 แพลตฟอร์ม", "รายรับ Manual ไม่จำกัด", "Google Sheets sync"] },
+  { key: "platinum", name: "Platinum", thb: 799,  desc: "ครบทุกฟีเจอร์ ไม่จำกัด",   color: "from-amber-400 to-orange-500",  rank: 3,
+    features: ["นำเข้า Excel 30 ไฟล์/เดือน", "สแกนใบเสร็จด้วย AI 1,000 ครั้ง/เดือน", "เชื่อม API 3 แพลตฟอร์ม", "รายรับ Manual ไม่จำกัด", "Google Sheets sync"] },
 ] as const;
 
 const PLAN_RANK: Record<string, number> = { trial: 0, free: 0, eco: 1, pro: 2, platinum: 3 };
 
 // Side-by-side feature comparison for the 3 paid plans.
 const PLAN_COMPARE: { label: string; eco: string; pro: string; platinum: string }[] = [
-  { label: "ราคา/เดือน",     eco: "฿100",    pro: "฿200",    platinum: "฿700"      },
-  { label: "รายจ่าย/เดือน",  eco: "30",      pro: "100",     platinum: "1,200"     },
-  { label: "นำเข้า Excel",   eco: "1 ไฟล์",  pro: "5 ไฟล์",  platinum: "12 ไฟล์"   },
-  { label: "สแกน AI/เดือน",  eco: "30",      pro: "100",     platinum: "ไม่จำกัด"  },
+  { label: "ราคา/เดือน",     eco: "฿169",    pro: "฿349",    platinum: "฿799"      },
+  { label: "นำเข้า Excel",   eco: "3 ไฟล์",  pro: "12 ไฟล์", platinum: "30 ไฟล์"   },
+  { label: "สแกน AI/เดือน",  eco: "60",      pro: "200",     platinum: "1,000"     },
+  { label: "เชื่อม API",     eco: "1 แพลตฟอร์ม", pro: "2 แพลตฟอร์ม", platinum: "3 แพลตฟอร์ม" },
   { label: "รายรับ Manual",  eco: "ไม่จำกัด", pro: "ไม่จำกัด", platinum: "ไม่จำกัด"  },
   { label: "Google Sheets",  eco: "✓",       pro: "✓",       platinum: "✓"         },
 ];
@@ -159,9 +159,9 @@ function SettingsPageInner() {
 
   // Scan quota limits per plan
   const SCAN_LIMIT: Record<string, number | null> = {
-    trial: 8, free: 8, eco: 30, pro: 100, platinum: null, // null = unlimited
+    trial: 10, free: 10, eco: 60, pro: 200, platinum: 1000,
   };
-  const scanLimit = SCAN_LIMIT[currentPlan] ?? 8;
+  const scanLimit = SCAN_LIMIT[currentPlan] ?? 10;
 
   // Days remaining on the current subscription (30-day cycle, renews on payment)
   const daysLeft = planExpiresAt
@@ -842,7 +842,7 @@ function SettingsPageInner() {
               </div>
             ) : confirmingPlan ? (
               (() => {
-                const PLAN_THB: Record<string, number> = { trial: 0, free: 0, eco: 100, pro: 200, platinum: 700 };
+                const PLAN_THB: Record<string, number> = { trial: 0, free: 0, eco: 169, pro: 349, platinum: 799 };
                 const info           = PLAN_OPTIONS.find((p) => p.key === selectedPlan);
                 const currentPlanThb = PLAN_THB[currentPlan] ?? 0;
                 const chargeThb      = currentPlanThb > 0 && info ? info.thb - currentPlanThb : info?.thb ?? 0;
@@ -939,7 +939,7 @@ function SettingsPageInner() {
 
                 <div className="space-y-3 mb-5">
                   {PLAN_OPTIONS.map((p) => {
-                    const PLAN_THB: Record<string, number> = { trial: 0, free: 0, eco: 100, pro: 200, platinum: 700 };
+                    const PLAN_THB: Record<string, number> = { trial: 0, free: 0, eco: 169, pro: 349, platinum: 799 };
                     const currentRank    = PLAN_RANK[currentPlan] ?? 0;
                     const currentPlanThb = PLAN_THB[currentPlan] ?? 0;
                     const isCurrent      = p.rank === currentRank;
@@ -987,7 +987,7 @@ function SettingsPageInner() {
                 </div>
 
                 {(() => {
-                  const PLAN_THB: Record<string, number> = { trial: 0, free: 0, eco: 100, pro: 200, platinum: 700 };
+                  const PLAN_THB: Record<string, number> = { trial: 0, free: 0, eco: 169, pro: 349, platinum: 799 };
                   const selectedInfo    = PLAN_OPTIONS.find((p) => p.key === selectedPlan);
                   const currentPlanThb  = PLAN_THB[currentPlan] ?? 0;
                   const chargeThb       = currentPlanThb > 0 && selectedInfo

@@ -1,5 +1,12 @@
 # SKILLS.md — Coding Patterns & Rules for Vendee
 
+## 0. Design & Landing-page Rules
+
+- **Don't ship a generic "AI-generated" look.** Avoid the tells: a purple/blue gradient hero on white, centered-everything, pastel gradient feature cards with emoji markers, `rounded-lg` on every element, Inter/Space Grotesk as the safe font. Make deliberate, subject-specific choices (Vendee = finance/tax for Thai online sellers) — a real typographic hierarchy, a chosen neutral palette, asymmetry where it helps, and content that reflects the actual product.
+- **Keep landing copy in sync with real features.** When features/pricing change, update the landing page content to match (feature cards, pricing, comparison). Never leave stale marketing copy.
+- **The public tax calculator lives in a modal/popup**, opened from a CTA — it is not embedded inline in the landing hero flow.
+
+
 ## 1. LINE Webhook Handler Pattern
 
 Always verify LINE signature. Every webhook must follow this pattern:

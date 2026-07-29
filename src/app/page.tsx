@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState, type ComponentType } from "react";
 import {
   VendeeLogo,
-  IconScan, IconIncome, IconTax, IconGoogleSheets, IconUpload, IconShield,
+  IconInbox, IconIncome, IconTax, IconGoogleSheets, IconShield,
   IconSparkle, IconRocket, IconFire, IconCrown,
   IconCheck, IconX, IconArrowDown, IconArrowRight,
 } from "@/components/icons";
@@ -29,33 +29,33 @@ const SEGMENT_FIELDS = [
 ] as const;
 
 const FEATURES: { slug: string; Icon: IconC; title: string; desc: string; color: string; iconColor: string; chipBg: string }[] = [
-  { slug: "scan",           Icon: IconScan,          title: "สแกนใบเสร็จด้วย AI",
-    desc: "ถ่ายรูปสลิปหรืออัปโหลดใบเสร็จ AI อ่านยอด วันที่ ร้านค้า และบันทึกให้อัตโนมัติ",
+  { slug: "stock",          Icon: IconInbox,         title: "จัดการสต็อกสินค้า",
+    desc: "อัปเดตสต็อกอัตโนมัติแบบเรียลไทม์ทุกแพลตฟอร์ม ลดปัญหาของขาด-ของเกิน คุมสต็อกได้แม่นยำ",
     color: "from-purple-50 to-white border-purple-100",
     iconColor: "text-purple-600",
     chipBg: "bg-purple-100" },
-  { slug: "income-expense", Icon: IconIncome,        title: "ติดตามรายรับ-รายจ่าย",
-    desc: "ดูยอดเดือนนี้ ทั้งปี กำไร-ขาดทุน พร้อมแยกแพลตฟอร์ม TikTok / Shopee / Lazada",
+  { slug: "income-expense", Icon: IconIncome,        title: "ติดตามรายรับ-รายจ่ายอัตโนมัติ",
+    desc: "รวมยอดขายและค่าใช้จ่ายจากทุกช่องทาง เห็นกำไร-ขาดทุนจริง แยกตาม TikTok / Shopee / Lazada",
     color: "from-emerald-50 to-white border-emerald-100",
     iconColor: "text-emerald-600",
     chipBg: "bg-emerald-100" },
   { slug: "tax",            Icon: IconTax,           title: "คำนวณภาษีอัตโนมัติ",
-    desc: "ประมาณภาษีเงินได้บุคคลธรรมดา ตามอัตราของไทย พร้อมแนะนำวิธีหักค่าใช้จ่าย",
+    desc: "ประมาณภาษีเงินได้ VAT และหัก ณ ที่จ่าย ตามอัตราของไทย พร้อมแนะนำวิธีประหยัดภาษี",
     color: "from-blue-50 to-white border-blue-100",
     iconColor: "text-blue-600",
     chipBg: "bg-blue-100" },
-  { slug: "sheets",         Icon: IconGoogleSheets,  title: "ซิงค์ Google Sheets",
-    desc: "ทุกรายการบันทึกลง Google Sheets ของคุณอัตโนมัติ ดาวน์โหลดหรือแชร์กับนักบัญชีได้ทันที",
+  { slug: "sheets",         Icon: IconGoogleSheets,  title: "ซิงค์ Google Sheets + ใบรับรอง",
+    desc: "ทุกรายการซิงค์ไป Google Sheets ของคุณ และสร้างใบรับรองแทนใบเสร็จให้อัตโนมัติ พร้อมส่งนักบัญชี",
     color: "from-green-50 to-white border-green-100",
     iconColor: "text-green-600",
     chipBg: "bg-green-100" },
-  { slug: "import",         Icon: IconUpload,        title: "นำเข้ายอดแพลตฟอร์ม",
-    desc: "อัปโหลดไฟล์ Excel จาก TikTok Shop, Shopee, Lazada — ระบบแยกยอดให้อัตโนมัติ",
+  { slug: "ai",             Icon: IconSparkle,       title: "AI ช่วยตัดสินใจ",
+    desc: "ผู้ช่วย AI วิเคราะห์ข้อมูลการเงินของร้าน และแนะนำการบริหารธุรกิจของคุณแบบเข้าใจง่าย",
     color: "from-orange-50 to-white border-orange-100",
     iconColor: "text-orange-600",
     chipBg: "bg-orange-100" },
   { slug: "team",           Icon: IconShield,        title: "แชร์ให้ทีมงาน",
-    desc: "เพิ่ม Admin ด้วย Google Email หรือสร้างลิงก์ Staff ให้พนักงานบันทึกรายจ่ายแทนได้",
+    desc: "เพิ่ม Admin ด้วย Google Email หรือสร้างลิงก์ Staff ให้พนักงานบันทึกรายจ่ายแทนได้อย่างปลอดภัย",
     color: "from-rose-50 to-white border-rose-100",
     iconColor: "text-rose-600",
     chipBg: "bg-rose-100" },
@@ -71,46 +71,45 @@ const PLANS: {
     color: "border-gray-200 bg-white",
     btnClass: "bg-gray-100 hover:bg-gray-200 text-gray-800",
     features: [
-      "ทดลองใช้ฟรี 7 วัน (ทุกฟีเจอร์)",
       "รายจ่าย 10 รายการ/เดือน",
-      "รายรับ Manual เท่านั้น",
-      "ไม่รองรับ Excel import",
+      "รายรับ Manual",
+      "สแกนใบเสร็จด้วย AI 10 ครั้ง/เดือน",
       "Google Sheets sync",
     ],
-    disabled: [2, 3] },
-  { name: "Eco", planKey: "eco", price: "฿100", period: "/เดือน", badge: null,
+    disabled: [] },
+  { name: "Eco", planKey: "eco", price: "฿169", period: "/เดือน", badge: null,
     color: "border-blue-200 bg-blue-50/40",
     btnClass: "bg-blue-500 hover:bg-blue-400 text-white",
     features: [
-      "รายจ่าย 30 รายการ/เดือน",
+      "นำเข้า Excel 3 ไฟล์/เดือน",
+      "สแกนใบเสร็จด้วย AI 60 ครั้ง/เดือน",
+      "เชื่อม API 1 แพลตฟอร์ม",
       "รายรับ Manual ไม่จำกัด",
-      "นำเข้า Excel 1 ไฟล์/เดือน",
       "Google Sheets sync",
-      "สแกนใบเสร็จด้วย AI",
     ],
     disabled: [] },
-  { name: "Pro", planKey: "pro", price: "฿200", period: "/เดือน",
+  { name: "Pro", planKey: "pro", price: "฿349", period: "/เดือน",
     badge: { Icon: IconFire, label: "แนะนำ" },
     color: "border-emerald-500 bg-emerald-50/60 ring-2 ring-emerald-500/30",
     btnClass: "bg-emerald-500 hover:bg-emerald-400 text-white shadow-lg shadow-emerald-500/25",
     features: [
-      "รายจ่าย 100 รายการ/เดือน",
+      "นำเข้า Excel 12 ไฟล์/เดือน",
+      "สแกนใบเสร็จด้วย AI 200 ครั้ง/เดือน",
+      "เชื่อม API 2 แพลตฟอร์ม",
       "รายรับ Manual ไม่จำกัด",
-      "นำเข้า Excel 5 ไฟล์/เดือน",
       "Google Sheets sync",
-      "สแกนใบเสร็จด้วย AI",
     ],
     disabled: [] },
-  { name: "Platinum", planKey: "platinum", price: "฿700", period: "/เดือน",
+  { name: "Platinum", planKey: "platinum", price: "฿799", period: "/เดือน",
     badge: { Icon: IconCrown, label: "ครบทุกอย่าง" },
     color: "border-amber-200 bg-amber-50/40",
     btnClass: "bg-amber-500 hover:bg-amber-400 text-white",
     features: [
-      "รายจ่าย 1,200 รายการ/เดือน",
+      "นำเข้า Excel 30 ไฟล์/เดือน",
+      "สแกนใบเสร็จด้วย AI 1,000 ครั้ง/เดือน",
+      "เชื่อม API 3 แพลตฟอร์ม",
       "รายรับ Manual ไม่จำกัด",
-      "นำเข้า Excel 12 ไฟล์/เดือน",
       "Google Sheets sync",
-      "สแกนใบเสร็จด้วย AI",
     ],
     disabled: [] },
 ];
@@ -631,6 +630,7 @@ function PublicTaxCalculator() {
 }
 
 export default function LandingPage() {
+  const [showCalc, setShowCalc] = useState(false);
   return (
     <main className="min-h-screen bg-white text-gray-900">
 
@@ -682,12 +682,12 @@ export default function LandingPage() {
           >
             <IconRocket className="w-5 h-5" /> เริ่มต้นใช้งานฟรี
           </Link>
-          <a
-            href="#calculator"
+          <button
+            onClick={() => setShowCalc(true)}
             className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-base font-semibold bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 transition-colors shadow-sm"
           >
             <IconTax className="w-4 h-4" /> ลองคำนวณภาษีฟรี
-          </a>
+          </button>
         </div>
 
         {/* Stats row */}
@@ -716,27 +716,20 @@ export default function LandingPage() {
           {FEATURES.map((f) => {
             const Ic = f.Icon;
             return (
-              <Link
+              <div
                 key={f.slug}
-                href={`/features/${f.slug}`}
-                className={`bg-gradient-to-br ${f.color} border rounded-2xl p-6 group hover:scale-[1.02] hover:shadow-md transition-all duration-200 block`}
+                className={`bg-gradient-to-br ${f.color} border rounded-2xl p-6 hover:shadow-md transition-all duration-200`}
               >
                 <div className={`inline-flex items-center justify-center w-12 h-12 rounded-xl ${f.chipBg} ${f.iconColor} mb-4`}>
                   <Ic className="w-6 h-6" />
                 </div>
                 <h3 className="text-gray-900 font-bold text-base mb-2">{f.title}</h3>
                 <p className="text-gray-500 text-sm leading-relaxed">{f.desc}</p>
-                <p className="text-xs text-gray-400 mt-3 group-hover:text-gray-600 transition-colors inline-flex items-center gap-1">
-                  อ่านเพิ่มเติม <IconArrowRight className="w-3.5 h-3.5" />
-                </p>
-              </Link>
+              </div>
             );
           })}
         </div>
       </section>
-
-      {/* ── Public Tax Calculator ─────────────────────────────────────────── */}
-      <PublicTaxCalculator />
 
       {/* ── Pricing ────────────────────────────────────────────────────────── */}
       <section id="pricing" className="px-6 py-20 max-w-6xl mx-auto">
@@ -849,6 +842,21 @@ export default function LandingPage() {
         </div>
         <p>© {new Date().getFullYear()} Vendee Finance · สร้างสำหรับร้านค้าออนไลน์ไทย</p>
       </footer>
+
+      {/* ── Tax calculator popup ───────────────────────────────────────────── */}
+      {showCalc && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-start sm:items-center justify-center p-4 overflow-y-auto"
+          onClick={() => setShowCalc(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-5xl my-6 relative max-h-[92vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setShowCalc(false)}
+              className="sticky top-3 float-right mr-3 z-10 w-9 h-9 rounded-full bg-white shadow border border-gray-100 text-gray-500 hover:text-gray-800 flex items-center justify-center text-xl leading-none">
+              ×
+            </button>
+            <PublicTaxCalculator />
+          </div>
+        </div>
+      )}
 
     </main>
   );

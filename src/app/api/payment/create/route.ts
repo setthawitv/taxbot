@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     const planInfo = PLANS[plan as PlanKey];
 
     // Calculate charge amount — only the upgrade difference if upgrading from a paid plan
-    const PLAN_THB: Record<string, number> = { trial: 0, free: 0, eco: 100, pro: 200, platinum: 700 };
+    const PLAN_THB: Record<string, number> = { trial: 0, free: 0, eco: 169, pro: 349, platinum: 799 };
     const currentPlanThb = PLAN_THB[currentPlan as string] ?? 0;
     const chargeThb      = currentPlanThb > 0 ? planInfo.thb - currentPlanThb : planInfo.thb;
     const chargeSatang   = chargeThb * 100;  // Beam uses satang
