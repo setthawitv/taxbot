@@ -398,6 +398,7 @@ type SummaryRow = {
   stock_in: number; stock_qty: number; total_sold: number;
   sold_by_platform: Record<string,number>;
   platforms: string[]; low_stock_at: number; is_low: boolean;
+  last_sold_at: string | null; is_dead: boolean;
 };
 
 const PLATFORMS_ALL = ["shopee","tiktok","lazada"] as const;
@@ -639,13 +640,14 @@ export default function StockPage() {
               </div>
             )}
 
-            {/* Dead-stock banner — products with stock but no sales */}
+            {/* Dead-stock banner — products with stock but no sale in the last 30 days */}
             {(() => {
-              const dead = summary.filter((r) => r.total_sold === 0 && r.stock_qty > 0);
+              const dead = summary.filter((r) => r.is_dead);
               if (dead.length === 0) return null;
               return (
                 <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
-                  <p className="font-semibold text-slate-600 text-sm mb-2">💤 สินค้าค้างสต็อก {dead.length} รายการ <span className="font-normal text-slate-400">— มีของแต่ยังไม่มียอดขาย</span></p>
+                  <p className="font-semibold text-slate-600 text-sm mb-1">💤 สินค้าค้างสต็อก {dead.length} รายการ</p>
+                  <p className="text-xs text-slate-400 mb-3">สินค้าที่ยังมีของในสต็อก แต่ไม่มียอดขายเลยใน 30 วันล่าสุด — ควรพิจารณาลดราคา/จัดโปรเพื่อระบายของ</p>
                   <div className="flex flex-wrap gap-2">
                     {dead.map((p) => (
                       <span key={p.id} className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">
@@ -710,7 +712,7 @@ export default function StockPage() {
                         </span>
                         <span className="text-xs text-gray-400 ml-1">{s.unit}</span>
                         {s.is_low && <span className="ml-1">⚠️</span>}
-                        {s.total_sold === 0 && s.stock_qty > 0 && <span className="ml-1" title="ค้างสต็อก">💤</span>}
+                        {s.is_dead && <span className="ml-1" title="ค้างสต็อก — ไม่มียอดขายใน 30 วันล่าสุด">💤</span>}
                       </td>
                     </tr>
                   ))}

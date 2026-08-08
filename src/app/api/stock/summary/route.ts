@@ -42,8 +42,9 @@ export async function GET(req: NextRequest) {
 
   // Build sold counts per product per platform from stock_movements
   type PlatformCount = Record<string, number>; // platform → qty
-  const soldByProduct: Record<string, PlatformCount> = {};
-  const inByProduct:   Record<string, number> = {};
+  const soldByProduct:   Record<string, PlatformCount> = {};
+  const inByProduct:     Record<string, number> = {};
+  const lastSoldByProduct: Record<string, string> = {}; // product → latest 'out' date (ISO)
 
   for (const m of movements ?? []) {
     if (!soldByProduct[m.product_id]) soldByProduct[m.product_id] = {};
@@ -57,6 +58,10 @@ export async function GET(req: NextRequest) {
         note.includes("tiktok")  ? "tiktok"  :
         note.includes("lazada")  ? "lazada"  : "manual";
       soldByProduct[m.product_id][platform] = (soldByProduct[m.product_id][platform] ?? 0) + Math.abs(m.qty);
+      // Track most recent sale date for dead-stock detection
+      if (m.created_at && (!lastSoldByProduct[m.product_id] || m.created_at > lastSoldByProduct[m.product_id])) {
+        lastSoldByProduct[m.product_id] = m.created_at;
+      }
     } else if (m.type === "in") {
       inByProduct[m.product_id] += m.qty;
     }
@@ -71,12 +76,19 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Dead stock = has stock but no sale in the last 30 days
+  const cutoff = new Date(Date.now() - 30 * 86_400_000).toISOString();
+
   const summary = products.map((p) => {
     const sold       = soldByProduct[p.id] ?? {};
     const totalSold  = Object.values(sold).reduce((s, v) => s + v, 0);
     const platforms  = platformsByProduct[p.id] ?? [];
+    const lastSoldAt = lastSoldByProduct[p.id] ?? null;
+    const isDead     = p.stock_qty > 0 && (!lastSoldAt || lastSoldAt < cutoff);
 
     return {
+      last_sold_at: lastSoldAt,
+      is_dead:      isDead,
       id:          p.id,
       sku:         p.sku,
       name:        p.name,

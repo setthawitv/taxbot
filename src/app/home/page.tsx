@@ -210,6 +210,7 @@ type Links = {
 type StockSumRow = {
   id: string; name: string; sku: string | null; attr1_val: string | null;
   sell_price: number; stock_qty: number; total_sold: number; is_low: boolean;
+  is_dead: boolean;
 };
 
 const PLATFORM_TH: Record<string, string> = {
@@ -456,7 +457,7 @@ export default function Home() {
     .filter((s) => s.total_sold > 0)
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 3);
-  const deadStock       = stockSum.filter((s) => s.total_sold === 0 && s.stock_qty > 0);
+  const deadStock       = stockSum.filter((s) => s.is_dead);
   const lowStockCount   = stockSum.filter((s) => s.is_low).length;
   const platformEntries = Object.entries(incByPlatform)
     .filter(([k]) => k !== "manual" && incByPlatform[k] > 0)
@@ -732,6 +733,7 @@ export default function Home() {
                       {deadStock.slice(0, 3).map((s) => s.name).join(", ")}{deadStock.length > 3 ? ` +${deadStock.length - 3}` : ""}
                     </p>
                   )}
+                  <p className="text-[11px] text-gray-400 px-1 pt-1">ค้างสต็อก = มีของแต่ไม่มียอดขายใน 30 วันล่าสุด</p>
                 </div>
               </div>
 
