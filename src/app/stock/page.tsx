@@ -638,6 +638,24 @@ export default function StockPage() {
                 </div>
               </div>
             )}
+
+            {/* Dead-stock banner — products with stock but no sales */}
+            {(() => {
+              const dead = summary.filter((r) => r.total_sold === 0 && r.stock_qty > 0);
+              if (dead.length === 0) return null;
+              return (
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                  <p className="font-semibold text-slate-600 text-sm mb-2">💤 สินค้าค้างสต็อก {dead.length} รายการ <span className="font-normal text-slate-400">— มีของแต่ยังไม่มียอดขาย</span></p>
+                  <div className="flex flex-wrap gap-2">
+                    {dead.map((p) => (
+                      <span key={p.id} className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">
+                        {p.name}{p.attr1_val ? ` · ${p.attr1_val}` : ""} ({fmt(p.stock_qty)} {p.unit})
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             {sumLoading ? (
               <div className="p-8 text-center text-gray-400 text-sm">กำลังโหลด...</div>
@@ -692,6 +710,7 @@ export default function StockPage() {
                         </span>
                         <span className="text-xs text-gray-400 ml-1">{s.unit}</span>
                         {s.is_low && <span className="ml-1">⚠️</span>}
+                        {s.total_sold === 0 && s.stock_qty > 0 && <span className="ml-1" title="ค้างสต็อก">💤</span>}
                       </td>
                     </tr>
                   ))}
