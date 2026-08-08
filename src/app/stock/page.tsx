@@ -408,7 +408,7 @@ export default function StockPage() {
   const [authReady,  setAuthReady]  = useState(false);
   const { data: session, status: sessionStatus } = useSession();
 
-  const [tab,       setTab]       = useState<"products"|"summary">("products");
+  const [tab,       setTab]       = useState<"products"|"summary">("summary");
   const [summary,   setSummary]   = useState<SummaryRow[]>([]);
   const [sumLoading,setSumLoading]= useState(false);
 
@@ -458,7 +458,7 @@ export default function StockPage() {
     setLoading(false);
   };
 
-  useEffect(() => { if (authReady && userId) loadProducts(); else if (authReady) setLoading(false); }, [authReady, userId]);
+  useEffect(() => { if (authReady && userId) { loadProducts(); loadSummary(); } else if (authReady) setLoading(false); }, [authReady, userId]);
   useEffect(() => { if (userId) { const t = setTimeout(loadProducts, 300); return () => clearTimeout(t); } }, [search]);
 
   async function handleSave(data: Partial<Product>) {
@@ -585,6 +585,27 @@ export default function StockPage() {
 
         {/* ── Summary tab ─────────────────────────────────────────────────── */}
         {tab === "summary" && (
+          <div className="space-y-4">
+            {summary.length > 0 && !sumLoading && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+                  <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">ยอดขายรวม</p>
+                  <p className="text-2xl font-extrabold text-[#0A192F] mt-1">{fmt(summary.reduce((s, r) => s + r.total_sold, 0))}</p>
+                </div>
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+                  <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Shopee</p>
+                  <p className="text-2xl font-extrabold text-orange-600 mt-1">{fmt(summary.reduce((s, r) => s + (r.sold_by_platform.shopee ?? 0), 0))}</p>
+                </div>
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+                  <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">TikTok</p>
+                  <p className="text-2xl font-extrabold text-gray-800 mt-1">{fmt(summary.reduce((s, r) => s + (r.sold_by_platform.tiktok ?? 0), 0))}</p>
+                </div>
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+                  <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">ใกล้หมด</p>
+                  <p className="text-2xl font-extrabold text-rose-500 mt-1">{summary.filter((r) => r.is_low).length}</p>
+                </div>
+              </div>
+            )}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             {sumLoading ? (
               <div className="p-8 text-center text-gray-400 text-sm">กำลังโหลด...</div>
@@ -665,6 +686,7 @@ export default function StockPage() {
                 </tfoot>
               </table>
             )}
+          </div>
           </div>
         )}
 
