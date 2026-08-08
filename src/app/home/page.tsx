@@ -207,6 +207,15 @@ type Links = {
   driveUrl: string | null;
 };
 
+type StockSumRow = {
+  id: string; name: string; sku: string | null; attr1_val: string | null;
+  sell_price: number; stock_qty: number; total_sold: number; is_low: boolean;
+};
+
+const PLATFORM_TH: Record<string, string> = {
+  shopee: "Shopee", tiktok: "TikTok", lazada: "Lazada", manual: "บันทึกเอง",
+};
+
 
 function StatCard({
   label, value, sub, color, loading,
@@ -298,6 +307,8 @@ export default function Home() {
   const [userInfo,     setUserInfo]     = useState<UserInfo | null>(null);
   const [stats,        setStats]        = useState<Stats | null>(null);
   const [links,        setLinks]        = useState<Links>({ sheetUrl: null, driveUrl: null });
+  const [stockSum,     setStockSum]     = useState<StockSumRow[]>([]);
+  const [incByPlatform,setIncByPlatform]= useState<Record<string, number>>({});
   const [loadingStats, setLoadingStats] = useState(true);
   const [showTour,      setShowTour]      = useState(false);
   const [showFee,       setShowFee]       = useState(false);
@@ -370,8 +381,9 @@ export default function Home() {
       fetch(`/api/tax/summary?userId=${uid}&year=${yr}`).then((r) => r.json()),
       fetch(`/api/user/status?userId=${uid}`).then((r) => r.json()),
       fetch(`/api/user/links?lid=${uid}`).then((r) => r.json()),
+      fetch(`/api/stock/summary?userId=${uid}`).then((r) => r.json()),
 
-    ]).then(([rangeIncome, rangeExpense, tax, status, lnks]) => {
+    ]).then(([rangeIncome, rangeExpense, tax, status, lnks, stock]) => {
       // Compute two tax estimates that differ ONLY by salary. Business income
       // is from the DB (tax summary); salary/commission/extra deductions live in
       // the tax page's localStorage. Pick the lower of หักเหมา 60% vs หักตามจริง.
@@ -425,6 +437,8 @@ export default function Home() {
         };
       });
       setLinks({ sheetUrl: lnks.sheet_url ?? null, driveUrl: lnks.drive_url ?? null });
+      setStockSum(stock?.summary ?? []);
+      setIncByPlatform(rangeIncome?.byPlatform ?? {});
     }).finally(() => setLoadingStats(false));
   }, [authReady, userId, range.from, range.to, rangeYear]);
 
@@ -435,6 +449,20 @@ export default function Home() {
 
   const netMonth = (stats?.monthIncome ?? 0) - (stats?.monthExpense ?? 0);
   const netYear  = (stats?.yearIncome  ?? 0) - (stats?.yearExpense  ?? 0);
+
+  // ── Insight derived from stock summary + income-by-platform ────────────────
+  const bestSellers = [...stockSum]
+    .map((s) => ({ ...s, revenue: s.total_sold * s.sell_price }))
+    .filter((s) => s.total_sold > 0)
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 3);
+  const deadStock       = stockSum.filter((s) => s.total_sold === 0 && s.stock_qty > 0);
+  const lowStockCount   = stockSum.filter((s) => s.is_low).length;
+  const platformEntries = Object.entries(incByPlatform)
+    .filter(([k]) => k !== "manual" && incByPlatform[k] > 0)
+    .sort((a, b) => b[1] - a[1]);
+  const topPlatform     = platformEntries[0];
+  const hasInsight      = stockSum.length > 0 || platformEntries.length > 0;
 
   const layoutUserInfo = userInfo
     ? { displayName: userInfo.displayName, pictureUrl: userInfo.pictureUrl, businessName: userInfo.businessName }
@@ -617,6 +645,99 @@ export default function Home() {
           </div>
 
         </div>
+
+        {/* ── Insight (selected range) ──────────────────────────────────────── */}
+        {!loadingStats && hasInsight && (
+          <div>
+            <p className="text-xs font-semibold text-[#4A5568] uppercase tracking-widest mb-3">Insight ช่วงที่เลือก</p>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+              {/* Best sellers */}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-lg" aria-hidden>🏆</span>
+                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">สินค้าขายดี</span>
+                </div>
+                {bestSellers.length === 0 ? (
+                  <p className="text-sm text-gray-300 py-4 text-center">ยังไม่มียอดขาย</p>
+                ) : (
+                  <ol className="space-y-2.5">
+                    {bestSellers.map((s, i) => (
+                      <li key={s.id} className="flex items-center gap-2.5">
+                        <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 ${
+                          i === 0 ? "bg-amber-100 text-amber-700" : i === 1 ? "bg-gray-100 text-gray-500" : "bg-orange-50 text-orange-400"
+                        }`}>{i + 1}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-800 truncate">
+                            {s.name}{s.attr1_val && <span className="text-gray-400 font-normal"> · {s.attr1_val}</span>}
+                          </p>
+                          <p className="text-xs text-gray-400">ขาย {fmtInt(s.total_sold)} ชิ้น</p>
+                        </div>
+                        <span className="text-sm font-semibold text-emerald-600 flex-shrink-0">฿{fmtInt(s.revenue)}</span>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </div>
+
+              {/* Top platform */}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-lg" aria-hidden>📈</span>
+                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">แพลตฟอร์มทำเงินสุด</span>
+                </div>
+                {!topPlatform ? (
+                  <p className="text-sm text-gray-300 py-4 text-center">ยังไม่มีข้อมูล</p>
+                ) : (
+                  <>
+                    <p className="text-2xl font-bold text-[#0A192F]">{PLATFORM_TH[topPlatform[0]] ?? topPlatform[0]}</p>
+                    <p className="text-sm text-gray-400 mt-0.5">฿{fmtInt(topPlatform[1])}</p>
+                    <div className="mt-3 space-y-2">
+                      {platformEntries.map(([k, v]) => {
+                        const max = platformEntries[0][1] || 1;
+                        return (
+                          <div key={k}>
+                            <div className="flex items-center justify-between text-xs mb-0.5">
+                              <span className="text-gray-500">{PLATFORM_TH[k] ?? k}</span>
+                              <span className="text-gray-400">฿{fmtInt(v)}</span>
+                            </div>
+                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                              <div className="h-full bg-[#10B981] rounded-full" style={{ width: `${(v / max) * 100}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Stock signals */}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-lg" aria-hidden>📦</span>
+                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">สัญญาณสต็อก</span>
+                </div>
+                <div className="space-y-2.5">
+                  <Link href="/stock" className="flex items-center justify-between p-3 rounded-xl bg-rose-50 border border-rose-100 hover:bg-rose-100 transition-colors">
+                    <span className="text-sm text-rose-600 font-medium">⚠️ สินค้าใกล้หมด</span>
+                    <span className="text-lg font-bold text-rose-600">{lowStockCount}</span>
+                  </Link>
+                  <Link href="/stock" className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors">
+                    <span className="text-sm text-gray-500 font-medium">💤 สินค้าค้างสต็อก</span>
+                    <span className="text-lg font-bold text-gray-600">{deadStock.length}</span>
+                  </Link>
+                  {deadStock.length > 0 && (
+                    <p className="text-xs text-gray-400 px-1">
+                      {deadStock.slice(0, 3).map((s) => s.name).join(", ")}{deadStock.length > 3 ? ` +${deadStock.length - 3}` : ""}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
 
         {/* ── Tools + help ──────────────────────────────────────────────────── */}
         <div className="flex justify-between items-center gap-3 flex-wrap">

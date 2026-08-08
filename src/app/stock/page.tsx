@@ -402,15 +402,32 @@ type SummaryRow = {
 
 const PLATFORMS_ALL = ["shopee","tiktok","lazada"] as const;
 
+type Order = {
+  id: string; platform: string; order_id: string;
+  product_name: string | null; seller_sku: string | null; variant: string | null;
+  amount: number; order_date: string; status: "to_ship" | "shipping" | "delivered";
+};
+
+const ORDER_STATUS: Record<Order["status"], { label: string; color: string; dot: string }> = {
+  to_ship:   { label: "รอจัดส่ง",    color: "bg-amber-50 text-amber-700 border-amber-200",     dot: "bg-amber-500"   },
+  shipping:  { label: "กำลังจัดส่ง", color: "bg-blue-50 text-blue-700 border-blue-200",        dot: "bg-blue-500"    },
+  delivered: { label: "จัดส่งแล้ว",  color: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
+};
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function StockPage() {
   const [userId, setUserId] = useState("");
   const [authReady,  setAuthReady]  = useState(false);
   const { data: session, status: sessionStatus } = useSession();
 
-  const [tab,       setTab]       = useState<"products"|"summary">("summary");
+  const [tab,       setTab]       = useState<"products"|"summary"|"orders"|"restock">("summary");
   const [summary,   setSummary]   = useState<SummaryRow[]>([]);
   const [sumLoading,setSumLoading]= useState(false);
+
+  const [orders,      setOrders]      = useState<Order[]>([]);
+  const [ordersLoaded,setOrdersLoaded]= useState(false);
+  const [ordersLoading,setOrdersLoading]= useState(false);
+  const [statusFilter,setStatusFilter]= useState<"all"|Order["status"]>("all");
 
   const [products,  setProducts]  = useState<Product[]>([]);
   const [loading,   setLoading]   = useState(true);
@@ -446,6 +463,17 @@ export default function StockPage() {
     const d   = await res.json();
     setSummary(d.summary ?? []);
     setSumLoading(false);
+  };
+
+  // Load orders (across all platforms)
+  const loadOrders = async () => {
+    if (!userId) return;
+    setOrdersLoading(true);
+    const res = await fetch(`/api/orders/list?userId=${userId}&limit=200`);
+    const d   = await res.json();
+    setOrders(d.orders ?? []);
+    setOrdersLoaded(true);
+    setOrdersLoading(false);
   };
 
   // Load products
@@ -565,10 +593,14 @@ export default function StockPage() {
         )}
 
         {/* Tabs */}
-        <div className="flex gap-2 border-b border-gray-100 pb-0">
-          {([["products","📦 สินค้า"],["summary","📊 สรุปยอดขาย"]] as const).map(([t, label]) => (
-            <button key={t} onClick={() => { setTab(t); if (t === "summary") loadSummary(); }}
-              className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
+        <div className="flex gap-1 sm:gap-2 border-b border-gray-100 pb-0 overflow-x-auto">
+          {([["summary","📊 สรุปยอดขาย"],["orders","🚚 ออเดอร์"],["restock","🔄 เติมสต็อก"],["products","📦 สินค้า"]] as const).map(([t, label]) => (
+            <button key={t} onClick={() => {
+              setTab(t);
+              if (t === "summary") loadSummary();
+              if (t === "orders" && !ordersLoaded) loadOrders();
+            }}
+              className={`px-3 sm:px-4 py-2 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap ${
                 tab === t ? "border-[#0A192F] text-[#0A192F]" : "border-transparent text-gray-400 hover:text-gray-600"
               }`}>
               {label}
@@ -689,6 +721,152 @@ export default function StockPage() {
           </div>
           </div>
         )}
+
+        {/* ── Orders tab ──────────────────────────────────────────────────── */}
+        {tab === "orders" && (
+          <div className="space-y-4">
+            {/* Status filter pills */}
+            <div className="flex gap-2 flex-wrap">
+              {([["all","ทั้งหมด"],["to_ship","รอจัดส่ง"],["shipping","กำลังจัดส่ง"],["delivered","จัดส่งแล้ว"]] as const).map(([k, label]) => {
+                const count  = k === "all" ? orders.length : orders.filter((o) => o.status === k).length;
+                const active = statusFilter === k;
+                return (
+                  <button key={k} onClick={() => setStatusFilter(k)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                      active ? "bg-[#0A192F] text-white border-[#0A192F]" : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"
+                    }`}>
+                    {label} <span className={active ? "text-white/60" : "text-gray-400"}>{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              {ordersLoading ? (
+                <div className="p-8 text-center text-gray-400 text-sm">กำลังโหลด...</div>
+              ) : orders.length === 0 ? (
+                <div className="p-10 text-center">
+                  <p className="text-3xl mb-2">🚚</p>
+                  <p className="text-gray-400 text-sm">ยังไม่มีออเดอร์ — เชื่อม API แพลตฟอร์ม หรือนำเข้าไฟล์ยอดขาย</p>
+                </div>
+              ) : (
+                <ul className="divide-y divide-gray-50">
+                  {orders.filter((o) => statusFilter === "all" || o.status === statusFilter).map((o) => {
+                    const pl = PLATFORM_LABELS[o.platform] ?? { label: o.platform, color: "bg-gray-100 text-gray-600" };
+                    const st = ORDER_STATUS[o.status];
+                    return (
+                      <li key={o.id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
+                        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${pl.color}`}>{pl.label}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-800 truncate">
+                            {o.product_name ?? "—"}
+                            {o.variant && <span className="text-violet-600 font-normal"> · {o.variant}</span>}
+                          </p>
+                          <p className="text-xs text-gray-400 truncate">
+                            #{o.order_id} · {new Date(o.order_date).toLocaleDateString("th-TH", { day: "numeric", month: "short" })}
+                          </p>
+                        </div>
+                        <span className="text-sm font-semibold text-gray-700 flex-shrink-0">{fmtB(Number(o.amount))}</span>
+                        <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border flex-shrink-0 ${st.color}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} /> {st.label}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Smart restock tab ───────────────────────────────────────────── */}
+        {tab === "restock" && (() => {
+          const rows = summary.map((s) => {
+            const daily    = s.total_sold / 30;             // avg units sold per day
+            const daysLeft = daily > 0 ? s.stock_qty / daily : Infinity;
+            const target   = 45;                            // aim to hold ~45 days of stock
+            const raw      = Math.max(0, Math.ceil(daily * target - s.stock_qty));
+            const reorder  = raw > 0 ? Math.ceil(raw / 5) * 5 : 0;
+            const urgency: "urgent"|"soon"|"ok" = daysLeft < 7 ? "urgent" : daysLeft < 14 ? "soon" : "ok";
+            return { ...s, daily, daysLeft, reorder, urgency };
+          }).sort((a, b) => a.daysLeft - b.daysLeft);
+          const urgentCount = rows.filter((r) => r.urgency === "urgent").length;
+
+          return (
+            <div className="space-y-4">
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-start gap-3">
+                <span className="text-2xl" aria-hidden>🔄</span>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-gray-800">เติมสต็อกอัจฉริยะ</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    คำนวณจากยอดขายเฉลี่ยต่อวัน แล้วแนะนำจำนวนที่ควรสั่งเพื่อมีของขายต่ออีก 45 วัน
+                  </p>
+                </div>
+                {urgentCount > 0 && (
+                  <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-rose-50 text-rose-600 border border-rose-200 flex-shrink-0">
+                    ควรสั่งด่วน {urgentCount}
+                  </span>
+                )}
+              </div>
+
+              {sumLoading ? (
+                <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-gray-400 text-sm">กำลังโหลด...</div>
+              ) : rows.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
+                  <p className="text-3xl mb-2">📦</p>
+                  <p className="text-gray-400 text-sm">ยังไม่มีข้อมูลสต็อก</p>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {rows.map((r) => {
+                    const badge = r.urgency === "urgent"
+                      ? { t: "ควรสั่งด่วน",  c: "bg-rose-50 text-rose-600 border-rose-200" }
+                      : r.urgency === "soon"
+                      ? { t: "ใกล้ต้องสั่ง", c: "bg-amber-50 text-amber-600 border-amber-200" }
+                      : { t: "เพียงพอ",     c: "bg-emerald-50 text-emerald-600 border-emerald-200" };
+                    return (
+                      <div key={r.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+                        <div className="flex items-center gap-2 flex-wrap mb-3">
+                          <span className="font-semibold text-gray-800">{r.name}</span>
+                          {r.attr1_val && <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{r.attr1_val}</span>}
+                          {r.sku && <span className="text-xs text-gray-400 font-mono">{r.sku}</span>}
+                          <span className={`ml-auto text-[11px] font-semibold px-2.5 py-1 rounded-full border ${badge.c}`}>{badge.t}</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3 text-center">
+                          <div>
+                            <p className="text-xs text-gray-400">คงเหลือ</p>
+                            <p className="text-lg font-bold text-gray-800">{fmt(r.stock_qty)}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-400">ขายเฉลี่ย/วัน</p>
+                            <p className="text-lg font-bold text-gray-800">{r.daily.toFixed(1)}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-400">พอขายอีก</p>
+                            <p className={`text-lg font-bold ${r.urgency === "urgent" ? "text-rose-500" : r.urgency === "soon" ? "text-amber-500" : "text-emerald-600"}`}>
+                              {isFinite(r.daysLeft) ? `${Math.round(r.daysLeft)} วัน` : "—"}
+                            </p>
+                          </div>
+                        </div>
+                        {r.reorder > 0 && (
+                          <div className="mt-3 pt-3 border-t border-gray-50 flex items-center justify-between gap-2">
+                            <p className="text-sm text-gray-500">
+                              แนะนำสั่งเพิ่ม <span className="font-bold text-[#0A192F]">{fmt(r.reorder)} {r.unit}</span>
+                            </p>
+                            <button onClick={() => setAdjustProd(products.find((p) => p.id === r.id) ?? null)}
+                              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#0A192F] text-white hover:bg-[#0d2240] transition-colors flex-shrink-0">
+                              รับของเข้า
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Product table (products tab only) */}
         {tab === "products" && <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
