@@ -35,7 +35,7 @@ const handler = NextAuth({
         if (!demoEmail || !demoPass) return null;
         const email = credentials?.email?.toLowerCase().trim();
         if (email === demoEmail && credentials?.password === demoPass) {
-          return { id: demoEmail, email: demoEmail, name: "Shopee Reviewer (Demo)" };
+          return { id: demoEmail, email: demoEmail, name: "Customer Review (Demo)" };
         }
         return null;
       },
