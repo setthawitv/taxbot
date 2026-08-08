@@ -593,6 +593,25 @@ export default function StockPage() {
           </div>
         )}
 
+        {/* Dead-stock warning — has stock but no sale in the last 30 days */}
+        {(() => {
+          const dead = summary.filter((r) => r.is_dead);
+          if (dead.length === 0) return null;
+          return (
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+              <p className="font-semibold text-slate-600 text-sm mb-1">💤 สินค้าค้างสต็อก {dead.length} รายการ</p>
+              <p className="text-xs text-slate-400 mb-3">สินค้าที่ยังมีของในสต็อก แต่ไม่มียอดขายเลยใน 30 วันล่าสุด — ควรพิจารณาลดราคา/จัดโปรเพื่อระบายของ</p>
+              <div className="flex flex-wrap gap-2">
+                {dead.map((p) => (
+                  <span key={p.id} className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">
+                    {p.name}{p.attr1_val ? ` · ${p.attr1_val}` : ""} ({fmt(p.stock_qty)} {p.unit})
+                  </span>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Tabs */}
         <div className="flex gap-1 sm:gap-2 border-b border-gray-100 pb-0 overflow-x-auto">
           {([["summary","📊 สรุปยอดขาย"],["orders","🚚 ออเดอร์"],["restock","🔄 เติมสต็อก"],["products","📦 สินค้า"]] as const).map(([t, label]) => (
@@ -640,24 +659,6 @@ export default function StockPage() {
               </div>
             )}
 
-            {/* Dead-stock banner — products with stock but no sale in the last 30 days */}
-            {(() => {
-              const dead = summary.filter((r) => r.is_dead);
-              if (dead.length === 0) return null;
-              return (
-                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
-                  <p className="font-semibold text-slate-600 text-sm mb-1">💤 สินค้าค้างสต็อก {dead.length} รายการ</p>
-                  <p className="text-xs text-slate-400 mb-3">สินค้าที่ยังมีของในสต็อก แต่ไม่มียอดขายเลยใน 30 วันล่าสุด — ควรพิจารณาลดราคา/จัดโปรเพื่อระบายของ</p>
-                  <div className="flex flex-wrap gap-2">
-                    {dead.map((p) => (
-                      <span key={p.id} className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">
-                        {p.name}{p.attr1_val ? ` · ${p.attr1_val}` : ""} ({fmt(p.stock_qty)} {p.unit})
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             {sumLoading ? (
               <div className="p-8 text-center text-gray-400 text-sm">กำลังโหลด...</div>
