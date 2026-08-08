@@ -37,7 +37,7 @@ const CATEGORIES = [
 const fmt = (n: number) =>
   n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-export default function ShopeeFeePage() {
+export function ShopeeFeeCalculator() {
   const [v, setV] = useState<Record<string, string>>({
     price: "110", cost: "30", custDiscount: "10", shipping: "10",
     shopeeDiscount: "10", coin: "20", otherCost: "2",
@@ -80,7 +80,6 @@ export default function ShopeeFeePage() {
   const programLabel = PROGRAMS.find((p) => p.key === programKey)?.label ?? "";
 
   return (
-    <AppLayout title="คิดค่าฟี Shopee">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
 
         {/* Header */}
@@ -176,6 +175,13 @@ export default function ShopeeFeePage() {
           </div>
         </div>
       </div>
+  );
+}
+
+export default function ShopeeFeePage() {
+  return (
+    <AppLayout title="คิดค่าฟี Shopee">
+      <ShopeeFeeCalculator />
     </AppLayout>
   );
 }

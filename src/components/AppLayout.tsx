@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import {
-  IconHome, IconIncome, IconExpense, IconTax, IconSettings, VendeeLogo, IconInbox, IconCart,
+  IconHome, IconIncome, IconExpense, IconTax, IconSettings, VendeeLogo, IconInbox,
 } from "@/components/icons";
 import type { ComponentType, ReactNode } from "react";
 
@@ -17,7 +17,6 @@ const NAV: NavItem[] = [
   { href: "/raijhai",  Icon: IconExpense, labelTh: "รายจ่าย",  labelEn: "Expense"   },
   { href: "/phasi",    Icon: IconTax,     labelTh: "ภาษี",     labelEn: "Tax"       },
   { href: "/stock",    Icon: IconInbox,   labelTh: "สต็อก",   labelEn: "Stock"     },
-  { href: "/shopee-fee", Icon: IconCart,  labelTh: "ค่าธรรมเนียม Shopee", labelEn: "Fees"  },
   { href: "/settings", Icon: IconSettings,labelTh: "ตั้งค่า",  labelEn: "Settings"  },
 ];
 

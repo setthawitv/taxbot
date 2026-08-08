@@ -11,6 +11,7 @@ import {
 } from "@/components/icons";
 import AppLayout from "@/components/AppLayout";
 import DateRangePicker, { presetRange, type DateRange } from "@/components/DateRangePicker";
+import { ShopeeFeeCalculator } from "@/app/shopee-fee/page";
 import { lsGet, lsSet } from "@/lib/storage";
 import type { ComponentType } from "react";
 
@@ -299,6 +300,7 @@ export default function Home() {
   const [links,        setLinks]        = useState<Links>({ sheetUrl: null, driveUrl: null });
   const [loadingStats, setLoadingStats] = useState(true);
   const [showTour,      setShowTour]      = useState(false);
+  const [showFee,       setShowFee]       = useState(false);
   const [range, setRange] = useState<DateRange>(() => {
     if (typeof window === "undefined") return presetRange("thisYear");
     try {
@@ -616,8 +618,14 @@ export default function Home() {
 
         </div>
 
-        {/* ── Help button ───────────────────────────────────────────────────── */}
-        <div className="flex justify-end">
+        {/* ── Tools + help ──────────────────────────────────────────────────── */}
+        <div className="flex justify-between items-center gap-3 flex-wrap">
+          <button
+            onClick={() => setShowFee(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-50 border border-orange-100 text-orange-600 text-sm font-semibold hover:bg-orange-100 active:scale-[0.98] transition-all"
+          >
+            🧮 คำนวณค่าธรรมเนียม Shopee
+          </button>
           <button
             onClick={() => setShowTour(true)}
             className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-600 transition-colors"
@@ -629,6 +637,21 @@ export default function Home() {
       </div>
 
       {showTour && <TourModal onClose={closeTour} />}
+
+      {/* ── Shopee fee calculator popup ────────────────────────────────────── */}
+      {showFee && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-start justify-center p-4 overflow-y-auto"
+          onClick={() => setShowFee(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-5xl my-6 relative max-h-[92vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setShowFee(false)}
+              className="sticky top-3 float-right mr-3 z-10 w-9 h-9 rounded-full bg-white shadow border border-gray-100 text-gray-500 hover:text-gray-800 flex items-center justify-center text-xl leading-none">
+              ×
+            </button>
+            <ShopeeFeeCalculator />
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }
