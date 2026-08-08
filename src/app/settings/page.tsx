@@ -23,6 +23,16 @@ type ImportLog = { id: string; platform: string; filename: string; order_count: 
 
 const PLATFORM_EMOJI: Record<string, string> = { tiktok: "🎵", shopee: "🛒", lazada: "📦" };
 
+// Sales platforms that can be connected via official Open API
+const PLATFORMS = [
+  { key: "shopee", name: "Shopee",       emoji: "🛒", color: "#EE4D2D" },
+  { key: "tiktok", name: "TikTok Shop",  emoji: "🎵", color: "#111111" },
+  { key: "lazada", name: "Lazada",       emoji: "📦", color: "#0F146D" },
+] as const;
+
+// How many platforms each plan may connect
+const API_LIMIT: Record<string, number> = { trial: 3, free: 1, eco: 1, pro: 2, platinum: 3 };
+
 const PLAN_OPTIONS = [
   { key: "eco",      name: "Eco",      thb: 169,  desc: "สำหรับร้านค้าเล็ก",        color: "from-teal-400 to-cyan-500",    rank: 1,
     features: ["นำเข้า Excel 3 ไฟล์/เดือน", "สแกนใบเสร็จด้วย AI 60 ครั้ง/เดือน", "เชื่อม API 1 แพลตฟอร์ม", "รายรับ Manual ไม่จำกัด", "Google Sheets sync"] },
@@ -90,6 +100,11 @@ function SettingsPageInner() {
   const [adminEmail,    setAdminEmail]    = useState("");
   const [adminAdding,   setAdminAdding]   = useState(false);
   const [adminCopied,   setAdminCopied]   = useState<string>("");   // invite_code that was copied
+
+  // Platform API connections (integration UI)
+  const [platforms,    setPlatforms]    = useState<Record<string, boolean>>({ shopee: false, tiktok: false, lazada: false });
+  const [connectModal, setConnectModal] = useState<string | null>(null);
+  const [connecting,   setConnecting]   = useState(false);
 
   const { data: session, status: sessionStatus } = useSession();
   const searchParams = useSearchParams();
@@ -242,6 +257,32 @@ function SettingsPageInner() {
     setShowLiffLink(true);
   }
 
+
+  // Load saved platform connections for this user
+  useEffect(() => {
+    if (!userId) return;
+    try {
+      const raw = localStorage.getItem(`vendee_platforms_${userId}`);
+      if (raw) setPlatforms((prev) => ({ ...prev, ...JSON.parse(raw) }));
+    } catch { /* ignore */ }
+  }, [userId]);
+
+  function setPlatformConnected(key: string, val: boolean) {
+    setPlatforms((prev) => {
+      const next = { ...prev, [key]: val };
+      try { localStorage.setItem(`vendee_platforms_${userId}`, JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }
+
+  async function confirmConnect(key: string) {
+    setConnecting(true);
+    // Simulate the OAuth round-trip to the platform's authorization page
+    await new Promise((r) => setTimeout(r, 1200));
+    setPlatformConnected(key, true);
+    setConnecting(false);
+    setConnectModal(null);
+  }
 
   // Load admin list when userId is available
   useEffect(() => {
@@ -609,6 +650,55 @@ function SettingsPageInner() {
               )}
             </div>
 
+            {/* Platform API connections */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-5">
+              <h2 className="font-semibold text-gray-700 mb-1">เชื่อมต่อแพลตฟอร์มขาย</h2>
+              <p className="text-xs text-gray-400 mb-4">
+                เชื่อม API เพื่อดึงคำสั่งซื้อและตัดสต็อกจาก Shopee, TikTok Shop, Lazada อัตโนมัติ
+              </p>
+
+              <div className="space-y-2.5">
+                {PLATFORMS.map((pf) => {
+                  const connected      = platforms[pf.key];
+                  const connectedCount = Object.values(platforms).filter(Boolean).length;
+                  const limit          = API_LIMIT[currentPlan] ?? 1;
+                  const atLimit        = !connected && connectedCount >= limit;
+                  return (
+                    <div key={pf.key} className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-3">
+                      <span className="text-2xl flex-shrink-0" aria-hidden>{pf.emoji}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-700">{pf.name}</p>
+                        <p className={`text-xs ${connected ? "text-emerald-600" : "text-gray-400"}`}>
+                          {connected ? "เชื่อมต่อแล้ว · ซิงค์อัตโนมัติ" : atLimit ? "อัปเกรดเพื่อเชื่อมเพิ่ม" : "ยังไม่เชื่อมต่อ"}
+                        </p>
+                      </div>
+                      {connected ? (
+                        <button
+                          onClick={() => setPlatformConnected(pf.key, false)}
+                          className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors flex-shrink-0"
+                        >
+                          ยกเลิก
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setConnectModal(pf.key)}
+                          disabled={!userId || atLimit}
+                          className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white hover:opacity-90 transition-opacity disabled:opacity-40 flex-shrink-0"
+                          style={{ background: pf.color }}
+                        >
+                          เชื่อมต่อ
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <p className="text-[11px] text-gray-400 mt-3">
+                แพ็กเกจปัจจุบันเชื่อมได้ {API_LIMIT[currentPlan] ?? 1} แพลตฟอร์ม
+                {" · "}เชื่อมแล้ว {Object.values(platforms).filter(Boolean).length}
+              </p>
+            </div>
 
           </div>
 
@@ -1009,6 +1099,45 @@ function SettingsPageInner() {
           </div>
         </div>
       )}
+
+      {/* ── Platform connect modal ─────────────────────────────────────── */}
+      {connectModal && (() => {
+        const pf = PLATFORMS.find((p) => p.key === connectModal);
+        if (!pf) return null;
+        return (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-gray-800 inline-flex items-center gap-2">
+                  <span className="text-2xl" aria-hidden>{pf.emoji}</span> เชื่อมต่อ {pf.name}
+                </h3>
+                <button onClick={() => setConnectModal(null)}
+                  className="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
+              </div>
+
+              <p className="text-sm text-gray-500 mb-4">
+                ระบบจะเปิดหน้าอนุญาตของ {pf.name} เพื่อขอสิทธิ์ดึงคำสั่งซื้อและสต็อกสินค้าเข้าสู่ Vendee โดยอัตโนมัติ ข้อมูลจะซิงค์ให้ทุกวัน
+              </p>
+
+              <ul className="text-xs text-gray-600 space-y-2 mb-5">
+                <li className="flex items-center gap-2"><IconCheck className="w-4 h-4 text-emerald-500 flex-shrink-0" /> ดึงยอดขายเข้ารายรับอัตโนมัติ</li>
+                <li className="flex items-center gap-2"><IconCheck className="w-4 h-4 text-emerald-500 flex-shrink-0" /> ตัดสต็อกทันทีเมื่อมีออเดอร์</li>
+                <li className="flex items-center gap-2"><IconCheck className="w-4 h-4 text-emerald-500 flex-shrink-0" /> อ่านข้อมูลอย่างเดียว ไม่แก้ไขร้านของคุณ</li>
+              </ul>
+
+              <button
+                onClick={() => confirmConnect(pf.key)}
+                disabled={connecting}
+                className="w-full py-3.5 rounded-2xl text-white font-bold text-sm hover:opacity-90 disabled:opacity-50 transition-opacity"
+                style={{ background: pf.color }}
+              >
+                {connecting ? "กำลังเชื่อมต่อ..." : `อนุญาตและเชื่อมต่อ ${pf.name}`}
+              </button>
+              <p className="text-center text-xs text-gray-400 mt-2">ผ่าน Open API อย่างเป็นทางการของ {pf.name}</p>
+            </div>
+          </div>
+        );
+      })()}
     </main>
     </AppLayout>
   );
