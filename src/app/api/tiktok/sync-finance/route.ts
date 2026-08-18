@@ -102,7 +102,7 @@ async function run(req: NextRequest) {
       synced += chunk.length;
     }
 
-    const totals = rows.reduce(
+    const totals = rows.reduce<{ revenue: number; fee: number; adjustment: number; net: number }>(
       (a, r) => ({
         revenue: a.revenue + num(r.revenue_amount),
         fee: a.fee + num(r.fee_amount),
