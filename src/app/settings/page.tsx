@@ -105,6 +105,7 @@ function SettingsPageInner() {
   const [platforms,    setPlatforms]    = useState<Record<string, boolean>>({ shopee: false, tiktok: false, lazada: false });
   const [connectModal, setConnectModal] = useState<string | null>(null);
   const [connecting,   setConnecting]   = useState(false);
+  const [syncingTiktok, setSyncingTiktok] = useState(false);
 
   const { data: session, status: sessionStatus } = useSession();
   const searchParams = useSearchParams();
@@ -281,7 +282,10 @@ function SettingsPageInner() {
         tt === "connected"    ? "เชื่อมต่อ TikTok Shop สำเร็จ" :
         tt === "misconfigured" ? "ระบบยังตั้งค่า TikTok ไม่ครบ กรุณาติดต่อผู้ดูแล" :
                                  "เชื่อมต่อ TikTok Shop ไม่สำเร็จ ลองใหม่อีกครั้ง";
-      if (tt === "connected") setPlatformConnected("tiktok", true);
+      if (tt === "connected") {
+        setPlatformConnected("tiktok", true);
+        handleSyncTiktok(); // pull orders right after connecting
+      }
       setSyncResult({ synced: 0, failed: 0, skipped: 0, message: msg });
       const url = new URL(window.location.href);
       url.searchParams.delete("tiktok");
@@ -319,6 +323,23 @@ function SettingsPageInner() {
       } catch { /* ignore */ }
     }
     setPlatformConnected(key, false);
+  }
+
+  async function handleSyncTiktok() {
+    if (!userId || syncingTiktok) return;
+    setSyncingTiktok(true);
+    setSyncResult(null);
+    try {
+      const r = await fetch(`/api/tiktok/sync?userId=${userId}&days=90`, { method: "POST" }).then((x) => x.json());
+      setSyncResult(
+        r.ok
+          ? { synced: r.lines_synced ?? 0, failed: 0, skipped: r.orders_skipped ?? 0, message: `ซิงค์ TikTok สำเร็จ · ${r.lines_synced ?? 0} รายการ` }
+          : { synced: 0, failed: 0, skipped: 0, message: `ซิงค์ไม่สำเร็จ: ${r.error ?? "unknown"}` }
+      );
+    } catch {
+      setSyncResult({ synced: 0, failed: 0, skipped: 0, message: "ซิงค์ไม่สำเร็จ ลองใหม่อีกครั้ง" });
+    }
+    setSyncingTiktok(false);
   }
 
   // Load admin list when userId is available
@@ -710,12 +731,23 @@ function SettingsPageInner() {
                         </p>
                       </div>
                       {connected ? (
-                        <button
-                          onClick={() => handleDisconnect(pf.key)}
-                          className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors flex-shrink-0"
-                        >
-                          ยกเลิก
-                        </button>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {pf.key === "tiktok" && (
+                            <button
+                              onClick={handleSyncTiktok}
+                              disabled={syncingTiktok}
+                              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 disabled:opacity-50 transition-colors"
+                            >
+                              {syncingTiktok ? "กำลังซิงค์..." : "ซิงค์"}
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleDisconnect(pf.key)}
+                            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
+                          >
+                            ยกเลิก
+                          </button>
+                        </div>
                       ) : (
                         <button
                           onClick={() => setConnectModal(pf.key)}
