@@ -525,12 +525,12 @@ export default function RaiRab() {
                     </div>
                     <div className="flex justify-between text-rose-500">
                       <span>− ค่าธรรมเนียม (GP)</span>
-                      <span>฿{summary.settlement.fee.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</span>
+                      <span>฿{Math.abs(summary.settlement.fee).toLocaleString("th-TH", { minimumFractionDigits: 2 })}</span>
                     </div>
                     {summary.settlement.adjustment !== 0 && (
                       <div className="flex justify-between text-amber-600">
-                        <span>± การปรับยอด</span>
-                        <span>฿{summary.settlement.adjustment.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</span>
+                        <span>{summary.settlement.adjustment < 0 ? "−" : "+"} การปรับยอด</span>
+                        <span>฿{Math.abs(summary.settlement.adjustment).toLocaleString("th-TH", { minimumFractionDigits: 2 })}</span>
                       </div>
                     )}
                   </div>
@@ -698,6 +698,25 @@ export default function RaiRab() {
                 <p className="text-sm font-bold text-[#0A192F]">รายการรายรับล่าสุด</p>
                 <span className="text-xs text-gray-400">ทั้งหมด {recentTxns.length} รายการ</span>
               </div>
+
+              {/* Gross → fees → net breakdown (from TikTok settlements) */}
+              {summary?.settlement?.hasData && (
+                <div className="grid grid-cols-3 divide-x divide-gray-100 border-b border-gray-100 text-center bg-gray-50/50">
+                  <div className="px-3 py-3">
+                    <p className="text-[11px] text-gray-400">ยอดขายรวม</p>
+                    <p className="text-sm font-bold text-[#0A192F]">฿{summary.settlement.revenue.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</p>
+                  </div>
+                  <div className="px-3 py-3">
+                    <p className="text-[11px] text-gray-400">ค่าธรรมเนียม (GP)</p>
+                    <p className="text-sm font-bold text-rose-500">−฿{Math.abs(summary.settlement.fee).toLocaleString("th-TH", { minimumFractionDigits: 2 })}</p>
+                  </div>
+                  <div className="px-3 py-3">
+                    <p className="text-[11px] text-gray-400">เงินเข้าจริง</p>
+                    <p className="text-sm font-bold text-emerald-600">฿{summary.settlement.net.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</p>
+                  </div>
+                </div>
+              )}
+
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>

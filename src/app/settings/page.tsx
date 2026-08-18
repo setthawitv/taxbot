@@ -339,6 +339,7 @@ function SettingsPageInner() {
       const parts: string[] = [];
       if (orders.ok)   parts.push(`ออเดอร์ ${orders.lines_synced ?? 0}`);
       if (products.ok) parts.push(`สินค้า ${(products.products_inserted ?? 0) + (products.products_updated ?? 0)}`);
+      else             parts.push(`สินค้าล้มเหลว (${products.error ?? "?"})`);
       if (finance.ok)  parts.push(`การเงิน ${finance.statements ?? 0}`);
       const anyOk = orders.ok || products.ok || finance.ok;
       setSyncResult({
