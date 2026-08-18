@@ -6,7 +6,7 @@ export const metadata = {
   description: "นโยบายความเป็นส่วนตัวของ Vendee Finance",
 };
 
-const UPDATED = "1 มกราคม 2026";
+const UPDATED = "18 สิงหาคม 2026";
 
 export default function PrivacyPolicyPage() {
   return (
@@ -45,6 +45,7 @@ export default function PrivacyPolicyPage() {
             <li><strong>รายการบัญชี</strong> — รายรับ-รายจ่ายที่คุณบันทึก, รูปใบเสร็จที่อัปโหลด</li>
             <li><strong>ข้อมูลภาษี</strong> — ค่าลดหย่อน, ตัวเลขที่กรอกในเครื่องคำนวณ</li>
             <li><strong>Google Drive / Sheets</strong> — เฉพาะไฟล์ที่ Vendee Finance สร้างเอง (ผ่าน scope <code>drive.file</code>)</li>
+            <li><strong>ข้อมูลร้านค้าจากแพลตฟอร์ม</strong> — ออเดอร์, รายการสินค้า/สต็อก และยอดชำระเงิน (settlement) จาก TikTok Shop / Shopee / Lazada เฉพาะเมื่อผู้ใช้เชื่อมต่อและอนุญาต (ผ่าน API ทางการของแพลตฟอร์ม)</li>
           </ul>
 
           <h2 className="text-lg font-bold text-white mt-8">2. การใช้งานข้อมูล</h2>
@@ -71,43 +72,60 @@ export default function PrivacyPolicyPage() {
             <li>มนุษย์จะอ่านข้อมูลของผู้ใช้เฉพาะกรณี: (1) ผู้ใช้ยินยอม (2) เพื่อความปลอดภัย/ป้องกันการละเมิด (3) กฎหมายบังคับ</li>
           </ul>
 
-          <h2 className="text-lg font-bold text-white mt-8">4. การจัดเก็บข้อมูล</h2>
+          <h2 className="text-lg font-bold text-white mt-8">4. การเชื่อมต่อแพลตฟอร์มร้านค้า (TikTok Shop / Shopee / Lazada)</h2>
+          <p>
+            หากผู้ใช้เลือกเชื่อมต่อร้านค้าของตนเอง Vendee Finance จะเข้าถึงข้อมูลของร้านนั้น
+            ผ่าน API ทางการของแพลตฟอร์ม โดยมีเงื่อนไขดังนี้:
+          </p>
           <ul className="list-disc pl-6 space-y-1.5">
-            <li><strong>Supabase (PostgreSQL)</strong> — โปรไฟล์, รายการบัญชี, การตั้งค่า</li>
+            <li>เราเข้าถึงข้อมูลได้<strong>ต่อเมื่อผู้ใช้อนุญาต (authorize)</strong> ผ่านหน้ายืนยันสิทธิ์ของแพลตฟอร์มเท่านั้น — เราไม่เคยเก็บรหัสผ่าน Seller Center ของผู้ใช้</li>
+            <li><strong>ข้อมูลที่เข้าถึง</strong>: รายการออเดอร์, ข้อมูลสินค้า/สต็อก และยอดชำระเงิน (sales &amp; fees) เพื่อสรุปรายรับ-รายจ่าย, สต็อก และประมาณการภาษีให้ผู้ใช้</li>
+            <li>ใช้ข้อมูล<strong>เพื่อให้บริการแก่เจ้าของร้านผู้เชื่อมต่อเท่านั้น</strong> ไม่นำไปใช้เพื่อวัตถุประสงค์อื่นของเรา</li>
+            <li>เรา<strong>ไม่ขาย ไม่แลกเปลี่ยน ไม่ส่งต่อ</strong>ข้อมูลร้านค้าให้บุคคลที่สาม และไม่นำไปรวม (aggregate) เพื่อประโยชน์ของเราเอง</li>
+            <li>เรา<strong>ไม่นำข้อมูลไปฝึก AI / Machine Learning</strong></li>
+            <li><strong>เมื่อผู้ใช้ถอนสิทธิ์ (revoke)</strong> หรือยกเลิกการเชื่อมต่อ เราจะหยุดเข้าถึงทันที และลบข้อมูลที่ไม่จำเป็นต้องเก็บออกภายใน 30 วัน</li>
+            <li>ผู้ใช้ถอนสิทธิ์ได้ที่หน้า <strong>ตั้งค่า</strong> ในแอพ หรือใน Seller Center ของแต่ละแพลตฟอร์ม</li>
+            <li>Vendee Finance เป็นผู้ให้บริการอิสระ <strong>ไม่ได้เป็นพาร์ทเนอร์ทางการ</strong>ของ TikTok, Shopee หรือ Lazada เว้นแต่ระบุไว้เป็นลายลักษณ์อักษร</li>
+          </ul>
+
+          <h2 className="text-lg font-bold text-white mt-8">5. การจัดเก็บข้อมูล</h2>
+          <ul className="list-disc pl-6 space-y-1.5">
+            <li><strong>Supabase (PostgreSQL)</strong> — โปรไฟล์, รายการบัญชี, การตั้งค่า, ออเดอร์/สต็อกที่ซิงค์จากแพลตฟอร์ม</li>
             <li><strong>Google Drive (ของผู้ใช้)</strong> — รูปใบเสร็จและ PDF ที่ระบบสร้าง</li>
             <li><strong>Google Sheets (ของผู้ใช้)</strong> — สำเนารายการแบบ tabular</li>
             <li><strong>Vercel</strong> — โฮสต์ web application (server-side execution)</li>
             <li><strong>Anthropic Claude API</strong> — วิเคราะห์ใบเสร็จ (รูปจะถูกส่งไปประมวลผลเพื่ออ่านยอด, ไม่ถูกเก็บถาวรที่ Anthropic)</li>
           </ul>
 
-          <h2 className="text-lg font-bold text-white mt-8">5. สิทธิ์ของผู้ใช้</h2>
+          <h2 className="text-lg font-bold text-white mt-8">6. สิทธิ์ของผู้ใช้</h2>
           <ul className="list-disc pl-6 space-y-1.5">
             <li>ขอดูข้อมูลทั้งหมดที่เราเก็บได้</li>
             <li>แก้ไข/ลบรายการได้เองในแอพ</li>
             <li>ขอลบบัญชีและข้อมูลทั้งหมดได้โดยส่งอีเมลถึงเรา</li>
             <li>ยกเลิกการเชื่อมต่อ Google ได้ที่ <a className="text-blue-400 underline" href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">myaccount.google.com/permissions</a></li>
+            <li>ยกเลิกการเชื่อมต่อร้านค้า (TikTok Shop / Shopee / Lazada) ได้ที่หน้า <strong>ตั้งค่า</strong> ในแอพ</li>
           </ul>
 
-          <h2 className="text-lg font-bold text-white mt-8">6. ความปลอดภัย</h2>
+          <h2 className="text-lg font-bold text-white mt-8">7. ความปลอดภัย</h2>
           <ul className="list-disc pl-6 space-y-1.5">
             <li>การส่งข้อมูลใช้ HTTPS/TLS ทั้งหมด</li>
             <li>OAuth 2.0 สำหรับการยืนยันตัวตน — เราไม่เก็บรหัสผ่าน Google ของผู้ใช้</li>
             <li>Token เข้ารหัสและเก็บใน database ที่จำกัดสิทธิ์การเข้าถึง</li>
           </ul>
 
-          <h2 className="text-lg font-bold text-white mt-8">7. คุกกี้ / Local Storage</h2>
+          <h2 className="text-lg font-bold text-white mt-8">8. คุกกี้ / Local Storage</h2>
           <p>
             เราใช้ session cookie สำหรับการ login และ localStorage สำหรับเก็บค่าที่ผู้ใช้กรอก
             (เช่น ค่าลดหย่อนภาษี) ไม่มีการใช้ tracking cookie สำหรับโฆษณา
           </p>
 
-          <h2 className="text-lg font-bold text-white mt-8">8. การเปลี่ยนแปลงนโยบาย</h2>
+          <h2 className="text-lg font-bold text-white mt-8">9. การเปลี่ยนแปลงนโยบาย</h2>
           <p>
             เราอาจปรับปรุงนโยบายนี้เมื่อจำเป็น
             การเปลี่ยนแปลงสำคัญจะแจ้งผู้ใช้ทางอีเมลหรือใน LINE
           </p>
 
-          <h2 className="text-lg font-bold text-white mt-8">9. ติดต่อเรา</h2>
+          <h2 className="text-lg font-bold text-white mt-8">10. ติดต่อเรา</h2>
           <p>
             หากมีคำถามเกี่ยวกับ Privacy Policy นี้ ติดต่อได้ที่: <br/>
             <strong>Email:</strong> <a className="text-blue-400 underline" href="mailto:admin@vendeefinance.com">admin@vendeefinance.com</a> <br/>
@@ -128,8 +146,11 @@ export default function PrivacyPolicyPage() {
             <li><code>drive.file</code> scope — used <strong>only</strong> to create and manage files (PDF receipts, spreadsheets) that the app itself created. We never access the user&apos;s other Drive content.</li>
           </ul>
           <p><strong>What we do with the data:</strong> calculate Thai income tax estimates, sync transactions to user-owned Google Sheets, store receipt PDFs in a user-owned Drive folder.</p>
-          <p><strong>What we never do:</strong> sell user data, transfer to third parties for ads, use for ML training, or allow humans to read user data except for security/legal purposes or with explicit user consent.</p>
-          <p>To revoke access, visit <a className="text-blue-400 underline" href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">myaccount.google.com/permissions</a>. To request data deletion email <a className="text-blue-400 underline" href="mailto:admin@vendeefinance.com">admin@vendeefinance.com</a>.</p>
+
+          <p className="mt-4"><strong>Marketplace platform data (TikTok Shop / Shopee / Lazada):</strong> When a seller connects their shop, we access their orders, product/inventory, and settlement (sales &amp; fees) data <strong>only via the platform&apos;s official API and only after the seller authorizes us</strong>. We use this data <strong>solely to provide bookkeeping, inventory, and tax-estimate services to that seller</strong>. We never sell, trade, share with third parties, aggregate for our own purposes, or use it for AI/ML training. When a seller revokes access or disconnects, we stop accessing their data immediately and delete data we no longer need within 30 days. Sellers can disconnect from the in-app <strong>Settings</strong> page or from their platform Seller Center. Vendee Finance is an independent service and is <strong>not an official partner</strong> of TikTok, Shopee, or Lazada unless stated in writing.</p>
+
+          <p className="mt-4"><strong>What we never do:</strong> sell user data, transfer to third parties for ads, use for ML training, or allow humans to read user data except for security/legal purposes or with explicit user consent.</p>
+          <p>To revoke access, visit <a className="text-blue-400 underline" href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">myaccount.google.com/permissions</a> (Google) or the in-app Settings page (marketplace platforms). To request data deletion email <a className="text-blue-400 underline" href="mailto:admin@vendeefinance.com">admin@vendeefinance.com</a>.</p>
         </section>
 
         <footer className="mt-16 pt-6 border-t border-white/10 text-gray-500 text-xs">

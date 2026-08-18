@@ -6,7 +6,7 @@ export const metadata = {
   description: "ข้อกำหนดและเงื่อนไขการใช้งาน Vendee Finance",
 };
 
-const UPDATED = "1 มกราคม 2026";
+const UPDATED = "18 สิงหาคม 2026";
 
 export default function TermsPage() {
   return (
@@ -92,19 +92,29 @@ export default function TermsPage() {
             <li>เมื่อยกเลิกบัญชี ข้อมูลของคุณจะถูกลบภายใน 30 วัน (ยกเว้นที่กฎหมายบังคับให้เก็บ)</li>
           </ul>
 
-          <h2 className="text-lg font-bold text-white mt-8">8. การระงับ/ยกเลิกบัญชี</h2>
+          <h2 className="text-lg font-bold text-white mt-8">8. การเชื่อมต่อร้านค้าจากแพลตฟอร์ม (TikTok Shop / Shopee / Lazada)</h2>
+          <ul className="list-disc pl-6 space-y-1.5">
+            <li>คุณเชื่อมต่อได้เฉพาะร้านค้า<strong>ของคุณเอง</strong> และรับรองว่าคุณมีสิทธิ์โดยชอบด้วยกฎหมายในบัญชีร้านนั้น</li>
+            <li>เมื่อเชื่อมต่อ คุณ<strong>อนุญาต</strong>ให้ Vendee Finance เข้าถึงข้อมูลออเดอร์ สินค้า/สต็อก และยอดชำระเงินของร้าน ผ่าน API ทางการของแพลตฟอร์ม เพื่อจัดทำบัญชี สรุปสต็อก และประมาณการภาษีให้คุณ</li>
+            <li>คุณ<strong>ถอนสิทธิ์หรือยกเลิกการเชื่อมต่อได้ทุกเมื่อ</strong> ที่หน้าตั้งค่า หรือใน Seller Center ของแพลตฟอร์ม — เมื่อถอนสิทธิ์ เราจะหยุดเข้าถึงข้อมูลทันที</li>
+            <li>การใช้งานส่วนที่เชื่อมต่อแพลตฟอร์มยังอยู่ภายใต้<strong>ข้อกำหนดของแพลตฟอร์มนั้นๆ</strong> (เช่น TikTok Shop Developer Terms) ด้วย</li>
+            <li>ข้อมูลจากแพลตฟอร์มให้บริการ<strong>ตามสภาพ (as is)</strong> — Vendee Finance ไม่รับประกันความถูกต้อง ครบถ้วน หรือความพร้อมใช้งานของข้อมูลที่ได้รับจากแพลตฟอร์ม</li>
+            <li>Vendee Finance เป็นผู้ให้บริการอิสระ ไม่ได้เป็นพาร์ทเนอร์ทางการของแพลตฟอร์มใดๆ เว้นแต่ระบุเป็นลายลักษณ์อักษร</li>
+          </ul>
+
+          <h2 className="text-lg font-bold text-white mt-8">9. การระงับ/ยกเลิกบัญชี</h2>
           <p>เรามีสิทธิ์ระงับหรือยกเลิกบัญชีหากตรวจพบการละเมิดเงื่อนไข โดยไม่ต้องคืนเงิน</p>
 
-          <h2 className="text-lg font-bold text-white mt-8">9. ทรัพย์สินทางปัญญา</h2>
+          <h2 className="text-lg font-bold text-white mt-8">10. ทรัพย์สินทางปัญญา</h2>
           <p>โค้ด, ดีไซน์, โลโก้, ชื่อ "Vendee Finance" เป็นทรัพย์สินทางปัญญาของเรา ห้ามคัดลอกหรือดัดแปลงโดยไม่ได้รับอนุญาต</p>
 
-          <h2 className="text-lg font-bold text-white mt-8">10. การเปลี่ยนแปลงเงื่อนไข</h2>
+          <h2 className="text-lg font-bold text-white mt-8">11. การเปลี่ยนแปลงเงื่อนไข</h2>
           <p>เราอาจปรับปรุงเงื่อนไขนี้ในอนาคต โดยจะแจ้งล่วงหน้าทางอีเมลหรือใน LINE</p>
 
-          <h2 className="text-lg font-bold text-white mt-8">11. กฎหมายที่ใช้บังคับ</h2>
+          <h2 className="text-lg font-bold text-white mt-8">12. กฎหมายที่ใช้บังคับ</h2>
           <p>เงื่อนไขนี้อยู่ภายใต้กฎหมายไทย กรณีพิพาทใช้ศาลในกรุงเทพมหานครเป็นเขตอำนาจศาล</p>
 
-          <h2 className="text-lg font-bold text-white mt-8">12. ติดต่อเรา</h2>
+          <h2 className="text-lg font-bold text-white mt-8">13. ติดต่อเรา</h2>
           <p>
             <strong>Email:</strong> <a className="text-blue-400 underline" href="mailto:admin@vendeefinance.com">admin@vendeefinance.com</a>
           </p>
