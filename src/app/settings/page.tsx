@@ -267,6 +267,29 @@ function SettingsPageInner() {
     } catch { /* ignore */ }
   }, [userId]);
 
+  // Load the real TikTok Shop connection status + surface the OAuth return result.
+  useEffect(() => {
+    if (!userId) return;
+    fetch(`/api/tiktok/status?userId=${userId}`)
+      .then((r) => r.json())
+      .then((d) => setPlatforms((prev) => ({ ...prev, tiktok: !!d.connected })))
+      .catch(() => { /* ignore */ });
+
+    const tt = searchParams.get("tiktok");
+    if (tt) {
+      const msg =
+        tt === "connected"    ? "เชื่อมต่อ TikTok Shop สำเร็จ" :
+        tt === "misconfigured" ? "ระบบยังตั้งค่า TikTok ไม่ครบ กรุณาติดต่อผู้ดูแล" :
+                                 "เชื่อมต่อ TikTok Shop ไม่สำเร็จ ลองใหม่อีกครั้ง";
+      if (tt === "connected") setPlatformConnected("tiktok", true);
+      setSyncResult({ synced: 0, failed: 0, skipped: 0, message: msg });
+      const url = new URL(window.location.href);
+      url.searchParams.delete("tiktok");
+      window.history.replaceState({}, "", url.toString());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
   function setPlatformConnected(key: string, val: boolean) {
     setPlatforms((prev) => {
       const next = { ...prev, [key]: val };
@@ -276,12 +299,26 @@ function SettingsPageInner() {
   }
 
   async function confirmConnect(key: string) {
+    // TikTok Shop uses the real OAuth flow — redirect to the seller authorization page.
+    if (key === "tiktok") {
+      window.location.href = "/api/tiktok/connect";
+      return;
+    }
+    // Shopee / Lazada: simulated connection until their APIs are wired.
     setConnecting(true);
-    // Simulate the OAuth round-trip to the platform's authorization page
     await new Promise((r) => setTimeout(r, 1200));
     setPlatformConnected(key, true);
     setConnecting(false);
     setConnectModal(null);
+  }
+
+  async function handleDisconnect(key: string) {
+    if (key === "tiktok") {
+      try {
+        await fetch(`/api/tiktok/disconnect?userId=${userId}`, { method: "POST" });
+      } catch { /* ignore */ }
+    }
+    setPlatformConnected(key, false);
   }
 
   // Load admin list when userId is available
@@ -674,7 +711,7 @@ function SettingsPageInner() {
                       </div>
                       {connected ? (
                         <button
-                          onClick={() => setPlatformConnected(pf.key, false)}
+                          onClick={() => handleDisconnect(pf.key)}
                           className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors flex-shrink-0"
                         >
                           ยกเลิก
