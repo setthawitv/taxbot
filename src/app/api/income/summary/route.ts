@@ -98,5 +98,26 @@ export async function GET(req: NextRequest) {
     byMonth[m].total += Number(r.amount);
   }
 
-  return NextResponse.json({ total, count, byPlatform, byMonth, year, month, platform });
+  // ── Settlement (real payout after fees) from platform_settlements ─────────
+  const settlement = { revenue: 0, fee: 0, adjustment: 0, net: 0, hasData: false };
+  if (platform !== "manual") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let sQuery: any = supabaseAdmin
+      .from("platform_settlements")
+      .select("revenue_amount, fee_amount, adjustment_amount, settlement_amount")
+      .eq("user_id", user.id)
+      .gte("statement_time", dateFrom)
+      .lte("statement_time", `${dateTo}T23:59:59`);
+    if (platform !== "all") sQuery = sQuery.eq("platform", platform);
+    const { data: sRows } = await sQuery;
+    for (const r of sRows ?? []) {
+      settlement.revenue += Number(r.revenue_amount ?? 0);
+      settlement.fee += Number(r.fee_amount ?? 0);
+      settlement.adjustment += Number(r.adjustment_amount ?? 0);
+      settlement.net += Number(r.settlement_amount ?? 0);
+    }
+    settlement.hasData = (sRows?.length ?? 0) > 0;
+  }
+
+  return NextResponse.json({ total, count, byPlatform, byMonth, settlement, year, month, platform });
 }

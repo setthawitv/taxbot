@@ -10,7 +10,6 @@ import { tiktokRequest } from "@/lib/tiktok";
 // Idempotent on (user_id, platform, statement_id).
 // debug=1 → dry run, returns statement field names only (no writes).
 
-const STATEMENTS = "/finance/202501/statements";
 const PAGE_SIZE = 50;
 const MAX_PAGES = 30;
 
@@ -37,6 +36,8 @@ async function run(req: NextRequest) {
 
   const days = Math.min(parseInt(searchParams.get("days") ?? "90"), 365);
   const debug = searchParams.get("debug") === "1";
+  const ver = searchParams.get("ver") ?? "202309"; // 202501 is invalid; try 202309/202405
+  const STATEMENTS = `/finance/${ver}/statements`;
   const nowSec = Math.floor(Date.now() / 1000);
   const startSec = nowSec - days * 86400;
 
@@ -57,7 +58,7 @@ async function run(req: NextRequest) {
       const json = await tiktokRequest("GET", STATEMENTS, conn.access_token, conn.shop_cipher, { query });
       if (json.code !== 0) {
         return NextResponse.json(
-          { ok: false, error: `statements: ${json.code} ${json.message ?? ""}`.trim() },
+          { ok: false, ver, error: `statements: ${json.code} ${json.message ?? ""}`.trim() },
           { status: 502 }
         );
       }

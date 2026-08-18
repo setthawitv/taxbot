@@ -28,6 +28,7 @@ type Summary = {
   count:      number;
   byPlatform: Record<string, number>;
   byMonth:    { month: number; total: number }[];
+  settlement?: { revenue: number; fee: number; adjustment: number; net: number; hasData: boolean };
 };
 
 type AdjustEntry = { id: string; amount: number; vendor: string; transaction_date: string };
@@ -504,10 +505,43 @@ export default function RaiRab() {
                   <p className="text-3xl font-bold mt-1">
                     ฿{(summary?.total ?? 0).toLocaleString("th-TH", { minimumFractionDigits: 2 })}
                   </p>
-                  <p className="text-sm opacity-70 mt-1">{summary?.count ?? 0} คำสั่งซื้อ</p>
+                  <p className="text-sm opacity-70 mt-1">{summary?.count ?? 0} คำสั่งซื้อ · ยอดขายก่อนหักค่าธรรมเนียม</p>
                 </>
               )}
             </div>
+
+            {/* Net payout card (real money in, after platform fees) */}
+            {!loading && (
+              summary?.settlement?.hasData ? (
+                <div className="bg-white rounded-2xl border border-gray-200 p-5">
+                  <p className="text-sm text-gray-500">เงินเข้าจริง (หลังหักค่าธรรมเนียม)</p>
+                  <p className="text-3xl font-bold mt-1 text-[#0A192F]">
+                    ฿{summary.settlement.net.toLocaleString("th-TH", { minimumFractionDigits: 2 })}
+                  </p>
+                  <div className="mt-3 space-y-1.5 text-sm">
+                    <div className="flex justify-between text-gray-500">
+                      <span>ยอดขายรวม</span>
+                      <span>฿{summary.settlement.revenue.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="flex justify-between text-rose-500">
+                      <span>− ค่าธรรมเนียม (GP)</span>
+                      <span>฿{summary.settlement.fee.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    {summary.settlement.adjustment !== 0 && (
+                      <div className="flex justify-between text-amber-600">
+                        <span>± การปรับยอด</span>
+                        <span>฿{summary.settlement.adjustment.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-gray-50 rounded-2xl border border-dashed border-gray-300 p-4">
+                  <p className="text-sm text-gray-500">เงินเข้าจริง (หลังหักค่าธรรมเนียม)</p>
+                  <p className="text-xs text-gray-400 mt-1">ยังไม่มีข้อมูลการเงิน — กด &quot;ซิงค์&quot; ในหน้าตั้งค่าเพื่อดึงค่าธรรมเนียมจาก TikTok</p>
+                </div>
+              )
+            )}
 
             {/* Add manual income form */}
             {showAdd && (
