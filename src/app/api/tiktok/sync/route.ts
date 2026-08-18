@@ -97,8 +97,9 @@ async function run(req: NextRequest) {
             user_id: userId,
             platform: "tiktok",
             order_id: String(o.id),
-            sku_line_id: li.id ? String(li.id) : null,
-            line_key: `${o.id}-${li.id ?? rows.length}`,
+            sku_line_id: li.sku_id ? String(li.sku_id) : null, // SKU ID → matches products.sku
+            line_key: `${o.id}-${li.id ?? rows.length}`,        // line_item id → unique per unit
+
             product_name: li.product_name ?? null,
             variant: li.sku_name ?? null,
             seller_sku: li.seller_sku ?? null,
