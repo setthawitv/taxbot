@@ -162,6 +162,41 @@ export type TikTokShop = {
   code?: string;
 };
 
+/**
+ * Signed business-API request (open-api host). Adds app_key, timestamp and
+ * shop_cipher to the query, signs, and sends the access token in the header.
+ * Returns the parsed JSON (caller checks `code`).
+ */
+export async function tiktokRequest(
+  method: "GET" | "POST",
+  path: string,
+  accessToken: string,
+  shopCipher: string,
+  opts: { query?: Record<string, string | number>; body?: unknown } = {}
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<any> {
+  const query: Record<string, string | number> = {
+    app_key: TIKTOK_APP_KEY,
+    timestamp: tiktokTimestamp(),
+    shop_cipher: shopCipher,
+    ...(opts.query ?? {}),
+  };
+  const bodyStr = opts.body !== undefined ? JSON.stringify(opts.body) : "";
+  const sign = signRequest(path, query, bodyStr);
+
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(query)) qs.set(k, String(v));
+  qs.set("sign", sign);
+
+  const res = await fetch(`${TIKTOK_API_BASE}${path}?${qs.toString()}`, {
+    method,
+    headers: { "x-tts-access-token": accessToken, "content-type": "application/json" },
+    body: method === "POST" ? bodyStr : undefined,
+    cache: "no-store",
+  });
+  return res.json();
+}
+
 export async function getAuthorizedShops(accessToken: string): Promise<TikTokShop[]> {
   const path = "/authorization/202309/shops";
   const query: Record<string, string | number> = {
