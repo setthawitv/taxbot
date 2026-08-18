@@ -330,12 +330,25 @@ function SettingsPageInner() {
     setSyncingTiktok(true);
     setSyncResult(null);
     try {
-      const r = await fetch(`/api/tiktok/sync?userId=${userId}&days=90`, { method: "POST" }).then((x) => x.json());
-      setSyncResult(
-        r.ok
-          ? { synced: r.lines_synced ?? 0, failed: 0, skipped: r.orders_skipped ?? 0, message: `ซิงค์ TikTok สำเร็จ · ${r.lines_synced ?? 0} รายการ` }
-          : { synced: 0, failed: 0, skipped: 0, message: `ซิงค์ไม่สำเร็จ: ${r.error ?? "unknown"}` }
-      );
+      // Pull everything: orders (income), products (stock), finance (fees/net).
+      const [orders, products, finance] = await Promise.all([
+        fetch(`/api/tiktok/sync?userId=${userId}&days=90`, { method: "POST" }).then((x) => x.json()).catch(() => ({ ok: false })),
+        fetch(`/api/tiktok/sync-products?userId=${userId}`, { method: "POST" }).then((x) => x.json()).catch(() => ({ ok: false })),
+        fetch(`/api/tiktok/sync-finance?userId=${userId}&days=90`, { method: "POST" }).then((x) => x.json()).catch(() => ({ ok: false })),
+      ]);
+      const parts: string[] = [];
+      if (orders.ok)   parts.push(`ออเดอร์ ${orders.lines_synced ?? 0}`);
+      if (products.ok) parts.push(`สินค้า ${(products.products_inserted ?? 0) + (products.products_updated ?? 0)}`);
+      if (finance.ok)  parts.push(`การเงิน ${finance.statements ?? 0}`);
+      const anyOk = orders.ok || products.ok || finance.ok;
+      setSyncResult({
+        synced: orders.lines_synced ?? 0,
+        failed: 0,
+        skipped: orders.orders_skipped ?? 0,
+        message: anyOk
+          ? `ซิงค์ TikTok สำเร็จ · ${parts.join(" · ")}`
+          : `ซิงค์ไม่สำเร็จ: ${orders.error ?? products.error ?? finance.error ?? "unknown"}`,
+      });
     } catch {
       setSyncResult({ synced: 0, failed: 0, skipped: 0, message: "ซิงค์ไม่สำเร็จ ลองใหม่อีกครั้ง" });
     }

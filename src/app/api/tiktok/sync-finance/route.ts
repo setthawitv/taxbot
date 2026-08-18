@@ -4,25 +4,22 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { ensureShopInfo } from "@/lib/tiktok-token";
 import { tiktokRequest } from "@/lib/tiktok";
 
-// GET/POST /api/tiktok/sync-finance?userId=xxx&days=90&debug=1
+// GET/POST /api/tiktok/sync-finance?userId=xxx&days=90&debug=1[&ver=202309]
 // Pulls TikTok settlement statements (revenue / fees / adjustments / net) into
-// platform_settlements. Powers the "เงินเข้าจริง หลังหักค่าธรรมเนียม" figure.
-// Idempotent on (user_id, platform, statement_id).
-// debug=1 → dry run, returns statement field names only (no writes).
+// platform_settlements → powers "เงินเข้าจริง หลังหักค่าธรรมเนียม".
+// Auto-discovers a valid finance API version (36009004 = invalid version).
+// Idempotent on (user_id, platform, statement_id). debug=1 → dry run.
 
 const PAGE_SIZE = 50;
 const MAX_PAGES = 30;
+const VERSIONS = ["202309", "202405", "202409", "202501"];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
+const num = (v: unknown) => { const n = Number(v); return isFinite(n) ? n : 0; };
 
 export async function GET(req: NextRequest) { return run(req); }
 export async function POST(req: NextRequest) { return run(req); }
-
-const num = (v: unknown) => {
-  const n = Number(v);
-  return isFinite(n) ? n : 0;
-};
 
 async function run(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -33,48 +30,60 @@ async function run(req: NextRequest) {
   if (!conn?.access_token || !conn.shop_cipher) {
     return NextResponse.json({ ok: false, error: error ?? "not_connected" }, { status: 400 });
   }
+  const accessToken: string = conn.access_token;
+  const shopCipher: string = conn.shop_cipher;
 
   const days = Math.min(parseInt(searchParams.get("days") ?? "90"), 365);
   const debug = searchParams.get("debug") === "1";
-  const ver = searchParams.get("ver") ?? "202309"; // 202501 is invalid; try 202309/202405
-  const STATEMENTS = `/finance/${ver}/statements`;
   const nowSec = Math.floor(Date.now() / 1000);
   const startSec = nowSec - days * 86400;
+  const verParam = searchParams.get("ver");
+  const versions: string[] = verParam ? [verParam] : VERSIONS;
 
-  const rows: Record<string, unknown>[] = [];
-  let pageToken = "";
-  let pages = 0;
+  const call = (ver: string, pageToken: string) => {
+    const query: Record<string, string | number> = {
+      page_size: PAGE_SIZE,
+      sort_field: "statement_time",
+      statement_time_ge: startSec,
+      statement_time_lt: nowSec,
+    };
+    if (pageToken) query.page_token = pageToken;
+    return tiktokRequest("GET", `/finance/${ver}/statements`, accessToken, shopCipher, { query });
+  };
 
   try {
+    // 1) Discover a valid version (invalid-version → try next; other error → surface).
+    let usedVer = "";
+    let first: Any = null;
+    for (const v of versions) {
+      const json = await call(v, "");
+      if (json.code === 0) { usedVer = v; first = json; break; }
+      const invalidVer = json.code === 36009004 || /invalid api version/i.test(json.message ?? "");
+      if (!invalidVer) {
+        return NextResponse.json({ ok: false, ver: v, error: `statements: ${json.code} ${json.message ?? ""}`.trim() }, { status: 502 });
+      }
+    }
+    if (!usedVer || !first) {
+      return NextResponse.json({ ok: false, error: "no valid finance API version", tried: versions }, { status: 502 });
+    }
+
+    if (debug) {
+      const statements: Any[] = first.data?.statements ?? [];
+      return NextResponse.json({
+        ok: true, dry_run: true, ver: usedVer,
+        statements_on_page: statements.length,
+        sampleStatementKeys: Object.keys(statements[0] ?? {}),
+        sample: statements[0] ?? null,
+      });
+    }
+
+    // 2) Paginate (first page already fetched).
+    const rows: Record<string, unknown>[] = [];
+    let json: Any = first;
+    let pages = 0;
+    let pageToken = "";
     for (; pages < MAX_PAGES; pages++) {
-      const query: Record<string, string | number> = {
-        page_size: PAGE_SIZE,
-        sort_field: "statement_time",
-        statement_time_ge: startSec,
-        statement_time_lt: nowSec,
-      };
-      if (pageToken) query.page_token = pageToken;
-
-      const json = await tiktokRequest("GET", STATEMENTS, conn.access_token, conn.shop_cipher, { query });
-      if (json.code !== 0) {
-        return NextResponse.json(
-          { ok: false, ver, error: `statements: ${json.code} ${json.message ?? ""}`.trim() },
-          { status: 502 }
-        );
-      }
-
-      const statements: Any[] = json.data?.statements ?? [];
-      if (debug) {
-        return NextResponse.json({
-          ok: true,
-          dry_run: true,
-          statements_on_page: statements.length,
-          sampleStatementKeys: Object.keys(statements[0] ?? {}),
-          sample: statements[0] ?? null, // amounts only, no PII
-        });
-      }
-
-      for (const s of statements) {
+      for (const s of (json.data?.statements ?? []) as Any[]) {
         rows.push({
           user_id: userId,
           platform: "tiktok",
@@ -88,9 +97,10 @@ async function run(req: NextRequest) {
           synced_at: new Date().toISOString(),
         });
       }
-
       pageToken = json.data?.next_page_token ?? "";
       if (!pageToken) break;
+      json = await call(usedVer, pageToken);
+      if (json.code !== 0) break;
     }
 
     let synced = 0;
@@ -113,7 +123,7 @@ async function run(req: NextRequest) {
       { revenue: 0, fee: 0, adjustment: 0, net: 0 }
     );
 
-    return NextResponse.json({ ok: true, shop: conn.shop_name, days, statements: synced, totals });
+    return NextResponse.json({ ok: true, shop: conn.shop_name, ver: usedVer, days, statements: synced, totals });
   } catch (e) {
     return NextResponse.json({ ok: false, error: (e as Error).message }, { status: 500 });
   }
