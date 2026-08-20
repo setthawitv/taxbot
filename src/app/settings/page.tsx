@@ -103,6 +103,7 @@ function SettingsPageInner() {
 
   // Platform API connections (integration UI)
   const [platforms,    setPlatforms]    = useState<Record<string, boolean>>({ shopee: false, tiktok: false, lazada: false });
+  const [demoPlatforms, setDemoPlatforms] = useState<Record<string, boolean>>({ shopee: false, tiktok: false, lazada: false });
   const [connectModal, setConnectModal] = useState<string | null>(null);
   const [connecting,   setConnecting]   = useState(false);
   const [syncingTiktok, setSyncingTiktok] = useState(false);
@@ -273,12 +274,19 @@ function SettingsPageInner() {
     if (!userId) return;
     fetch(`/api/platforms/status?userId=${userId}`)
       .then((r) => r.json())
-      .then((d) => setPlatforms((prev) => ({
-        ...prev,
-        shopee: !!d.shopee,
-        tiktok: !!d.tiktok,
-        lazada: !!d.lazada,
-      })))
+      .then((d) => {
+        setPlatforms((prev) => ({
+          ...prev,
+          shopee: !!d.shopee,
+          tiktok: !!d.tiktok,
+          lazada: !!d.lazada,
+        }));
+        setDemoPlatforms({
+          shopee: !!d.demo?.shopee,
+          tiktok: !!d.demo?.tiktok,
+          lazada: !!d.demo?.lazada,
+        });
+      })
       .catch(() => { /* ignore */ });
 
     const tt = searchParams.get("tiktok");
@@ -742,6 +750,7 @@ function SettingsPageInner() {
               <div className="space-y-2.5">
                 {PLATFORMS.map((pf) => {
                   const connected      = platforms[pf.key];
+                  const isDemo         = connected && demoPlatforms[pf.key];
                   const connectedCount = Object.values(platforms).filter(Boolean).length;
                   const limit          = API_LIMIT[currentPlan] ?? 1;
                   const atLimit        = !connected && connectedCount >= limit;
@@ -749,9 +758,16 @@ function SettingsPageInner() {
                     <div key={pf.key} className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-3">
                       <span className="text-2xl flex-shrink-0" aria-hidden>{pf.emoji}</span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-700">{pf.name}</p>
-                        <p className={`text-xs ${connected ? "text-emerald-600" : "text-gray-400"}`}>
-                          {connected ? "เชื่อมต่อแล้ว · ซิงค์อัตโนมัติ" : atLimit ? "อัปเกรดเพื่อเชื่อมเพิ่ม" : "ยังไม่เชื่อมต่อ"}
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-semibold text-gray-700">{pf.name}</p>
+                          {isDemo && (
+                            <span className="text-[10px] font-semibold text-amber-700 bg-amber-100 rounded-full px-1.5 py-0.5">จำลอง</span>
+                          )}
+                        </div>
+                        <p className={`text-xs ${isDemo ? "text-amber-600" : connected ? "text-emerald-600" : "text-gray-400"}`}>
+                          {isDemo ? "จำลองการเชื่อมต่อ · ข้อมูลตัวอย่าง"
+                            : connected ? "เชื่อมต่อแล้ว · ซิงค์อัตโนมัติ"
+                            : atLimit ? "อัปเกรดเพื่อเชื่อมเพิ่ม" : "ยังไม่เชื่อมต่อ"}
                         </p>
                       </div>
                       {connected ? (

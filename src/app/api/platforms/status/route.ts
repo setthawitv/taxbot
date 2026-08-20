@@ -16,13 +16,24 @@ export async function GET(req: NextRequest) {
     supabaseAdmin.from("platform_orders").select("platform").eq("user_id", userId),
   ]);
 
-  const connected = new Set<string>();
-  for (const row of tokens.data ?? []) if (row.platform) connected.add(row.platform);
-  for (const row of orders.data ?? []) if (row.platform) connected.add(row.platform);
+  const tokenSet = new Set<string>();
+  for (const row of tokens.data ?? []) if (row.platform) tokenSet.add(row.platform);
+  const orderSet = new Set<string>();
+  for (const row of orders.data ?? []) if (row.platform) orderSet.add(row.platform);
+
+  // A platform is "connected" if it has a real OAuth token OR imported orders.
+  // It is "demo" (simulated) when it only has sample orders but no live token.
+  const connected = (p: string) => tokenSet.has(p) || orderSet.has(p);
+  const demo = (p: string) => !tokenSet.has(p) && orderSet.has(p);
 
   return NextResponse.json({
-    shopee: connected.has("shopee"),
-    tiktok: connected.has("tiktok"),
-    lazada: connected.has("lazada"),
+    shopee: connected("shopee"),
+    tiktok: connected("tiktok"),
+    lazada: connected("lazada"),
+    demo: {
+      shopee: demo("shopee"),
+      tiktok: demo("tiktok"),
+      lazada: demo("lazada"),
+    },
   });
 }
