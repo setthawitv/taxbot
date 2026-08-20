@@ -22,9 +22,12 @@ export async function GET(req: NextRequest) {
   for (const row of orders.data ?? []) if (row.platform) orderSet.add(row.platform);
 
   // A platform is "connected" if it has a real OAuth token OR imported orders.
-  // It is "demo" (simulated) when it only has sample orders but no live token.
+  // "demo" (simulated) = shown as connected but not backed by a live API
+  // integration. Only TikTok Shop has a real integration (Vendee is a published
+  // TikTok Shop Partner); Shopee/Lazada data is sample data until their API is
+  // integrated, so they count as demo whenever they lack a real token.
   const connected = (p: string) => tokenSet.has(p) || orderSet.has(p);
-  const demo = (p: string) => !tokenSet.has(p) && orderSet.has(p);
+  const demo = (p: string) => connected(p) && !tokenSet.has(p) && p !== "tiktok";
 
   return NextResponse.json({
     shopee: connected("shopee"),
