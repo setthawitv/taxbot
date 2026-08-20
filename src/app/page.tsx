@@ -703,6 +703,18 @@ export default function LandingPage() {
             </div>
           ))}
         </div>
+
+        {/* TikTok Shop Partner badge → /partner */}
+        <div className="mt-12 flex justify-center">
+          <Link href="/partner"
+            className="group inline-flex items-center gap-3 bg-white border border-emerald-200 hover:border-emerald-400 rounded-full pl-2.5 pr-4 py-2 shadow-sm hover:shadow-md transition-all">
+            <span className="inline-flex items-center gap-1.5 bg-emerald-500 text-white text-sm font-bold rounded-full px-3 py-1.5">
+              <span className="w-2 h-2 rounded-full bg-white" /> TikTok Shop Partner
+            </span>
+            <span className="text-sm font-medium text-gray-600 group-hover:text-gray-900">เชื่อมต่อผ่าน API ทางการ · ดูพันธมิตรทั้งหมด</span>
+            <IconArrowRight className="w-4 h-4 text-emerald-500 group-hover:translate-x-0.5 transition-transform" />
+          </Link>
+        </div>
       </section>
 
       {/* ── Features ───────────────────────────────────────────────────────── */}
@@ -814,34 +826,34 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Final CTA ──────────────────────────────────────────────────────── */}
-      <section className="px-6 py-20">
-        <div className="max-w-2xl mx-auto bg-gradient-to-br from-emerald-50 to-cyan-50 border border-emerald-200 rounded-3xl p-10 text-center shadow-sm">
-          <div className="flex justify-center mb-4">
-            <VendeeLogo className="w-14 h-14" />
+      {/* ── Final CTA banner ───────────────────────────────────────────────── */}
+      <section className="px-6 py-16">
+        <div className="max-w-5xl mx-auto rounded-3xl bg-gradient-to-br from-emerald-500 to-cyan-500 p-8 sm:p-12 shadow-lg shadow-emerald-500/20 relative overflow-hidden">
+          <div className="absolute -right-10 -top-10 w-48 h-48 rounded-full bg-white/10" aria-hidden />
+          <div className="absolute right-24 bottom-0 w-24 h-24 rounded-full bg-white/10" aria-hidden />
+          <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div className="text-white">
+              <h2 className="text-2xl sm:text-3xl font-extrabold leading-snug">สมัครวันนี้ ใช้งานฟรี · ครบทุกฟีเจอร์</h2>
+              <p className="text-white/85 mt-2 text-sm sm:text-base">ไม่ต้องดาวน์โหลดแอป ไม่ต้องผูกบัตร — เปิดเว็บแล้วเริ่มได้เลย</p>
+            </div>
+            <div className="flex flex-shrink-0 gap-3">
+              <a href="mailto:admin@vendeefinance.com"
+                className="inline-flex items-center justify-center px-6 py-3 rounded-xl text-sm font-bold bg-white text-emerald-700 hover:bg-emerald-50 transition-colors">
+                ติดต่อเรา
+              </a>
+              <Link href="/onboarding"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold bg-[#0A192F] text-white hover:bg-[#0d2242] transition-colors">
+                ทดลองใช้ฟรี <IconArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
           </div>
-          <h2 className="text-3xl font-bold mb-3 text-gray-900">พร้อมเริ่มต้นแล้วหรือยัง?</h2>
-          <p className="text-gray-600 mb-8 leading-relaxed">
-            ไม่ต้องดาวน์โหลดแอป ไม่ต้องสมัครใหม่ — เปิดเว็บแล้วเริ่มได้เลย
-          </p>
-          <Link
-            href="/onboarding"
-            className="inline-flex items-center justify-center gap-2 px-10 py-4 rounded-2xl text-base font-bold bg-emerald-500 hover:bg-emerald-400 text-white transition-colors shadow-lg shadow-emerald-500/25"
-          >
-            <IconRocket className="w-5 h-5" /> เริ่มต้นใช้งานฟรี
-          </Link>
         </div>
       </section>
 
       {/* ── Footer ─────────────────────────────────────────────────────────── */}
       <footer className="border-t border-gray-200 px-6 py-8 text-center text-gray-500 text-sm space-y-3">
-        <div className="flex justify-center">
-          <span className="inline-flex items-center gap-2 text-xs font-semibold text-emerald-700 border border-emerald-200 bg-emerald-50 rounded-full px-3.5 py-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            TikTok Shop Partner · เชื่อมต่อผ่าน API ทางการ
-          </span>
-        </div>
         <div className="flex justify-center gap-5 text-xs">
+          <Link href="/partner" className="hover:text-gray-800 transition-colors">พันธมิตร</Link>
           <Link href="/privacy" className="hover:text-gray-800 transition-colors">Privacy Policy</Link>
           <Link href="/terms" className="hover:text-gray-800 transition-colors">Terms of Service</Link>
           <a href="mailto:admin@vendeefinance.com" className="hover:text-gray-800 transition-colors">Contact</a>
