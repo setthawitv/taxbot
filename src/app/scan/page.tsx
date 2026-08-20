@@ -148,7 +148,7 @@ function ScanPageInner() {
   if (!authReady) {
     return (
       <main className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-4xl animate-pulse">📸</div>
+        <div className="text-4xl animate-pulse"></div>
       </main>
     );
   }
@@ -162,7 +162,7 @@ function ScanPageInner() {
           <Link href="/home" className="text-gray-500 text-sm">← กลับ</Link>
         </div>
         <div className="flex items-center gap-3 mb-6">
-          <div className="text-4xl">📸</div>
+          <div className="text-4xl"></div>
           <div>
             <h1 className="text-xl font-bold text-white">สแกนใบเสร็จ</h1>
             <p className="text-gray-400 text-sm">ถ่ายรูปหรืออัปโหลด → AI อ่านให้อัตโนมัติ</p>
@@ -174,7 +174,7 @@ function ScanPageInner() {
           <div className="space-y-3">
             <button onClick={() => setShowCamera(true)}
               className="w-full flex items-center justify-center gap-3 py-5 rounded-2xl border-2 border-dashed border-gray-600 bg-gray-800 text-white hover:border-gray-400 hover:bg-gray-700 transition-colors">
-              <span className="text-3xl">📷</span>
+              <span className="text-3xl"></span>
               <div className="text-left">
                 <p className="font-semibold">ถ่ายรูป</p>
                 <p className="text-xs text-gray-400">เปิดกล้องเพื่อถ่ายใบเสร็จ</p>
@@ -183,7 +183,7 @@ function ScanPageInner() {
 
             <button onClick={() => fileRef.current?.click()}
               className="w-full flex items-center justify-center gap-3 py-5 rounded-2xl border-2 border-dashed border-gray-600 bg-gray-800 text-white hover:border-gray-400 hover:bg-gray-700 transition-colors">
-              <span className="text-3xl">🖼️</span>
+              <span className="text-3xl"></span>
               <div className="text-left">
                 <p className="font-semibold">เลือกรูปจากคลัง</p>
                 <p className="text-xs text-gray-400">รองรับ JPG, PNG, HEIC</p>
@@ -215,15 +215,15 @@ function ScanPageInner() {
 
             {error && (
               <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3">
-                <p className="text-red-400 text-sm">❌ {error}</p>
+                <p className="text-red-400 text-sm">{error}</p>
               </div>
             )}
 
             <button onClick={handleScan} disabled={scanning || !userId}
               className="w-full py-4 rounded-2xl text-base font-bold bg-emerald-500 hover:bg-emerald-600 text-white disabled:opacity-40 transition-colors flex items-center justify-center gap-2">
               {scanning
-                ? <><span className="animate-spin">⏳</span> AI กำลังอ่านใบเสร็จ...</>
-                : <>🤖 สแกนด้วย AI</>}
+                ? <><span className="animate-spin"></span> AI กำลังอ่านใบเสร็จ...</>
+                : <>สแกนด้วย AI</>}
             </button>
           </div>
         )}
@@ -232,7 +232,7 @@ function ScanPageInner() {
         {step === "review" && ocr && (
           <div className="space-y-4">
             <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl px-4 py-3">
-              <p className="text-blue-300 text-sm font-medium">✏️ ตรวจสอบและแก้ไขก่อนบันทึก</p>
+              <p className="text-blue-300 text-sm font-medium">ตรวจสอบและแก้ไขก่อนบันทึก</p>
             </div>
 
             <div className="bg-gray-800 rounded-2xl p-5 space-y-4">
@@ -248,7 +248,7 @@ function ScanPageInner() {
                           ? t === "income" ? "bg-emerald-500 text-white" : "bg-rose-500 text-white"
                           : "bg-gray-700 text-gray-400"
                       }`}>
-                      {t === "income" ? "💰 รายรับ" : "🧾 รายจ่าย"}
+                      {t === "income" ? "รายรับ" : "รายจ่าย"}
                     </button>
                   ))}
                 </div>
@@ -330,7 +330,7 @@ function ScanPageInner() {
 
             {error && (
               <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3">
-                <p className="text-red-400 text-sm">❌ {error}</p>
+                <p className="text-red-400 text-sm">{error}</p>
               </div>
             )}
 
@@ -342,8 +342,8 @@ function ScanPageInner() {
               <button onClick={handleSave} disabled={saving || !ocr.amount || !ocr.vendor}
                 className="flex-1 py-3 rounded-2xl text-sm font-bold bg-emerald-500 hover:bg-emerald-600 text-white disabled:opacity-40 transition-colors flex items-center justify-center gap-2">
                 {saving
-                  ? <><span className="animate-spin text-base">⏳</span> กำลังบันทึก...</>
-                  : <>✅ ยืนยันบันทึก</>}
+                  ? <><span className="animate-spin text-base"></span> กำลังบันทึก...</>
+                  : <>ยืนยันบันทึก</>}
               </button>
             </div>
           </div>
@@ -353,7 +353,7 @@ function ScanPageInner() {
         {step === "done" && saved && ocr && (
           <div className="space-y-4">
             <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-5 text-center">
-              <div className="text-4xl mb-2">✅</div>
+              <div className="text-4xl mb-2"></div>
               <p className="text-emerald-400 font-bold text-lg">บันทึกสำเร็จ!</p>
               <p className="text-gray-400 text-xs mt-1">
                 {saved.sheetSynced ? "ซิงค์ไป Google Sheets แล้ว ✓" : "บันทึกใน Database แล้ว"}
@@ -386,11 +386,11 @@ function ScanPageInner() {
             <div className="flex gap-3">
               <button onClick={reset}
                 className="flex-1 py-3 rounded-2xl text-sm font-semibold bg-gray-700 text-white hover:bg-gray-600 transition-colors">
-                📸 สแกนใหม่
+                สแกนใหม่
               </button>
               <Link href="/raijhai"
                 className="flex-1 py-3 rounded-2xl text-sm font-semibold bg-gray-700 text-white hover:bg-gray-600 transition-colors text-center">
-                📋 ดูรายจ่าย
+                ดูรายจ่าย
               </Link>
             </div>
           </div>
@@ -405,7 +405,7 @@ export default function ScanPage() {
   return (
     <Suspense fallback={
       <main className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-4xl animate-pulse">📸</div>
+        <div className="text-4xl animate-pulse"></div>
       </main>
     }>
       <ScanPageInner />

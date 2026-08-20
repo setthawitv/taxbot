@@ -571,7 +571,7 @@ function PublicTaxCalculator() {
           {/* Save data CTA */}
           {hasInput && (
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 leading-relaxed">
-              💾 <strong>สมัครฟรี</strong> เพื่อย้ายข้อมูลที่กรอกไว้ (ลดหย่อน + เงินเดือน) ไปบัญชีของคุณอัตโนมัติ
+              <strong>สมัครฟรี</strong> เพื่อย้ายข้อมูลที่กรอกไว้ (ลดหย่อน + เงินเดือน) ไปบัญชีของคุณอัตโนมัติ
             </div>
           )}
 
@@ -840,7 +840,7 @@ export default function LandingPage() {
           <Link href="/terms" className="hover:text-gray-800 transition-colors">Terms of Service</Link>
           <a href="mailto:admin@vendeefinance.com" className="hover:text-gray-800 transition-colors">Contact</a>
         </div>
-        <p>© {new Date().getFullYear()} Vendee Finance · สร้างสำหรับร้านค้าออนไลน์ไทย</p>
+        <p>{new Date().getFullYear()} Vendee Finance · สร้างสำหรับร้านค้าออนไลน์ไทย</p>
       </footer>
 
       {/* ── Tax calculator popup ───────────────────────────────────────────── */}

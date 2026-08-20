@@ -36,19 +36,19 @@ export default function SheetsRedirectPage() {
       <div className="text-center max-w-xs">
         {status === "loading" && (
           <>
-            <div className="text-5xl mb-4 animate-pulse">📋</div>
+            <div className="text-5xl mb-4 animate-pulse"></div>
             <p className="text-gray-600 font-medium">กำลังโหลด...</p>
           </>
         )}
         {status === "redirecting" && (
           <>
-            <div className="text-5xl mb-4">📋</div>
+            <div className="text-5xl mb-4"></div>
             <p className="text-gray-600 font-medium">กำลังเปิด Google Sheets...</p>
           </>
         )}
         {status === "no_google" && (
           <>
-            <div className="text-5xl mb-4">⚠️</div>
+            <div className="text-5xl mb-4"></div>
             <p className="text-gray-800 font-semibold mb-2">ยังไม่ได้เชื่อมต่อ Google</p>
             <p className="text-gray-500 text-sm mb-4">กรุณาเชื่อมต่อ Google ที่หน้าตั้งค่าก่อนครับ</p>
             <a href="/settings" className="inline-block bg-blue-500 text-white px-6 py-2.5 rounded-xl text-sm font-semibold">
@@ -58,7 +58,7 @@ export default function SheetsRedirectPage() {
         )}
         {status === "no_sheet" && (
           <>
-            <div className="text-5xl mb-4">📋</div>
+            <div className="text-5xl mb-4"></div>
             <p className="text-gray-800 font-semibold mb-2">ยังไม่มี Google Sheet</p>
             <p className="text-gray-500 text-sm mb-4">ส่งสลิปแรกเพื่อสร้าง Sheet อัตโนมัติครับ</p>
             <a href="/home" className="inline-block bg-gray-800 text-white px-6 py-2.5 rounded-xl text-sm font-semibold">
@@ -68,7 +68,7 @@ export default function SheetsRedirectPage() {
         )}
         {status === "error" && (
           <>
-            <div className="text-5xl mb-4">❌</div>
+            <div className="text-5xl mb-4"></div>
             <p className="text-gray-600">เกิดข้อผิดพลาด กรุณาลองใหม่</p>
             <a href="/home" className="inline-block mt-4 text-blue-500 text-sm underline">กลับหน้าหลัก</a>
           </>

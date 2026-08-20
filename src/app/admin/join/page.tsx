@@ -58,7 +58,7 @@ function AdminJoinInner() {
     return (
       <main className="min-h-screen bg-gray-900 flex items-center justify-center px-4">
         <div className="text-center">
-          <div className="text-5xl mb-4">🔗</div>
+          <div className="text-5xl mb-4"></div>
           <p className="text-gray-400">ลิงก์ไม่ถูกต้อง</p>
         </div>
       </main>
@@ -70,7 +70,7 @@ function AdminJoinInner() {
       <div className="w-full max-w-sm">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="text-5xl mb-3">🛡️</div>
+          <div className="text-5xl mb-3"></div>
           <h1 className="text-2xl font-bold text-white">เข้าร่วมเป็น Admin</h1>
           <p className="text-gray-400 text-sm mt-1">Vendee Finance Account Access</p>
         </div>
@@ -80,7 +80,7 @@ function AdminJoinInner() {
             <p className="text-center text-gray-400 py-4">กำลังโหลด...</p>
           ) : error ? (
             <div className="text-center py-4">
-              <div className="text-3xl mb-3">❌</div>
+              <div className="text-3xl mb-3"></div>
               <p className="text-red-400 text-sm font-medium">{error}</p>
               <p className="text-gray-500 text-xs mt-2">
                 กรุณาติดต่อเจ้าของบัญชีเพื่อขอลิงก์ใหม่
@@ -88,7 +88,7 @@ function AdminJoinInner() {
             </div>
           ) : done ? (
             <div className="text-center py-4">
-              <div className="text-4xl mb-3">✅</div>
+              <div className="text-4xl mb-3"></div>
               <p className="text-emerald-400 font-semibold text-lg">เข้าร่วมสำเร็จแล้ว!</p>
               {inviteInfo && (
                 <p className="text-gray-400 text-sm mt-2">
@@ -99,7 +99,7 @@ function AdminJoinInner() {
                 href="/home"
                 className="mt-5 w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
               >
-                🏠 ไปยัง Dashboard
+                ไปยัง Dashboard
               </a>
             </div>
           ) : inviteInfo ? (
@@ -118,7 +118,7 @@ function AdminJoinInner() {
 
               <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">
                 <p className="text-amber-400 text-xs leading-relaxed">
-                  ⚠️ <span className="font-semibold">หมายเหตุ:</span> การซิงค์ข้อมูลไปยัง Google Sheets และ Drive
+                  <span className="font-semibold">หมายเหตุ:</span> การซิงค์ข้อมูลไปยัง Google Sheets และ Drive
                   จะใช้บัญชี Google ของเจ้าของรหัส — เจ้าของต้องเชื่อมต่อ Google Drive ในหน้าตั้งค่าก่อน
                   จึงจะใช้งานฟีเจอร์นี้ได้
                 </p>
@@ -145,7 +145,7 @@ function AdminJoinInner() {
                   {session?.user?.email?.toLowerCase() !== inviteInfo.adminEmail.toLowerCase() ? (
                     <div>
                       <p className="text-amber-400 text-xs text-center mb-3">
-                        ⚠️ กรุณาลงชื่อด้วย <strong>{inviteInfo.adminEmail}</strong>
+                        กรุณาลงชื่อด้วย <strong>{inviteInfo.adminEmail}</strong>
                       </p>
                       <button
                         onClick={() => signIn("google", { callbackUrl: `/admin/join?code=${code}` }, { scope: "openid email profile" })}
@@ -189,7 +189,7 @@ export default function AdminJoinPage() {
     <Suspense fallback={
       <main className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-4xl mb-3 animate-pulse">🛡️</div>
+          <div className="text-4xl mb-3 animate-pulse"></div>
           <p className="text-gray-400 text-sm">กำลังโหลด...</p>
         </div>
       </main>

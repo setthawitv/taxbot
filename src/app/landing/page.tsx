@@ -304,7 +304,7 @@ export default function LandingPage() {
 
       {/* ── Footer ─────────────────────────────────────────────────────────── */}
       <footer className="border-t border-white/10 px-6 py-8 text-center text-gray-600 text-sm">
-        <p>© {new Date().getFullYear()} Vendee · สร้างสำหรับร้านค้าออนไลน์ไทย</p>
+        <p>{new Date().getFullYear()} Vendee · สร้างสำหรับร้านค้าออนไลน์ไทย</p>
       </footer>
 
     </main>

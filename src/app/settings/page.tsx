@@ -21,13 +21,13 @@ type SyncResult = { synced: number; failed: number; skipped: number; message: st
 type AdminRow = { id: string; admin_email: string; admin_name: string | null; invite_code: string; status: string; created_at: string };
 type ImportLog = { id: string; platform: string; filename: string; order_count: number; new_count: number; total_amount: number; created_at: string };
 
-const PLATFORM_EMOJI: Record<string, string> = { tiktok: "🎵", shopee: "🛒", lazada: "📦" };
+const PLATFORM_EMOJI: Record<string, string> = { tiktok: "", shopee: "", lazada: "" };
 
 // Sales platforms that can be connected via official Open API
 const PLATFORMS = [
-  { key: "shopee", name: "Shopee",       emoji: "🛒", color: "#EE4D2D" },
-  { key: "tiktok", name: "TikTok Shop",  emoji: "🎵", color: "#111111" },
-  { key: "lazada", name: "Lazada",       emoji: "📦", color: "#0F146D" },
+  { key: "shopee", name: "Shopee",       emoji: "", color: "#EE4D2D" },
+  { key: "tiktok", name: "TikTok Shop",  emoji: "", color: "#111111" },
+  { key: "lazada", name: "Lazada",       emoji: "", color: "#0F146D" },
 ] as const;
 
 // How many platforms each plan may connect
@@ -912,7 +912,7 @@ function SettingsPageInner() {
 
             {/* Import history */}
             <div className="bg-white rounded-2xl border border-gray-200 p-5">
-              <h2 className="font-semibold text-gray-700 mb-1">🕓 ประวัติการนำเข้าไฟล์</h2>
+              <h2 className="font-semibold text-gray-700 mb-1">ประวัติการนำเข้าไฟล์</h2>
               <p className="text-xs text-gray-400 mb-4">ไฟล์ Excel ที่เคยอัพโหลดทั้งหมด</p>
               {logsLoading ? (
                 <p className="text-sm text-gray-400 text-center py-4">กำลังโหลด...</p>
@@ -926,7 +926,7 @@ function SettingsPageInner() {
                     const timeStr = d.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
                     return (
                       <div key={log.id} className="flex items-start gap-3 px-3 py-2.5 bg-gray-50 rounded-xl">
-                        <span className="text-xl mt-0.5">{PLATFORM_EMOJI[log.platform] ?? "📄"}</span>
+                        <span className="text-xl mt-0.5">{PLATFORM_EMOJI[log.platform] ?? ""}</span>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-700 truncate">{log.filename}</p>
                           <p className="text-xs text-gray-400 mt-0.5">{dateStr} · {timeStr}</p>
@@ -1231,7 +1231,7 @@ export default function SettingsPage() {
     <Suspense fallback={
       <main className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
         <div className="text-center">
-          <div className="text-4xl mb-3 animate-pulse">⚙️</div>
+          <div className="text-4xl mb-3 animate-pulse"></div>
           <p className="text-gray-400 text-sm">กำลังโหลด...</p>
         </div>
       </main>

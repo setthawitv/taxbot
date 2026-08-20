@@ -46,11 +46,11 @@ type TxnRow = {
 };
 
 const PLATFORM_OPTIONS: { id: Platform; label: string; emoji: string; color: string }[] = [
-  { id: "all",    label: "ทั้งหมด", emoji: "📊", color: "bg-emerald-500" },
-  { id: "tiktok", label: "TikTok",  emoji: "🎵", color: "bg-gray-800"   },
-  { id: "shopee", label: "Shopee",  emoji: "🛒", color: "bg-orange-500" },
-  { id: "lazada", label: "Lazada",  emoji: "📦", color: "bg-blue-600"   },
-  { id: "manual", label: "Manual",  emoji: "📝", color: "bg-purple-500" },
+  { id: "all",    label: "ทั้งหมด", emoji: "", color: "bg-emerald-500" },
+  { id: "tiktok", label: "TikTok",  emoji: "", color: "bg-gray-800"   },
+  { id: "shopee", label: "Shopee",  emoji: "", color: "bg-orange-500" },
+  { id: "lazada", label: "Lazada",  emoji: "", color: "bg-blue-600"   },
+  { id: "manual", label: "Manual",  emoji: "", color: "bg-purple-500" },
 ];
 
 const MONTHS = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
@@ -276,14 +276,14 @@ export default function RaiRab() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "เกิดข้อผิดพลาด");
 
-      setAddMsg({ ok: true, text: `✅ บันทึกรายรับ ฿${parseFloat(addAmt).toLocaleString("th-TH")} แล้ว` });
+      setAddMsg({ ok: true, text: `บันทึกรายรับ ฿${parseFloat(addAmt).toLocaleString("th-TH")} แล้ว` });
       setAddAmt(""); setAddVendor(""); setAddDesc("");
       setAddDate(new Date().toISOString().slice(0, 10));
       setShowAdd(false);
       refreshSummary(userId);
       loadAdjusts(userId);
     } catch (err: unknown) {
-      setAddMsg({ ok: false, text: `❌ ${err instanceof Error ? err.message : "เกิดข้อผิดพลาด"}` });
+      setAddMsg({ ok: false, text: `${err instanceof Error ? err.message : "เกิดข้อผิดพลาด"}` });
     } finally {
       setAddSaving(false);
     }
@@ -310,13 +310,13 @@ export default function RaiRab() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "เกิดข้อผิดพลาด");
 
-      setAdjMsg({ ok: true, text: `✅ ปรับยอด ${adjDir}฿${amt.toLocaleString("th-TH")} เดือน ${MONTHS[adjMonth - 1]} แล้ว` });
+      setAdjMsg({ ok: true, text: `ปรับยอด ${adjDir}฿${amt.toLocaleString("th-TH")} เดือน ${MONTHS[adjMonth - 1]} แล้ว` });
       setAdjAmount(""); setAdjNote("");
       setShowAdjust(false);
       refreshSummary(userId);
       loadAdjusts(userId);
     } catch (err: unknown) {
-      setAdjMsg({ ok: false, text: `❌ ${err instanceof Error ? err.message : "เกิดข้อผิดพลาด"}` });
+      setAdjMsg({ ok: false, text: `${err instanceof Error ? err.message : "เกิดข้อผิดพลาด"}` });
     } finally {
       setAdjSaving(false);
     }
@@ -336,7 +336,7 @@ export default function RaiRab() {
       setAdjusts((prev) => prev.filter((t) => t.id !== id));
       refreshSummary(userId);
     } catch {
-      setAdjMsg({ ok: false, text: "❌ ลบไม่สำเร็จ" });
+      setAdjMsg({ ok: false, text: "ลบไม่สำเร็จ" });
     } finally {
       setDeletingId(null);
     }
@@ -591,7 +591,7 @@ export default function RaiRab() {
             {/* Adjust form */}
             {showAdjust && (
               <form onSubmit={handleAdjust} className="bg-white rounded-2xl border border-emerald-200 p-4 space-y-3">
-                <p className="text-sm font-semibold text-gray-700">✏️ ปรับยอดรายรับ</p>
+                <p className="text-sm font-semibold text-gray-700">ปรับยอดรายรับ</p>
                 <div>
                   <label className="text-xs text-gray-500 mb-1.5 block">เดือนที่ต้องการปรับ</label>
                   <div className="flex flex-wrap gap-1.5">
@@ -670,7 +670,7 @@ export default function RaiRab() {
                         </p>
                         <button onClick={() => setConfirmDelete(t.id)} disabled={deletingId === t.id}
                           className="text-gray-300 hover:text-rose-500 text-lg leading-none transition-colors flex-shrink-0 disabled:opacity-40" title="ลบ">
-                          {deletingId === t.id ? "⏳" : "🗑️"}
+                          {deletingId === t.id ? "" : ""}
                         </button>
                       </li>
                     );
@@ -812,7 +812,7 @@ export default function RaiRab() {
         <div className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="font-bold text-gray-800">📸 สแกนใบเสร็จรายรับ</h2>
+              <h2 className="font-bold text-gray-800">สแกนใบเสร็จรายรับ</h2>
               <button onClick={() => { setShowScan(false); setScanPreview(null); setScanError(""); }}
                 className="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
             </div>
@@ -821,7 +821,7 @@ export default function RaiRab() {
               <div className="space-y-3">
                 <button onClick={() => setShowCamera(true)}
                   className="w-full flex items-center gap-3 py-4 rounded-xl border-2 border-dashed border-gray-200 hover:border-emerald-300 hover:bg-emerald-50 transition-colors">
-                  <span className="text-2xl ml-3">📷</span>
+                  <span className="text-2xl ml-3"></span>
                   <div className="text-left">
                     <p className="text-sm font-semibold text-gray-700">ถ่ายรูป</p>
                     <p className="text-xs text-gray-400">เปิดกล้อง</p>
@@ -830,7 +830,7 @@ export default function RaiRab() {
 
                 <button onClick={() => scanFileRef.current?.click()}
                   className="w-full flex items-center gap-3 py-4 rounded-xl border-2 border-dashed border-gray-200 hover:border-emerald-300 hover:bg-emerald-50 transition-colors">
-                  <span className="text-2xl ml-3">🖼️</span>
+                  <span className="text-2xl ml-3"></span>
                   <div className="text-left">
                     <p className="text-sm font-semibold text-gray-700">เลือกจากคลัง</p>
                     <p className="text-xs text-gray-400">JPG, PNG</p>
@@ -847,10 +847,10 @@ export default function RaiRab() {
                   <button onClick={() => setScanPreview(null)}
                     className="absolute top-2 right-2 bg-black/50 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm">×</button>
                 </div>
-                {scanError && <p className="text-red-500 text-xs">❌ {scanError}</p>}
+                {scanError && <p className="text-red-500 text-xs">{scanError}</p>}
                 <button onClick={runScan} disabled={scanning}
                   className="w-full py-3 rounded-xl text-sm font-bold bg-emerald-500 hover:bg-emerald-600 text-white disabled:opacity-40 transition-colors">
-                  {scanning ? "⏳ AI กำลังอ่าน..." : "🤖 สแกนด้วย AI"}
+                  {scanning ? "AI กำลังอ่าน..." : "สแกนด้วย AI"}
                 </button>
               </div>
             )}
@@ -871,7 +871,7 @@ export default function RaiRab() {
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4"
           onClick={() => setConfirmDelete(null)}>
           <div className="bg-white rounded-2xl w-full max-w-xs p-5 text-center" onClick={(e) => e.stopPropagation()}>
-            <div className="text-4xl mb-2">🗑️</div>
+            <div className="text-4xl mb-2"></div>
             <p className="font-bold text-gray-800">ลบรายการปรับยอดนี้?</p>
             <p className="text-sm text-gray-500 mt-1">การลบไม่สามารถกู้คืนได้</p>
             <div className="flex gap-2 mt-5">

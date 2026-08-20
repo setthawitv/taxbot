@@ -53,7 +53,7 @@ function ConnectGoogleDoneInner() {
       <div className="text-center max-w-xs">
         {saved ? (
           <>
-            <div className="text-6xl mb-4">✅</div>
+            <div className="text-6xl mb-4"></div>
             <h1 className="text-xl font-bold text-gray-800 mb-2">เชื่อมต่อสำเร็จ!</h1>
             <p className="text-gray-500 text-sm mb-1">
               {googleEmail}
@@ -71,7 +71,7 @@ function ConnectGoogleDoneInner() {
           </>
         ) : error ? (
           <>
-            <div className="text-5xl mb-4">❌</div>
+            <div className="text-5xl mb-4"></div>
             <p className="text-red-500 font-medium">{error}</p>
             <button
               onClick={() => window.location.reload()}

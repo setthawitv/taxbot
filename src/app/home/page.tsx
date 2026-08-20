@@ -599,7 +599,7 @@ export default function Home() {
                 <IconGoogleSheets className="w-9 h-9 flex-shrink-0" />
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-gray-800 truncate">Google Sheets</p>
-                  <p className="text-xs text-gray-500 truncate">{links.sheetUrl ? "เปิดชีต ↗" : "ยังไม่มี"}</p>
+                  <p className="text-xs text-gray-500 truncate">{links.sheetUrl ? "เปิดชีต " : "ยังไม่มี"}</p>
                 </div>
               </button>
               <button onClick={() => openExternal(links.driveUrl, "/drive")}
@@ -607,7 +607,7 @@ export default function Home() {
                 <IconGoogleDrive className="w-9 h-9 flex-shrink-0" />
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-gray-800 truncate">Google Drive</p>
-                  <p className="text-xs text-gray-500 truncate">{links.driveUrl ? "เปิดไดรฟ์ ↗" : "ยังไม่มี"}</p>
+                  <p className="text-xs text-gray-500 truncate">{links.driveUrl ? "เปิดไดรฟ์ " : "ยังไม่มี"}</p>
                 </div>
               </button>
             </div>
@@ -656,7 +656,7 @@ export default function Home() {
               {/* Best sellers */}
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="text-lg" aria-hidden>🏆</span>
+                  <span className="text-lg" aria-hidden></span>
                   <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">สินค้าขายดี</span>
                 </div>
                 {bestSellers.length === 0 ? (
@@ -684,7 +684,7 @@ export default function Home() {
               {/* Top platform */}
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="text-lg" aria-hidden>📈</span>
+                  <span className="text-lg" aria-hidden></span>
                   <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">แพลตฟอร์มทำเงินสุด</span>
                 </div>
                 {!topPlatform ? (
@@ -716,16 +716,16 @@ export default function Home() {
               {/* Stock signals */}
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="text-lg" aria-hidden>📦</span>
+                  <span className="text-lg" aria-hidden></span>
                   <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">สัญญาณสต็อก</span>
                 </div>
                 <div className="space-y-2.5">
                   <Link href="/stock" className="flex items-center justify-between p-3 rounded-xl bg-rose-50 border border-rose-100 hover:bg-rose-100 transition-colors">
-                    <span className="text-sm text-rose-600 font-medium">⚠️ สินค้าใกล้หมด</span>
+                    <span className="text-sm text-rose-600 font-medium">สินค้าใกล้หมด</span>
                     <span className="text-lg font-bold text-rose-600">{lowStockCount}</span>
                   </Link>
                   <Link href="/stock" className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors">
-                    <span className="text-sm text-gray-500 font-medium">💤 สินค้าค้างสต็อก</span>
+                    <span className="text-sm text-gray-500 font-medium">สินค้าค้างสต็อก</span>
                     <span className="text-lg font-bold text-gray-600">{deadStock.length}</span>
                   </Link>
                   {deadStock.length > 0 && (
@@ -747,7 +747,7 @@ export default function Home() {
             onClick={() => setShowFee(true)}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-50 border border-orange-100 text-orange-600 text-sm font-semibold hover:bg-orange-100 active:scale-[0.98] transition-all"
           >
-            🧮 คำนวณค่าธรรมเนียม Shopee
+            คำนวณค่าธรรมเนียม Shopee
           </button>
           <button
             onClick={() => setShowTour(true)}

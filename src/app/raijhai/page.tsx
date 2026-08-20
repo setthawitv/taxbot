@@ -249,19 +249,19 @@ export default function RaiJhai() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "เกิดข้อผิดพลาด");
 
-      let msg = "✅ บันทึกแล้ว";
+      let msg = "บันทึกแล้ว";
       if (!editId) {
-        if (data.driveSynced)       msg = "✅ บันทึกแล้ว · ซิงค์ Sheets · อัปโหลด PDF ไป Drive แล้ว";
-        else if (data.sheetSynced)  msg = "✅ บันทึกแล้ว · ซิงค์ Sheets แล้ว";
+        if (data.driveSynced)       msg = "บันทึกแล้ว · ซิงค์ Sheets · อัปโหลด PDF ไป Drive แล้ว";
+        else if (data.sheetSynced)  msg = "บันทึกแล้ว · ซิงค์ Sheets แล้ว";
         else if (data.sheetError || data.driveError) {
           const detail = String(data.sheetError || data.driveError || "");
           // A scopes/auth error means the Google connection needs re-granting.
           msg = /scope|auth|token|permission|insufficient/i.test(detail)
-            ? "⚠️ บันทึกแล้ว แต่ซิงค์ Google ไม่ได้ — โปรดเชื่อมต่อ Google ใหม่ที่หน้า ตั้งค่า"
-            : `⚠️ บันทึกแล้ว แต่ซิงค์ Google ไม่ได้ (${detail})`;
+            ? "บันทึกแล้ว แต่ซิงค์ Google ไม่ได้ — โปรดเชื่อมต่อ Google ใหม่ที่หน้า ตั้งค่า"
+            : `บันทึกแล้ว แต่ซิงค์ Google ไม่ได้ (${detail})`;
         }
       } else {
-        msg = "✅ แก้ไขแล้ว";
+        msg = "แก้ไขแล้ว";
       }
       setSaveMsg({ ok: !editId && (data.sheetError || data.driveError) ? false : true, text: msg });
       setShowForm(false);
@@ -270,7 +270,7 @@ export default function RaiJhai() {
       loadTxns(userId);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "เกิดข้อผิดพลาด";
-      setSaveMsg({ ok: false, text: `❌ ${msg}` });
+      setSaveMsg({ ok: false, text: `${msg}` });
     } finally {
       setSaving(false);
     }
@@ -294,10 +294,10 @@ export default function RaiJhai() {
         return t ? prev - Number(t.amount) : prev;
       });
       if (data.sheetDeleted === false) {
-        setSaveMsg({ ok: false, text: "⚠️ ลบแล้ว แต่ลบใน Sheets ไม่ได้ — ลองเชื่อมต่อ Google ใหม่ใน Settings" });
+        setSaveMsg({ ok: false, text: "ลบแล้ว แต่ลบใน Sheets ไม่ได้ — ลองเชื่อมต่อ Google ใหม่ใน Settings" });
       }
     } catch (err: unknown) {
-      setSaveMsg({ ok: false, text: `❌ ${err instanceof Error ? err.message : "ลบไม่สำเร็จ"}` });
+      setSaveMsg({ ok: false, text: `${err instanceof Error ? err.message : "ลบไม่สำเร็จ"}` });
     } finally {
       setDeletingId(null);
     }
@@ -429,7 +429,7 @@ export default function RaiJhai() {
             {showForm && (
               <form onSubmit={handleSave} className="bg-white rounded-2xl border border-rose-100 p-4 space-y-3">
                 <p className="text-sm font-semibold text-gray-700 mb-1">
-                  {editId ? "✏️ แก้ไขรายจ่าย" : "บันทึกรายจ่ายใหม่"}
+                  {editId ? "แก้ไขรายจ่าย" : "บันทึกรายจ่ายใหม่"}
                 </p>
 
                 <div>
@@ -555,7 +555,7 @@ export default function RaiJhai() {
 
                 <button type="submit" disabled={saving || !vendor.trim() || !amount}
                   className="w-full bg-rose-500 hover:bg-rose-600 disabled:opacity-40 text-white font-semibold py-3 rounded-xl text-sm transition-colors">
-                  {saving ? "กำลังบันทึก..." : editId ? "💾 บันทึกการแก้ไข" : "💾 บันทึกรายจ่าย"}
+                  {saving ? "กำลังบันทึก..." : editId ? "บันทึกการแก้ไข" : "บันทึกรายจ่าย"}
                 </button>
               </form>
             )}
@@ -583,7 +583,7 @@ export default function RaiJhai() {
                       <p className="text-xs text-gray-400 truncate">{t.description}</p>
                       <p className="text-xs text-gray-300">
                         {t.transaction_date}
-                        {t.staff_name && <span className="ml-1.5 text-purple-400">· 👤 {t.staff_name}</span>}
+                        {t.staff_name && <span className="ml-1.5 text-purple-400">· {t.staff_name}</span>}
                       </p>
                     </div>
                     <p className="text-rose-600 font-semibold flex-shrink-0 text-sm">
@@ -592,12 +592,12 @@ export default function RaiJhai() {
                     <button onClick={() => openEditForm(t)}
                       className="text-gray-300 hover:text-blue-400 text-base transition-colors flex-shrink-0"
                       title="แก้ไข">
-                      ✏️
+                      
                     </button>
                     <button onClick={() => setConfirmDelete(t.id)} disabled={deletingId === t.id}
                       className="text-gray-300 hover:text-rose-500 text-lg leading-none transition-colors flex-shrink-0 disabled:opacity-40"
                       title="ลบ">
-                      {deletingId === t.id ? "⏳" : "🗑️"}
+                      {deletingId === t.id ? "" : ""}
                     </button>
                   </li>
                 ))}
@@ -613,7 +613,7 @@ export default function RaiJhai() {
         <div className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="font-bold text-gray-800">📸 สแกนใบเสร็จรายจ่าย</h2>
+              <h2 className="font-bold text-gray-800">สแกนใบเสร็จรายจ่าย</h2>
               <button onClick={() => { setShowScan(false); setScanPreview(null); setScanError(""); }}
                 className="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
             </div>
@@ -622,7 +622,7 @@ export default function RaiJhai() {
               <div className="space-y-3">
                 <button type="button" onClick={() => setShowCamera(true)}
                   className="w-full flex items-center gap-3 py-4 rounded-xl border-2 border-dashed border-gray-200 hover:border-rose-300 hover:bg-rose-50 transition-colors cursor-pointer">
-                  <span className="text-2xl ml-3">📷</span>
+                  <span className="text-2xl ml-3"></span>
                   <div className="text-left">
                     <p className="text-sm font-semibold text-gray-700">ถ่ายรูป</p>
                     <p className="text-xs text-gray-400">เปิดกล้อง</p>
@@ -631,7 +631,7 @@ export default function RaiJhai() {
 
                 <label htmlFor="raijhai-scan-file"
                   className="w-full flex items-center gap-3 py-4 rounded-xl border-2 border-dashed border-gray-200 hover:border-rose-300 hover:bg-rose-50 transition-colors cursor-pointer">
-                  <span className="text-2xl ml-3">🖼️</span>
+                  <span className="text-2xl ml-3"></span>
                   <div className="text-left">
                     <p className="text-sm font-semibold text-gray-700">เลือกจากคลัง</p>
                     <p className="text-xs text-gray-400">JPG, PNG</p>
@@ -648,10 +648,10 @@ export default function RaiJhai() {
                   <button onClick={() => setScanPreview(null)}
                     className="absolute top-2 right-2 bg-black/50 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm">×</button>
                 </div>
-                {scanError && <p className="text-red-500 text-xs">❌ {scanError}</p>}
+                {scanError && <p className="text-red-500 text-xs">{scanError}</p>}
                 <button onClick={runScan} disabled={scanning}
                   className="w-full py-3 rounded-xl text-sm font-bold bg-rose-500 hover:bg-rose-600 text-white disabled:opacity-40 transition-colors">
-                  {scanning ? "⏳ AI กำลังอ่าน..." : "🤖 สแกนด้วย AI"}
+                  {scanning ? "AI กำลังอ่าน..." : "สแกนด้วย AI"}
                 </button>
               </div>
             )}
@@ -672,7 +672,7 @@ export default function RaiJhai() {
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4"
           onClick={() => setConfirmDelete(null)}>
           <div className="bg-white rounded-2xl w-full max-w-xs p-5 text-center" onClick={(e) => e.stopPropagation()}>
-            <div className="text-4xl mb-2">🗑️</div>
+            <div className="text-4xl mb-2"></div>
             <p className="font-bold text-gray-800">ลบรายจ่ายนี้?</p>
             <p className="text-sm text-gray-500 mt-1">การลบไม่สามารถกู้คืนได้ (ลบไฟล์ใน Drive ด้วย)</p>
             <div className="flex gap-2 mt-5">
@@ -694,7 +694,7 @@ export default function RaiJhai() {
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-end sm:items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm max-h-[88vh] overflow-y-auto p-5 space-y-4">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-500 flex items-center justify-center flex-shrink-0 text-xl">⚠️</div>
+              <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-500 flex items-center justify-center flex-shrink-0 text-xl"></div>
               <h2 className="font-bold text-gray-800 text-lg flex-1 leading-snug">ข้อควรระวังก่อนแก้ไขยอดเอง</h2>
               <button onClick={() => setShowTaxWarn(false)}
                 className="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
@@ -726,7 +726,7 @@ export default function RaiJhai() {
             </p>
 
             <div className="bg-blue-50 rounded-xl p-3 text-sm text-gray-600 flex gap-2.5">
-              <span className="text-base">✏️</span>
+              <span className="text-base"></span>
               <div>
                 <p className="font-semibold text-gray-700 mb-1">สิ่งที่แก้ไขได้:</p>
                 <ul className="list-disc pl-4 space-y-0.5">

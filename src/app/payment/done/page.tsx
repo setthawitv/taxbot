@@ -50,21 +50,21 @@ function PaymentDoneInner() {
       <div className="text-center">
         {state === "checking" && (
           <>
-            <div className="text-6xl mb-4">⏳</div>
+            <div className="text-6xl mb-4"></div>
             <h1 className="text-2xl font-bold text-white mb-2">กำลังตรวจสอบการชำระเงิน...</h1>
             <p className="text-gray-400">รอสักครู่ อย่าเพิ่งปิดหน้านี้</p>
           </>
         )}
         {state === "success" && (
           <>
-            <div className="text-6xl mb-4">✅</div>
+            <div className="text-6xl mb-4"></div>
             <h1 className="text-2xl font-bold text-white mb-2">ชำระเงินสำเร็จ!</h1>
             <p className="text-gray-400">กำลังกลับหน้าหลัก...</p>
           </>
         )}
         {state === "failed" && (
           <>
-            <div className="text-6xl mb-4">⚠️</div>
+            <div className="text-6xl mb-4"></div>
             <h1 className="text-2xl font-bold text-white mb-2">ยังไม่พบการชำระเงิน</h1>
             <p className="text-gray-400 mb-4">
               ถ้าคุณชำระเงินแล้ว ระบบจะอัปเดตแพ็กเกจให้อัตโนมัติภายในไม่กี่นาที

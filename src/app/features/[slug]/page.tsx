@@ -19,7 +19,7 @@ type FeatureData = {
 const FEATURES: FeatureData[] = [
   {
     slug: "scan",
-    emoji: "📸",
+    emoji: "",
     title: "สแกนใบเสร็จด้วย AI",
     tagline: "ถ่ายรูปเดียว บันทึกทุกอย่างให้อัตโนมัติ",
     color: "from-purple-900/60 to-gray-950",
@@ -28,10 +28,10 @@ const FEATURES: FeatureData[] = [
     description:
       "ไม่ต้องพิมพ์เองอีกต่อไป เพียงถ่ายรูปสลิปโอนเงินหรืออัปโหลดใบเสร็จ AI จะอ่านข้อมูลทุกอย่างและบันทึกลงระบบให้อัตโนมัติ ใช้ได้ทั้งกล้องถ่ายสด และรูปจากคลัง",
     steps: [
-      { icon: "1️⃣", title: "ไปที่หน้ารายจ่าย หรือรายรับ", desc: "กดปุ่ม 📸 สแกน ที่มุมขวาบน" },
-      { icon: "2️⃣", title: "ถ่ายรูปหรืออัปโหลด", desc: "ใช้กล้องถ่ายใบเสร็จสด หรือเลือกรูปจากคลังภาพ (JPG, PNG, HEIC)" },
-      { icon: "3️⃣", title: "AI อ่านข้อมูล", desc: "ระบบจะดึง ยอดเงิน, ชื่อร้านค้า, วันที่, ประเภทเอกสาร และหมวดหมู่" },
-      { icon: "4️⃣", title: "ตรวจสอบและบันทึก", desc: "ข้อมูลจะถูกเติมในฟอร์มให้อัตโนมัติ ตรวจสอบแล้วกดบันทึกได้เลย" },
+      { icon: "1", title: "ไปที่หน้ารายจ่าย หรือรายรับ", desc: "กดปุ่ม สแกน ที่มุมขวาบน" },
+      { icon: "2", title: "ถ่ายรูปหรืออัปโหลด", desc: "ใช้กล้องถ่ายใบเสร็จสด หรือเลือกรูปจากคลังภาพ (JPG, PNG, HEIC)" },
+      { icon: "3", title: "AI อ่านข้อมูล", desc: "ระบบจะดึง ยอดเงิน, ชื่อร้านค้า, วันที่, ประเภทเอกสาร และหมวดหมู่" },
+      { icon: "4", title: "ตรวจสอบและบันทึก", desc: "ข้อมูลจะถูกเติมในฟอร์มให้อัตโนมัติ ตรวจสอบแล้วกดบันทึกได้เลย" },
     ],
     tips: [
       "ถ่ายรูปในที่มีแสงพอ ตัวเลขชัด อ่านง่าย",
@@ -42,7 +42,7 @@ const FEATURES: FeatureData[] = [
   },
   {
     slug: "income-expense",
-    emoji: "💰",
+    emoji: "",
     title: "ติดตามรายรับ-รายจ่าย",
     tagline: "เห็นภาพรวมธุรกิจแบบ real-time",
     color: "from-emerald-900/60 to-gray-950",
@@ -51,10 +51,10 @@ const FEATURES: FeatureData[] = [
     description:
       "ดูยอดรายรับ-รายจ่าย กำไร-ขาดทุน แยกตามเดือน แยกตามแพลตฟอร์ม ทั้งหมดในหน้าเดียว อัปเดตทันทีทุกครั้งที่มีการบันทึก",
     steps: [
-      { icon: "1️⃣", title: "บันทึกรายรับ", desc: "นำเข้าไฟล์ Excel จาก TikTok/Shopee/Lazada หรือบันทึก Manual ก็ได้" },
-      { icon: "2️⃣", title: "บันทึกรายจ่าย", desc: "พิมพ์เอง สแกนใบเสร็จ หรือให้พนักงาน Staff บันทึกแทน" },
-      { icon: "3️⃣", title: "ดูสรุปรายเดือน/รายปี", desc: "Dashboard แสดงยอดรวม กำไร และแนวโน้มแบบกราฟ" },
-      { icon: "4️⃣", title: "กรองตามแพลตฟอร์ม", desc: "แยกดูยอด TikTok, Shopee, Lazada หรือ Manual แยกกันได้" },
+      { icon: "1", title: "บันทึกรายรับ", desc: "นำเข้าไฟล์ Excel จาก TikTok/Shopee/Lazada หรือบันทึก Manual ก็ได้" },
+      { icon: "2", title: "บันทึกรายจ่าย", desc: "พิมพ์เอง สแกนใบเสร็จ หรือให้พนักงาน Staff บันทึกแทน" },
+      { icon: "3", title: "ดูสรุปรายเดือน/รายปี", desc: "Dashboard แสดงยอดรวม กำไร และแนวโน้มแบบกราฟ" },
+      { icon: "4", title: "กรองตามแพลตฟอร์ม", desc: "แยกดูยอด TikTok, Shopee, Lazada หรือ Manual แยกกันได้" },
     ],
     tips: [
       "กดที่แท่งกราฟรายเดือนเพื่อ filter เฉพาะเดือนนั้น",
@@ -65,7 +65,7 @@ const FEATURES: FeatureData[] = [
   },
   {
     slug: "tax",
-    emoji: "📊",
+    emoji: "",
     title: "คำนวณภาษีอัตโนมัติ",
     tagline: "รู้ล่วงหน้าว่าต้องเสียภาษีเท่าไหร่",
     color: "from-blue-900/60 to-gray-950",
@@ -74,10 +74,10 @@ const FEATURES: FeatureData[] = [
     description:
       "ระบบคำนวณภาษีเงินได้บุคคลธรรมดาจากรายได้จริงที่คุณบันทึกไว้ เปรียบเทียบ 2 วิธีหักค่าใช้จ่าย พร้อมบอกว่าแบบไหนประหยัดภาษีมากกว่า",
     steps: [
-      { icon: "1️⃣", title: "บันทึกรายรับ-รายจ่ายตลอดปี", desc: "ยิ่งข้อมูลครบ ยิ่งคำนวณแม่นยำ" },
-      { icon: "2️⃣", title: "เปิดหน้าภาษี", desc: "ระบบดึงยอดรวมรายได้และรายจ่ายของปีนั้นมาคำนวณให้เลย" },
-      { icon: "3️⃣", title: "เปรียบเทียบ 2 วิธี", desc: "วิธีที่ 1: หักค่าใช้จ่าย 60% (จริง) / วิธีที่ 2: หักแบบเหมา" },
-      { icon: "4️⃣", title: "รู้ยอดภาษีโดยประมาณ", desc: "แนะนำล่วงหน้าก่อนถึงกำหนดยื่น ภ.ง.ด.90/91" },
+      { icon: "1", title: "บันทึกรายรับ-รายจ่ายตลอดปี", desc: "ยิ่งข้อมูลครบ ยิ่งคำนวณแม่นยำ" },
+      { icon: "2", title: "เปิดหน้าภาษี", desc: "ระบบดึงยอดรวมรายได้และรายจ่ายของปีนั้นมาคำนวณให้เลย" },
+      { icon: "3", title: "เปรียบเทียบ 2 วิธี", desc: "วิธีที่ 1: หักค่าใช้จ่าย 60% (จริง) / วิธีที่ 2: หักแบบเหมา" },
+      { icon: "4", title: "รู้ยอดภาษีโดยประมาณ", desc: "แนะนำล่วงหน้าก่อนถึงกำหนดยื่น ภ.ง.ด.90/91" },
     ],
     tips: [
       "ยอดภาษีที่แสดงเป็นประมาณการ — ยื่นจริงควรปรึกษานักบัญชี",
@@ -88,7 +88,7 @@ const FEATURES: FeatureData[] = [
   },
   {
     slug: "sheets",
-    emoji: "📋",
+    emoji: "",
     title: "ซิงค์ Google Sheets",
     tagline: "ข้อมูลทุกรายการพร้อมใน Spreadsheet ของคุณ",
     color: "from-green-900/60 to-gray-950",
@@ -97,10 +97,10 @@ const FEATURES: FeatureData[] = [
     description:
       "ทุกรายการที่บันทึกจะถูกส่งไปยัง Google Sheets ของคุณอัตโนมัติ ดาวน์โหลดเป็น Excel แชร์กับนักบัญชีหรือสรรพากรได้ทันที ไม่ต้องพิมพ์ซ้ำ",
     steps: [
-      { icon: "1️⃣", title: "เชื่อมต่อ Google", desc: "ไปที่ ตั้งค่า → เชื่อมต่อ Google และให้สิทธิ์เข้าถึง Drive" },
-      { icon: "2️⃣", title: "ระบบสร้าง Sheet ให้อัตโนมัติ", desc: "สร้าง Google Sheet ชื่อ \"Vendee Finance - [ชื่อธุรกิจ]\" ใน Drive ของคุณ" },
-      { icon: "3️⃣", title: "ซิงค์อัตโนมัติ", desc: "ทุกรายการที่บันทึกจะถูก append ลง Sheet ทันที" },
-      { icon: "4️⃣", title: "เปิดหรือแชร์ได้เลย", desc: "กด Google Sheets ใน Dashboard เพื่อเปิด หรือ Share URL ให้นักบัญชี" },
+      { icon: "1", title: "เชื่อมต่อ Google", desc: "ไปที่ ตั้งค่า → เชื่อมต่อ Google และให้สิทธิ์เข้าถึง Drive" },
+      { icon: "2", title: "ระบบสร้าง Sheet ให้อัตโนมัติ", desc: "สร้าง Google Sheet ชื่อ \"Vendee Finance - [ชื่อธุรกิจ]\" ใน Drive ของคุณ" },
+      { icon: "3", title: "ซิงค์อัตโนมัติ", desc: "ทุกรายการที่บันทึกจะถูก append ลง Sheet ทันที" },
+      { icon: "4", title: "เปิดหรือแชร์ได้เลย", desc: "กด Google Sheets ใน Dashboard เพื่อเปิด หรือ Share URL ให้นักบัญชี" },
     ],
     tips: [
       "กด Sync ใน Settings เพื่อนำรายการเก่าเข้า Sheets ย้อนหลัง",
@@ -111,7 +111,7 @@ const FEATURES: FeatureData[] = [
   },
   {
     slug: "import",
-    emoji: "📤",
+    emoji: "",
     title: "นำเข้ายอดแพลตฟอร์ม",
     tagline: "อัปโหลดครั้งเดียว ได้รายรับทั้งเดือน",
     color: "from-orange-900/60 to-gray-950",
@@ -120,10 +120,10 @@ const FEATURES: FeatureData[] = [
     description:
       "ดาวน์โหลดรายงานยอดขายจาก TikTok Shop, Shopee หรือ Lazada แล้วอัปโหลดเข้า Vendee Finance — ระบบจะแยกยอดรายรับของแต่ละออเดอร์ให้อัตโนมัติ ไม่ต้องกรอกทีละรายการ",
     steps: [
-      { icon: "1️⃣", title: "ดาวน์โหลดรายงานจากแพลตฟอร์ม", desc: "TikTok: Order Management → Export / Shopee: My Income → Export / Lazada: Orders → Export" },
-      { icon: "2️⃣", title: "ไปที่หน้ารายรับ → นำเข้า", desc: "กดปุ่ม 📤 นำเข้า แล้วเลือกแพลตฟอร์มที่ต้องการ" },
-      { icon: "3️⃣", title: "เลือกไฟล์ Excel/CSV", desc: "ระบบจะอ่านและแยกออเดอร์ทั้งหมดในไฟล์" },
-      { icon: "4️⃣", title: "ยืนยันและบันทึก", desc: "ตรวจสอบยอดรวม แล้วกดยืนยัน — รายรับทั้งหมดจะเข้าระบบทันที" },
+      { icon: "1", title: "ดาวน์โหลดรายงานจากแพลตฟอร์ม", desc: "TikTok: Order Management → Export / Shopee: My Income → Export / Lazada: Orders → Export" },
+      { icon: "2", title: "ไปที่หน้ารายรับ → นำเข้า", desc: "กดปุ่ม นำเข้า แล้วเลือกแพลตฟอร์มที่ต้องการ" },
+      { icon: "3", title: "เลือกไฟล์ Excel/CSV", desc: "ระบบจะอ่านและแยกออเดอร์ทั้งหมดในไฟล์" },
+      { icon: "4", title: "ยืนยันและบันทึก", desc: "ตรวจสอบยอดรวม แล้วกดยืนยัน — รายรับทั้งหมดจะเข้าระบบทันที" },
     ],
     tips: [
       "ระบบตรวจสอบ Order ID ซ้ำ ป้องกันการนับยอดสองครั้ง",
@@ -134,7 +134,7 @@ const FEATURES: FeatureData[] = [
   },
   {
     slug: "team",
-    emoji: "🛡️",
+    emoji: "",
     title: "แชร์ให้ทีมงาน",
     tagline: "ทำงานร่วมกันได้โดยไม่ต้องแชร์รหัส",
     color: "from-rose-900/60 to-gray-950",
@@ -143,10 +143,10 @@ const FEATURES: FeatureData[] = [
     description:
       "เพิ่มผู้ดูแลร่วม (Admin) ด้วย Google Email เพื่อให้เข้าถึง Dashboard ได้เต็มที่ หรือสร้างลิงก์ Staff สำหรับให้พนักงานบันทึกรายจ่ายแทนโดยไม่ต้อง login",
     steps: [
-      { icon: "1️⃣", title: "Admin — เพิ่มผู้ดูแลร่วม", desc: "ไปที่ ตั้งค่า → Admin → ใส่ Gmail ของผู้ที่จะเพิ่ม → คัดลอกลิงก์เชิญ" },
-      { icon: "2️⃣", title: "Admin ยืนยันตัวตน", desc: "Admin เปิดลิงก์ → ล็อกอินด้วย Google → ยืนยันการเข้าร่วม" },
-      { icon: "3️⃣", title: "Staff — บันทึกรายจ่ายแทน", desc: "สร้างลิงก์ Staff ใน Settings → ส่งให้พนักงาน → กรอกชื่อแล้วบันทึกได้เลย ไม่ต้อง login" },
-      { icon: "4️⃣", title: "เห็นว่าใครบันทึก", desc: "รายจ่ายที่บันทึกโดย Staff จะมีแท็กชื่อกำกับในรายการ" },
+      { icon: "1", title: "Admin — เพิ่มผู้ดูแลร่วม", desc: "ไปที่ ตั้งค่า → Admin → ใส่ Gmail ของผู้ที่จะเพิ่ม → คัดลอกลิงก์เชิญ" },
+      { icon: "2", title: "Admin ยืนยันตัวตน", desc: "Admin เปิดลิงก์ → ล็อกอินด้วย Google → ยืนยันการเข้าร่วม" },
+      { icon: "3", title: "Staff — บันทึกรายจ่ายแทน", desc: "สร้างลิงก์ Staff ใน Settings → ส่งให้พนักงาน → กรอกชื่อแล้วบันทึกได้เลย ไม่ต้อง login" },
+      { icon: "4", title: "เห็นว่าใครบันทึก", desc: "รายจ่ายที่บันทึกโดย Staff จะมีแท็กชื่อกำกับในรายการ" },
     ],
     tips: [
       "Admin เข้าถึงได้ทุกอย่าง — รายรับ, รายจ่าย, ภาษี, ตั้งค่า",
@@ -201,7 +201,7 @@ export default async function FeaturePage({ params }: { params: Promise<{ slug: 
 
         {/* Tips */}
         <div className={`border rounded-2xl p-5 mb-8 ${feature.accentBg}`}>
-          <h2 className="text-sm font-bold mb-3 text-gray-300">💡 เคล็ดลับ</h2>
+          <h2 className="text-sm font-bold mb-3 text-gray-300">เคล็ดลับ</h2>
           <ul className="space-y-2">
             {feature.tips.map((t) => (
               <li key={t} className="flex items-start gap-2 text-sm text-gray-300">
@@ -217,7 +217,7 @@ export default async function FeaturePage({ params }: { params: Promise<{ slug: 
           href="/onboarding"
           className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-base font-bold bg-emerald-500 hover:bg-emerald-400 text-white transition-colors"
         >
-          🚀 {feature.cta}
+          {feature.cta}
         </Link>
 
         {/* Other features */}

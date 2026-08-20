@@ -559,12 +559,12 @@ export default function StockPage() {
           <div className="flex items-center gap-2 flex-wrap">
             <button onClick={downloadTemplate}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-gray-200 bg-white text-gray-600 hover:border-gray-400 transition-colors">
-              ⬇ Template
+              Template
             </button>
             <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImport} />
             <button onClick={() => fileRef.current?.click()} disabled={importing}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors disabled:opacity-50">
-              {importing ? "กำลังนำเข้า..." : "📥 นำเข้า Excel"}
+              {importing ? "กำลังนำเข้า..." : "นำเข้า Excel"}
             </button>
             <button onClick={() => setShowAdd(true)}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-[#0A192F] text-white hover:bg-[#0d2240] transition-colors">
@@ -582,7 +582,7 @@ export default function StockPage() {
         {/* Low stock warning */}
         {lowStockProducts.length > 0 && (
           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
-            <p className="font-semibold text-amber-700 text-sm mb-2">⚠️ สินค้าใกล้หมด {lowStockProducts.length} รายการ</p>
+            <p className="font-semibold text-amber-700 text-sm mb-2">สินค้าใกล้หมด {lowStockProducts.length} รายการ</p>
             <div className="flex flex-wrap gap-2">
               {lowStockProducts.map((p) => (
                 <span key={p.id} className="text-xs bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full font-medium">
@@ -599,7 +599,7 @@ export default function StockPage() {
           if (dead.length === 0) return null;
           return (
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
-              <p className="font-semibold text-slate-600 text-sm mb-1">💤 สินค้าค้างสต็อก {dead.length} รายการ</p>
+              <p className="font-semibold text-slate-600 text-sm mb-1">สินค้าค้างสต็อก {dead.length} รายการ</p>
               <p className="text-xs text-slate-400 mb-3">สินค้าที่ยังมีของในสต็อก แต่ไม่มียอดขายเลยใน 30 วันล่าสุด — ควรพิจารณาลดราคา/จัดโปรเพื่อระบายของ</p>
               <div className="flex flex-wrap gap-2">
                 {dead.map((p) => (
@@ -614,7 +614,7 @@ export default function StockPage() {
 
         {/* Tabs */}
         <div className="flex gap-1 sm:gap-2 border-b border-gray-100 pb-0 overflow-x-auto">
-          {([["summary","📊 สรุปยอดขาย"],["orders","🚚 ออเดอร์"],["restock","🔄 เติมสต็อก"],["products","📦 สินค้า"]] as const).map(([t, label]) => (
+          {([["summary","สรุปยอดขาย"],["orders","ออเดอร์"],["restock","เติมสต็อก"],["products","สินค้า"]] as const).map(([t, label]) => (
             <button key={t} onClick={() => {
               setTab(t);
               if (t === "summary") loadSummary();
@@ -631,7 +631,7 @@ export default function StockPage() {
         {/* Search (products tab only) */}
         {tab === "products" && (
           <input value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder="🔍 ค้นหาสินค้า..."
+            placeholder="ค้นหาสินค้า..."
             className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A192F]/20" />
         )}
 
@@ -664,7 +664,7 @@ export default function StockPage() {
               <div className="p-8 text-center text-gray-400 text-sm">กำลังโหลด...</div>
             ) : summary.length === 0 ? (
               <div className="p-10 text-center">
-                <p className="text-3xl mb-2">📊</p>
+                <p className="text-3xl mb-2"></p>
                 <p className="text-gray-400 text-sm">ยังไม่มีข้อมูลสต็อก — เพิ่มสินค้าก่อน</p>
               </div>
             ) : (
@@ -712,8 +712,8 @@ export default function StockPage() {
                           {fmt(s.stock_qty)}
                         </span>
                         <span className="text-xs text-gray-400 ml-1">{s.unit}</span>
-                        {s.is_low && <span className="ml-1">⚠️</span>}
-                        {s.is_dead && <span className="ml-1" title="ค้างสต็อก — ไม่มียอดขายใน 30 วันล่าสุด">💤</span>}
+                        {s.is_low && <span className="ml-1"></span>}
+                        {s.is_dead && <span className="ml-1" title="ค้างสต็อก — ไม่มียอดขายใน 30 วันล่าสุด"></span>}
                       </td>
                     </tr>
                   ))}
@@ -768,7 +768,7 @@ export default function StockPage() {
                 <div className="p-8 text-center text-gray-400 text-sm">กำลังโหลด...</div>
               ) : orders.length === 0 ? (
                 <div className="p-10 text-center">
-                  <p className="text-3xl mb-2">🚚</p>
+                  <p className="text-3xl mb-2"></p>
                   <p className="text-gray-400 text-sm">ยังไม่มีออเดอร์ — เชื่อม API แพลตฟอร์ม หรือนำเข้าไฟล์ยอดขาย</p>
                 </div>
               ) : (
@@ -817,7 +817,7 @@ export default function StockPage() {
           return (
             <div className="space-y-4">
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-start gap-3">
-                <span className="text-2xl" aria-hidden>🔄</span>
+                <span className="text-2xl" aria-hidden></span>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-gray-800">เติมสต็อกอัจฉริยะ</p>
                   <p className="text-xs text-gray-400 mt-0.5">
@@ -835,7 +835,7 @@ export default function StockPage() {
                 <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-gray-400 text-sm">กำลังโหลด...</div>
               ) : rows.length === 0 ? (
                 <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
-                  <p className="text-3xl mb-2">📦</p>
+                  <p className="text-3xl mb-2"></p>
                   <p className="text-gray-400 text-sm">ยังไม่มีข้อมูลสต็อก</p>
                 </div>
               ) : (
@@ -896,7 +896,7 @@ export default function StockPage() {
             <div className="p-8 text-center text-gray-400 text-sm">กำลังโหลด...</div>
           ) : products.length === 0 ? (
             <div className="p-12 text-center">
-              <p className="text-4xl mb-3">📦</p>
+              <p className="text-4xl mb-3"></p>
               <p className="text-gray-500 font-medium">ยังไม่มีสินค้า</p>
               <p className="text-gray-400 text-sm mt-1">เพิ่มสินค้าหรือนำเข้าจาก Excel</p>
             </div>
@@ -964,7 +964,7 @@ export default function StockPage() {
                           {fmt(p.stock_qty)}
                         </span>
                         <span className="text-gray-400 text-xs ml-1">{p.unit}</span>
-                        {isLow && <span className="ml-1 text-xs">⚠️</span>}
+                        {isLow && <span className="ml-1 text-xs"></span>}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1 justify-end">
@@ -974,7 +974,7 @@ export default function StockPage() {
                           </button>
                           <button onClick={() => setMappingProd(p)}
                             className="px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors">
-                            🔗 Map
+                            Map
                           </button>
                           <button onClick={() => setEditProd(p)}
                             className="px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">

@@ -154,7 +154,7 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <footer className="mt-16 pt-6 border-t border-white/10 text-gray-500 text-xs">
-          <p>© {new Date().getFullYear()} Vendee Finance · <Link href="/terms" className="hover:text-gray-300 underline">Terms of Service</Link> · <Link href="/" className="hover:text-gray-300 underline">Home</Link></p>
+          <p>{new Date().getFullYear()} Vendee Finance · <Link href="/terms" className="hover:text-gray-300 underline">Terms of Service</Link> · <Link href="/" className="hover:text-gray-300 underline">Home</Link></p>
         </footer>
       </article>
     </main>

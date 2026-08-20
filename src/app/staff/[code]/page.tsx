@@ -79,10 +79,10 @@ export default function StaffExpensePage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "เกิดข้อผิดพลาด");
-      setSaveMsg({ ok: true, text: `✅ บันทึกรายจ่าย ฿${parseFloat(amount).toLocaleString("th-TH")} แล้ว` });
+      setSaveMsg({ ok: true, text: `บันทึกรายจ่าย ฿${parseFloat(amount).toLocaleString("th-TH")} แล้ว` });
       setVendor(""); setAmount(""); setDesc(""); setCategory("อื่นๆ");
     } catch (err: unknown) {
-      setSaveMsg({ ok: false, text: `❌ ${err instanceof Error ? err.message : "เกิดข้อผิดพลาด"}` });
+      setSaveMsg({ ok: false, text: `${err instanceof Error ? err.message : "เกิดข้อผิดพลาด"}` });
     } finally {
       setSaving(false);
     }
@@ -93,7 +93,7 @@ export default function StaffExpensePage() {
     return (
       <main className="min-h-screen bg-rose-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-4xl mb-3 animate-pulse">🧾</div>
+          <div className="text-4xl mb-3 animate-pulse"></div>
           <p className="text-gray-400 text-sm">กำลังตรวจสอบ...</p>
         </div>
       </main>
@@ -105,7 +105,7 @@ export default function StaffExpensePage() {
     return (
       <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center max-w-sm w-full">
-          <p className="text-4xl mb-4">{status === "disabled" ? "🔒" : "❌"}</p>
+          <p className="text-4xl mb-4">{status === "disabled" ? "" : ""}</p>
           <h1 className="text-lg font-bold text-gray-700 mb-2">
             {status === "disabled" ? "ลิงก์ถูกปิดแล้ว" : "ลิงก์ไม่ถูกต้อง"}
           </h1>
@@ -125,7 +125,7 @@ export default function StaffExpensePage() {
       <main className="min-h-screen bg-rose-50 flex items-center justify-center px-4">
         <div className="bg-white rounded-2xl border border-rose-100 p-8 max-w-sm w-full shadow-sm">
           <div className="text-center mb-6">
-            <p className="text-4xl mb-2">🧾</p>
+            <p className="text-4xl mb-2"></p>
             <h1 className="text-lg font-bold text-gray-800">บันทึกรายจ่าย</h1>
             <p className="text-gray-400 text-sm mt-1">ให้กับ <span className="text-rose-600 font-semibold">{ownerName}</span></p>
           </div>
@@ -162,7 +162,7 @@ export default function StaffExpensePage() {
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <div className="text-3xl">🧾</div>
+          <div className="text-3xl"></div>
           <div className="flex-1">
             <h1 className="text-lg font-bold text-rose-700">บันทึกรายจ่าย</h1>
             <p className="text-xs text-gray-400">
@@ -233,7 +233,7 @@ export default function StaffExpensePage() {
 
           <button type="submit" disabled={saving || !vendor.trim() || !amount}
             className="w-full bg-rose-500 hover:bg-rose-600 disabled:opacity-40 text-white font-bold py-3.5 rounded-xl text-sm transition-colors">
-            {saving ? "กำลังบันทึก..." : "💾 บันทึกรายจ่าย"}
+            {saving ? "กำลังบันทึก..." : "บันทึกรายจ่าย"}
           </button>
         </form>
 

@@ -426,7 +426,7 @@ export default function OnboardingPage() {
   return (
     <main className="min-h-screen bg-white flex flex-col px-6 pt-10 pb-8">
       <div className="text-center mb-6">
-        <div className="text-4xl mb-2">🤖</div>
+        <div className="text-4xl mb-2"></div>
         <h1 className="text-xl font-bold text-gray-800">ยินดีต้อนรับสู่ Vendee Finance</h1>
         <p className="text-gray-400 text-sm mt-1">เริ่มใช้งานฟรีได้ทันที! เพียง 3 ขั้นตอนง่าย ๆ</p>
       </div>

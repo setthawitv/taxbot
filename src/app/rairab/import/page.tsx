@@ -30,9 +30,9 @@ type PreviewData = {
 };
 
 const PLATFORMS: { id: Platform; label: string; emoji: string; color: string; accept: string }[] = [
-  { id: "tiktok",  label: "TikTok Shop", emoji: "🎵", color: "bg-gray-900",   accept: ".csv,.xlsx,.xls" },
-  { id: "shopee",  label: "Shopee",      emoji: "🛒", color: "bg-orange-500", accept: ".csv,.xlsx,.xls" },
-  { id: "lazada",  label: "Lazada",      emoji: "📦", color: "bg-blue-600",   accept: ".csv,.xlsx,.xls" },
+  { id: "tiktok",  label: "TikTok Shop", emoji: "", color: "bg-gray-900",   accept: ".csv,.xlsx,.xls" },
+  { id: "shopee",  label: "Shopee",      emoji: "", color: "bg-orange-500", accept: ".csv,.xlsx,.xls" },
+  { id: "lazada",  label: "Lazada",      emoji: "", color: "bg-blue-600",   accept: ".csv,.xlsx,.xls" },
 ];
 
 export default function ImportPage() {
@@ -179,7 +179,7 @@ export default function ImportPage() {
             <Link href="/rairab" className="text-emerald-600 text-sm">← กลับ</Link>
           </div>
           <div className="flex items-center gap-3 mb-6">
-            <div className="text-4xl">📤</div>
+            <div className="text-4xl"></div>
             <div>
               <h1 className="text-xl font-bold text-gray-800">นำเข้าข้อมูลรายรับ</h1>
               <p className="text-gray-400 text-sm">เลือกแพลตฟอร์มของคุณ</p>
@@ -190,7 +190,7 @@ export default function ImportPage() {
           {!userId && (
             <div className="mb-4 bg-amber-50 border border-amber-200 rounded-2xl p-4">
               <p className="text-amber-700 text-sm font-medium mb-3">
-                ⚠️ ยังไม่ได้เข้าสู่ระบบ — ดูตัวอย่างได้ แต่บันทึกไม่ได้
+                ยังไม่ได้เข้าสู่ระบบ — ดูตัวอย่างได้ แต่บันทึกไม่ได้
               </p>
               <button
                 onClick={() => signIn("google")}
@@ -225,17 +225,17 @@ export default function ImportPage() {
           </div>
 
           <div className="mt-6 bg-white rounded-2xl p-4 border border-emerald-100 text-xs text-gray-500 space-y-1">
-            <p className="font-semibold text-gray-600 mb-2">📋 วิธีดาวน์โหลดไฟล์</p>
-            <p>🎵 <strong>TikTok</strong> → Seller Center → Orders → Export</p>
-            <p>🛒 <strong>Shopee</strong> → Seller Centre → Orders → Export</p>
-            <p>📦 <strong>Lazada</strong> → Seller Center → Orders → Export</p>
+            <p className="font-semibold text-gray-600 mb-2">วิธีดาวน์โหลดไฟล์</p>
+            <p><strong>TikTok</strong> → Seller Center → Orders → Export</p>
+            <p><strong>Shopee</strong> → Seller Centre → Orders → Export</p>
+            <p><strong>Lazada</strong> → Seller Center → Orders → Export</p>
           </div>
 
           {/* ── Link to settings for history ── */}
           {userId && (
             <div className="mt-4">
               <Link href="/settings" className="w-full flex items-center justify-between px-4 py-3 bg-white rounded-2xl border border-gray-100 text-sm text-gray-500 hover:border-gray-300 transition-colors">
-                <span>🕓 ดูประวัติการอัพโหลด</span>
+                <span>ดูประวัติการอัพโหลด</span>
                 <span className="text-gray-300">→</span>
               </Link>
             </div>
@@ -268,12 +268,12 @@ export default function ImportPage() {
           >
             {loading ? (
               <>
-                <div className="text-4xl animate-spin">⏳</div>
+                <div className="text-4xl animate-spin"></div>
                 <p className="text-gray-500 font-medium">กำลังอ่านไฟล์...</p>
               </>
             ) : (
               <>
-                <div className="text-4xl">📂</div>
+                <div className="text-4xl"></div>
                 <p className="text-gray-700 font-semibold">กดเพื่อเลือกไฟล์</p>
                 <p className="text-gray-400 text-xs">.csv, .xlsx, .xls</p>
               </>
@@ -290,7 +290,7 @@ export default function ImportPage() {
 
           {error && (
             <div className="mt-4 bg-red-50 border border-red-200 rounded-xl p-3 text-red-600 text-sm">
-              ⚠️ {error}
+              {error}
             </div>
           )}
         </div>
@@ -341,7 +341,7 @@ export default function ImportPage() {
               <div className="grid grid-cols-2 gap-2 text-center border-t border-white/20 pt-3">
                 <div className="bg-white/15 rounded-xl py-2">
                   <p className="text-lg font-bold">{preview.newCount}</p>
-                  <p className="text-xs opacity-80">✨ ใหม่</p>
+                  <p className="text-xs opacity-80">ใหม่</p>
                 </div>
                 <div className="bg-white/10 rounded-xl py-2">
                   <p className="text-lg font-bold">{preview.existingCount}</p>
@@ -376,7 +376,7 @@ export default function ImportPage() {
 
           {preview.overlapWarning && (
             <div className="mb-3 bg-amber-50 border border-amber-300 rounded-xl p-4 text-sm">
-              <p className="font-semibold text-amber-800 mb-1">⚠️ ช่วงวันที่คาบเกี่ยวกับไฟล์เก่า</p>
+              <p className="font-semibold text-amber-800 mb-1">ช่วงวันที่คาบเกี่ยวกับไฟล์เก่า</p>
               <p className="text-amber-700 leading-relaxed">
                 มีไฟล์รายงาน TikTok ที่นำเข้าไปแล้วซึ่งช่วงวันที่ทับซ้อนกัน
                 ถ้าบันทึกไฟล์นี้เพิ่ม <strong>ยอดรายรับจะนับซ้ำ</strong> ทำให้ตัวเลขเพี้ยน
@@ -389,7 +389,7 @@ export default function ImportPage() {
 
           {error && (
             <div className="mb-3 bg-red-50 border border-red-200 rounded-xl p-3 text-red-600 text-sm">
-              ⚠️ {error}
+              {error}
             </div>
           )}
 
@@ -418,10 +418,10 @@ export default function ImportPage() {
               className="w-full bg-emerald-500 text-white font-bold py-4 rounded-2xl active:scale-95 transition-all disabled:opacity-50 shadow-md shadow-emerald-200"
             >
               {loading
-                ? "⏳ กำลังบันทึก..."
+                ? "กำลังบันทึก..."
                 : preview.newCount === 0
-                  ? "✅ ข้อมูลทั้งหมดมีในระบบแล้ว"
-                  : `✅ บันทึก ${preview.newCount} รายการใหม่ · ฿${(preview.newTotal ?? preview.total).toLocaleString("th-TH", { maximumFractionDigits: 0 })}`
+                  ? "ข้อมูลทั้งหมดมีในระบบแล้ว"
+                  : `บันทึก ${preview.newCount} รายการใหม่ · ฿${(preview.newTotal ?? preview.total).toLocaleString("th-TH", { maximumFractionDigits: 0 })}`
               }
             </button>
           )}
@@ -434,7 +434,7 @@ export default function ImportPage() {
   return (
     <main className="min-h-screen bg-emerald-50 flex flex-col items-center justify-center px-4">
       <div className="text-center max-w-xs">
-        <div className="text-6xl mb-4">✅</div>
+        <div className="text-6xl mb-4"></div>
         <h1 className="text-xl font-bold text-gray-800 mb-2">บันทึกสำเร็จ!</h1>
         <p className="text-gray-500 text-sm mb-1">
           นำเข้าข้อมูลจาก {pl?.label} เรียบร้อยแล้ว
@@ -447,7 +447,7 @@ export default function ImportPage() {
             ดูรายรับทั้งหมด
           </Link>
           <Link href="/stock" className="w-full bg-white border border-emerald-200 text-emerald-700 font-semibold py-3 rounded-2xl text-center block">
-            📦 ดูสต็อกสินค้า
+            ดูสต็อกสินค้า
           </Link>
           <button onClick={() => { setStep("platform"); setFile(null); setPreview(null); }}
             className="w-full bg-white border border-gray-200 text-gray-500 font-medium py-3 rounded-2xl">
@@ -461,7 +461,7 @@ export default function ImportPage() {
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl max-h-[85vh] flex flex-col">
             <div className="p-5 border-b border-gray-100">
-              <h3 className="font-bold text-gray-800 text-lg">🔗 ผูกสินค้ากับสต็อก</h3>
+              <h3 className="font-bold text-gray-800 text-lg">ผูกสินค้ากับสต็อก</h3>
               <p className="text-sm text-gray-400 mt-1">ระบบจะจำ mapping นี้สำหรับการนำเข้าครั้งถัดไปอัตโนมัติ</p>
             </div>
 

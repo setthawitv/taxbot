@@ -47,7 +47,7 @@ function ConnectGoogleInner() {
     return (
       <main className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
         <div className="text-center max-w-xs">
-          <div className="text-6xl mb-4">🌐</div>
+          <div className="text-6xl mb-4"></div>
           <h1 className="text-lg font-bold text-gray-800 mb-2">กำลังเปิด Browser ภายนอก</h1>
           <p className="text-gray-500 text-sm mb-6 leading-relaxed">
             รอสักครู่... ระบบกำลังเปิด Safari/Chrome<br />
@@ -72,7 +72,7 @@ function ConnectGoogleInner() {
   return (
     <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="text-center">
-        <div className="text-5xl mb-4">🔄</div>
+        <div className="text-5xl mb-4"></div>
         <p className="text-gray-600 font-medium">กำลังเชื่อมต่อ Google...</p>
         <p className="text-gray-400 text-sm mt-2">กรุณารอสักครู่</p>
       </div>

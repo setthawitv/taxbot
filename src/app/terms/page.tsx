@@ -69,7 +69,7 @@ export default function TermsPage() {
 
           <h2 className="text-lg font-bold text-white mt-8">5. ข้อจำกัดความรับผิด (Disclaimer ภาษี)</h2>
           <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 text-amber-100">
-            <p className="font-semibold mb-2">⚠️ ข้อมูลภาษีจาก Vendee Finance เป็น "การประมาณการ" เท่านั้น</p>
+            <p className="font-semibold mb-2">ข้อมูลภาษีจาก Vendee Finance เป็น "การประมาณการ" เท่านั้น</p>
             <ul className="list-disc pl-6 space-y-1.5">
               <li>ตัวเลขที่คำนวณอ้างอิงจากอัตราภาษีของกรมสรรพากร แต่อาจไม่ครอบคลุมทุกกรณี</li>
               <li>ผู้ใช้ต้องตรวจสอบความถูกต้องและปรึกษานักบัญชีก่อนยื่นภาษีจริง</li>
@@ -121,7 +121,7 @@ export default function TermsPage() {
         </section>
 
         <footer className="mt-16 pt-6 border-t border-white/10 text-gray-500 text-xs">
-          <p>© {new Date().getFullYear()} Vendee Finance · <Link href="/privacy" className="hover:text-gray-300 underline">Privacy Policy</Link> · <Link href="/" className="hover:text-gray-300 underline">Home</Link></p>
+          <p>{new Date().getFullYear()} Vendee Finance · <Link href="/privacy" className="hover:text-gray-300 underline">Privacy Policy</Link> · <Link href="/" className="hover:text-gray-300 underline">Home</Link></p>
         </footer>
       </article>
     </main>

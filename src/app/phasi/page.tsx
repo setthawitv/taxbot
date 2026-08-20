@@ -337,13 +337,13 @@ export default function PhasiPage() {
             className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
               view === "dashboard" ? "bg-blue-600 text-white shadow-sm" : "text-gray-500 hover:bg-gray-50"
             }`}>
-            📊 แดชบอร์ด
+            แดชบอร์ด
           </button>
           <button onClick={() => setView("calculator")}
             className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
               view === "calculator" ? "bg-blue-600 text-white shadow-sm" : "text-gray-500 hover:bg-gray-50"
             }`}>
-            🧮 คำนวณเอง
+            คำนวณเอง
           </button>
         </div>
 
@@ -358,7 +358,7 @@ export default function PhasiPage() {
 
               {/* ภาษีที่ควรกันไว้ */}
               <div className="bg-white rounded-2xl border border-blue-100 p-6">
-                <p className="text-sm font-semibold text-gray-500 flex items-center gap-1.5 mb-4">💰 ภาษีที่ควรกันไว้</p>
+                <p className="text-sm font-semibold text-gray-500 flex items-center gap-1.5 mb-4">ภาษีที่ควรกันไว้</p>
                 <p className="text-4xl font-extrabold text-blue-700">฿{fmtInt(dash.taxToSetAside)}</p>
                 <p className="text-xs text-gray-400 mt-1">ประมาณการ ณ วันนี้ · ปี {year}</p>
                 <div className="border-t border-gray-100 mt-4 pt-4 space-y-2 text-sm">
@@ -381,7 +381,7 @@ export default function PhasiPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* VAT status */}
                 <div className="bg-white rounded-2xl border border-blue-100 p-5">
-                  <p className="text-sm font-semibold text-gray-500 flex items-center gap-1.5 mb-3">📊 สถานะ VAT</p>
+                  <p className="text-sm font-semibold text-gray-500 flex items-center gap-1.5 mb-3">สถานะ VAT</p>
                   <p className="text-2xl font-bold text-gray-800">฿{fmtInt(raw.totalIncome)}</p>
                   <p className="text-xs text-gray-400 mb-3">จาก ฿{fmtInt(VAT_THRESHOLD)} (เกณฑ์จด VAT)</p>
                   <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
@@ -400,7 +400,7 @@ export default function PhasiPage() {
 
                 {/* WHT recorded */}
                 <div className="bg-white rounded-2xl border border-blue-100 p-5">
-                  <p className="text-sm font-semibold text-gray-500 flex items-center gap-1.5 mb-3">✂️ ภาษีหัก ณ ที่จ่าย</p>
+                  <p className="text-sm font-semibold text-gray-500 flex items-center gap-1.5 mb-3">ภาษีหัก ณ ที่จ่าย</p>
                   <p className="text-2xl font-bold text-gray-800">฿{fmtInt(raw.whtRecorded)}</p>
                   <p className="text-xs text-gray-400 mb-3">หักไว้สะสมปีนี้ (จากรายจ่ายที่บันทึก)</p>
                   <div className="bg-blue-50 rounded-lg p-2.5 text-xs text-blue-700 leading-relaxed">
@@ -412,7 +412,7 @@ export default function PhasiPage() {
               {/* VAT payable (ภ.พ.30) — only for VAT-registered sellers */}
               {dash.vatReg && (
                 <div className="bg-white rounded-2xl border border-blue-100 p-5">
-                  <p className="text-sm font-semibold text-gray-500 flex items-center gap-1.5 mb-3">🧾 ภาษีมูลค่าเพิ่มที่ต้องนำส่ง (ภ.พ.30)</p>
+                  <p className="text-sm font-semibold text-gray-500 flex items-center gap-1.5 mb-3">ภาษีมูลค่าเพิ่มที่ต้องนำส่ง (ภ.พ.30)</p>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
                     <div className="bg-gray-50 rounded-xl p-3">
                       <p className="text-xs text-gray-400">VAT ขาย (Output)</p>
@@ -436,36 +436,36 @@ export default function PhasiPage() {
 
               {/* What to do next */}
               <div className="bg-white rounded-2xl border border-blue-100 p-5">
-                <p className="text-sm font-semibold text-gray-500 flex items-center gap-1.5 mb-3">📋 สิ่งที่ควรทำต่อ</p>
+                <p className="text-sm font-semibold text-gray-500 flex items-center gap-1.5 mb-3">สิ่งที่ควรทำต่อ</p>
                 <ul className="space-y-2.5 text-sm">
                   {/* VAT */}
                   {dash.vatPct >= 100 ? (
                     <li className="flex items-start gap-2.5">
-                      <span className="flex-shrink-0">🔴</span>
+                      <span className="flex-shrink-0"></span>
                       <span className="text-gray-700">รายได้เกิน ฿{fmtInt(VAT_THRESHOLD)} — <strong>ต้องจดทะเบียน VAT ภายใน 30 วัน</strong></span>
                     </li>
                   ) : dash.vatPct >= 80 ? (
                     <li className="flex items-start gap-2.5">
-                      <span className="flex-shrink-0">⚠️</span>
+                      <span className="flex-shrink-0"></span>
                       <span className="text-gray-700">VAT ใกล้เกณฑ์ — อีก ฿{fmtInt(dash.vatRemaining)} ต้องจด VAT เตรียมตัวไว้</span>
                     </li>
                   ) : (
                     <li className="flex items-start gap-2.5">
-                      <span className="flex-shrink-0">✅</span>
+                      <span className="flex-shrink-0"></span>
                       <span className="text-gray-700">รายได้ยังไม่ถึงเกณฑ์ VAT (ใช้ไป {dash.vatPct.toFixed(0)}%)</span>
                     </li>
                   )}
                   {/* WHT */}
                   {raw.whtRecorded > 0 && (
                     <li className="flex items-start gap-2.5">
-                      <span className="flex-shrink-0">✅</span>
+                      <span className="flex-shrink-0"></span>
                       <span className="text-gray-700">หัก ณ ที่จ่ายไว้ ฿{fmtInt(raw.whtRecorded)} — อย่าลืมนำส่ง ภ.ง.ด.3/53</span>
                     </li>
                   )}
                   {/* Bracket */}
                   {dash.nextTop && dash.distToNext !== null && dash.distToNext <= 100_000 && dash.taxable > 0 && (
                     <li className="flex items-start gap-2.5">
-                      <span className="flex-shrink-0">💡</span>
+                      <span className="flex-shrink-0"></span>
                       <span className="text-gray-700">
                         กำไรกำลังจะข้าม bracket {dash.nextRate}% (อีก ฿{fmtInt(dash.distToNext)}) — วางแผนซื้อลดหย่อนเพิ่มช่วยได้
                       </span>
@@ -474,7 +474,7 @@ export default function PhasiPage() {
                   {/* Deduction nudge (individual) */}
                   {compute.kind === "individual" && (
                     <li className="flex items-start gap-2.5">
-                      <span className="flex-shrink-0">💡</span>
+                      <span className="flex-shrink-0"></span>
                       <span className="text-gray-700">
                         ตอนนี้ลดหย่อนรวม ฿{fmtInt(compute.totalDeductions)} — เพิ่มประกัน/กองทุนช่วยลดภาษีได้ (<button onClick={() => setView("calculator")} className="text-blue-600 font-semibold underline">ปรับลดหย่อน</button>)
                       </span>
@@ -532,7 +532,7 @@ export default function PhasiPage() {
 
               {raw.vatWarning && (
                 <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
-                  <p className="text-red-700 font-semibold text-sm">⚠️ รายได้เกิน 1,800,000 บาท</p>
+                  <p className="text-red-700 font-semibold text-sm">รายได้เกิน 1,800,000 บาท</p>
                   <p className="text-red-500 text-xs mt-1">คุณอาจต้องจดทะเบียนภาษีมูลค่าเพิ่ม (VAT)</p>
                 </div>
               )}
@@ -720,10 +720,10 @@ export default function PhasiPage() {
                         );
                       })}
                       <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-xs text-emerald-700">
-                        ✅ <strong>หักให้อัตโนมัติแล้ว:</strong> ค่าลดหย่อนส่วนตัว 60,000 บาท
+                        <strong>หักให้อัตโนมัติแล้ว:</strong> ค่าลดหย่อนส่วนตัว 60,000 บาท
                       </div>
                       <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700">
-                        💡 รายการที่อยู่ในเพดานเดียวกันระบบจะคำนวณให้อัตโนมัติ <br/>
+                        รายการที่อยู่ในเพดานเดียวกันระบบจะคำนวณให้อัตโนมัติ <br/>
                         เช่น ประกันชีวิต + สุขภาพตนเอง รวมไม่เกิน 100,000 บาท
                       </div>
                     </div>
@@ -733,7 +733,7 @@ export default function PhasiPage() {
 
               {raw.vatRegistered && (
                 <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700 leading-relaxed">
-                  🧾 <strong>จดทะเบียน VAT:</strong> คำนวณภาษีเงินได้จากยอด<strong>หลังหัก VAT</strong> (รายได้ ÷ 1.07, รายจ่ายหัก VAT ซื้อออก) — ดู VAT ที่ต้องนำส่งได้ในแท็บแดชบอร์ด
+                  <strong>จดทะเบียน VAT:</strong> คำนวณภาษีเงินได้จากยอด<strong>หลังหัก VAT</strong> (รายได้ ÷ 1.07, รายจ่ายหัก VAT ซื้อออก) — ดู VAT ที่ต้องนำส่งได้ในแท็บแดชบอร์ด
                 </div>
               )}
               <p className="text-xs text-gray-400 text-center pb-2">
@@ -752,7 +752,7 @@ export default function PhasiPage() {
                 <>
                   {compute.savings > 0 && (
                     <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3">
-                      <span className="text-2xl flex-shrink-0">💡</span>
+                      <span className="text-2xl flex-shrink-0"></span>
                       <div>
                         <p className="text-amber-800 font-semibold text-sm">
                           วิธีที่ {compute.recommended} ประหยัดกว่า ฿{fmtInt(compute.savings)}
