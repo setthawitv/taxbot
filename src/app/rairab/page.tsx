@@ -11,7 +11,6 @@ import {
 import AppLayout from "@/components/AppLayout";
 import DateRangePicker, { presetRange, type DateRange } from "@/components/DateRangePicker";
 import CameraCapture from "@/components/CameraCapture";
-import { lsGet, lsSet } from "@/lib/storage";
 
 type Platform = "all" | "tiktok" | "shopee" | "lazada" | "manual";
 
@@ -139,12 +138,9 @@ function PlatformDonut({ byPlatform, total }: { byPlatform: Record<string, numbe
 export default function RaiRab() {
   const [userId, setUserId] = useState("");
   const [authReady,  setAuthReady]  = useState(false);
-  const [range, setRange] = useState<DateRange>(() => {
-    if (typeof window === "undefined") return presetRange("thisYear");
-    try { const s = lsGet("income_range"); if (s) { const r = JSON.parse(s); if (r?.from && r?.to) return r as DateRange; } } catch { /* ignore */ }
-    return presetRange("thisYear");
-  });
-  function pickRange(r: DateRange) { setRange(r); lsSet("income_range", JSON.stringify(r)); }
+  // Always default to "ปีนี้" (this year) on load.
+  const [range, setRange] = useState<DateRange>(() => presetRange("thisYear"));
+  function pickRange(r: DateRange) { setRange(r); }
   const rangeYear = parseInt(range.to.slice(0, 4), 10) || CURRENT_YEAR;
   const [platform,   setPlatform]   = useState<Platform>("all");
   const [summary,    setSummary]    = useState<Summary | null>(null);
