@@ -834,7 +834,13 @@ export default function LandingPage() {
       </section>
 
       {/* ── Footer ─────────────────────────────────────────────────────────── */}
-      <footer className="border-t border-gray-200 px-6 py-8 text-center text-gray-500 text-sm space-y-2">
+      <footer className="border-t border-gray-200 px-6 py-8 text-center text-gray-500 text-sm space-y-3">
+        <div className="flex justify-center">
+          <span className="inline-flex items-center gap-2 text-xs font-semibold text-emerald-700 border border-emerald-200 bg-emerald-50 rounded-full px-3.5 py-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            TikTok Shop Partner · เชื่อมต่อผ่าน API ทางการ
+          </span>
+        </div>
         <div className="flex justify-center gap-5 text-xs">
           <Link href="/privacy" className="hover:text-gray-800 transition-colors">Privacy Policy</Link>
           <Link href="/terms" className="hover:text-gray-800 transition-colors">Terms of Service</Link>

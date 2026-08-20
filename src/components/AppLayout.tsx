@@ -134,7 +134,13 @@ export default function AppLayout({
         </nav>
 
         {/* Footer */}
-        <div className="px-4 py-4 border-t border-white/10 flex-shrink-0">
+        <div className="px-4 py-4 border-t border-white/10 flex-shrink-0 space-y-2">
+          <div className="flex justify-center">
+            <span className="inline-flex items-center gap-1.5 text-[9px] font-semibold text-emerald-300/90 border border-emerald-400/25 bg-emerald-400/5 rounded-full px-2.5 py-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              TikTok Shop Partner
+            </span>
+          </div>
           <p className="text-white/20 text-[10px] text-center">Vendee Finance · สำหรับร้านค้าออนไลน์ไทย</p>
         </div>
       </aside>
