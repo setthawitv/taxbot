@@ -271,9 +271,14 @@ function SettingsPageInner() {
   // Load the real TikTok Shop connection status + surface the OAuth return result.
   useEffect(() => {
     if (!userId) return;
-    fetch(`/api/tiktok/status?userId=${userId}`)
+    fetch(`/api/platforms/status?userId=${userId}`)
       .then((r) => r.json())
-      .then((d) => setPlatforms((prev) => ({ ...prev, tiktok: !!d.connected })))
+      .then((d) => setPlatforms((prev) => ({
+        ...prev,
+        shopee: !!d.shopee,
+        tiktok: !!d.tiktok,
+        lazada: !!d.lazada,
+      })))
       .catch(() => { /* ignore */ });
 
     const tt = searchParams.get("tiktok");
@@ -722,6 +727,11 @@ function SettingsPageInner() {
               )}
             </div>
 
+          </div>
+
+          {/* RIGHT — Platform connections + Vendor rules + Admin + Logout */}
+          <div className="space-y-4">
+
             {/* Platform API connections */}
             <div className="bg-white rounded-2xl border border-gray-200 p-5">
               <h2 className="font-semibold text-gray-700 mb-1">เชื่อมต่อแพลตฟอร์มขาย</h2>
@@ -783,10 +793,6 @@ function SettingsPageInner() {
               </p>
             </div>
 
-          </div>
-
-          {/* RIGHT — Vendor rules + Admin + Logout */}
-          <div className="space-y-4">
             <div className="bg-white rounded-2xl border border-gray-200 p-5">
               <h2 className="font-semibold text-gray-700 mb-1">รายชื่อผู้จ่าย/ผู้รับเงิน</h2>
               <p className="text-xs text-gray-400 mb-4">
