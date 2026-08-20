@@ -1,57 +1,17 @@
 import Link from "next/link";
-import {
-  VendeeLogo, IconArrowRight, IconCheck,
-  IconMusic, IconCart, IconBag, IconGoogleSheets, IconInbox, IconCard, IconSparkle, IconShield,
-} from "@/components/icons";
+import { VendeeLogo, IconArrowRight, IconCheck } from "@/components/icons";
 
 export const metadata = {
   title: "พันธมิตรและการเชื่อมต่อ · Vendee Finance",
   description: "Vendee Finance เป็น TikTok Shop Partner เชื่อมต่อร้านค้าและเครื่องมือครบวงจร",
 };
 
-type Item = {
-  Icon: React.ComponentType<{ className?: string }>;
-  name: string;
-  desc: string;
-  status: "live" | "soon";
-  tint: string;
-};
-
-const MARKETPLACES: Item[] = [
-  { Icon: IconMusic, name: "TikTok Shop", desc: "ดึงออเดอร์ สินค้า/สต็อก และยอดเงินเข้าจริง ผ่าน API ทางการ", status: "live", tint: "bg-gray-900 text-white" },
-  { Icon: IconCart,  name: "Shopee",      desc: "ซิงค์คำสั่งซื้อและสต็อกอัตโนมัติ", status: "soon", tint: "bg-orange-500 text-white" },
-  { Icon: IconBag,   name: "Lazada",      desc: "ซิงค์คำสั่งซื้อและสต็อกอัตโนมัติ", status: "soon", tint: "bg-blue-600 text-white" },
+const TOOLS: { name: string; desc: string }[] = [
+  { name: "Google Sheets",   desc: "ซิงค์รายรับรายจ่ายเป็นสเปรดชีตของคุณเอง" },
+  { name: "LINE OA",         desc: "แจ้งเตือน สแกนสลิป และดูยอดผ่าน LINE" },
+  { name: "Beam (PromptPay)", desc: "รับชำระเงินและอัปเกรดแพ็กเกจผ่าน QR" },
+  { name: "AI อ่านใบเสร็จ",   desc: "อ่านสลิป/ใบเสร็จอัตโนมัติด้วย AI" },
 ];
-
-const TOOLS: Item[] = [
-  { Icon: IconGoogleSheets, name: "Google Sheets", desc: "ซิงค์รายรับรายจ่ายเป็นสเปรดชีตของคุณเอง", status: "live", tint: "bg-emerald-600 text-white" },
-  { Icon: IconInbox,        name: "LINE OA",        desc: "แจ้งเตือน สแกนสลิป และดูยอดผ่าน LINE", status: "live", tint: "bg-green-500 text-white" },
-  { Icon: IconCard,         name: "Beam (PromptPay)", desc: "รับชำระเงินและอัปเกรดแพ็กเกจผ่าน QR", status: "live", tint: "bg-violet-600 text-white" },
-  { Icon: IconSparkle,      name: "AI อ่านใบเสร็จ",  desc: "อ่านสลิป/ใบเสร็จอัตโนมัติด้วย AI", status: "live", tint: "bg-cyan-600 text-white" },
-];
-
-function Card({ it }: { it: Item }) {
-  return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all">
-      <div className="flex items-start gap-3">
-        <span className={`inline-flex items-center justify-center w-11 h-11 rounded-xl flex-shrink-0 ${it.tint}`}>
-          <it.Icon className="w-6 h-6" />
-        </span>
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <p className="font-bold text-gray-900">{it.name}</p>
-            {it.status === "live" ? (
-              <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">เชื่อมต่อแล้ว</span>
-            ) : (
-              <span className="text-[10px] font-semibold text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">เร็วๆ นี้</span>
-            )}
-          </div>
-          <p className="text-sm text-gray-500 mt-1 leading-relaxed">{it.desc}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function PartnerPage() {
   return (
@@ -69,7 +29,7 @@ export default function PartnerPage() {
       </nav>
 
       {/* Hero */}
-      <section className="px-6 pt-12 pb-14 max-w-4xl mx-auto text-center">
+      <section className="px-6 pt-12 pb-14 max-w-3xl mx-auto text-center">
         <div className="inline-flex items-center gap-2 bg-emerald-500 text-white text-xs font-bold px-3.5 py-1.5 rounded-full mb-6">
           <span className="w-2 h-2 rounded-full bg-white" /> TikTok Shop Partner
         </div>
@@ -86,45 +46,70 @@ export default function PartnerPage() {
         </p>
       </section>
 
-      {/* Marketplaces */}
-      <section className="px-6 pb-12 max-w-5xl mx-auto">
+      {/* Marketplace — TikTok Shop (featured, text-forward) */}
+      <section className="px-6 pb-12 max-w-4xl mx-auto">
         <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wide mb-4">แพลตฟอร์มการขาย</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {MARKETPLACES.map((it) => <Card key={it.name} it={it} />)}
-        </div>
-      </section>
-
-      {/* Tools */}
-      <section className="px-6 pb-16 max-w-5xl mx-auto">
-        <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wide mb-4">เครื่องมือที่เชื่อมต่อ</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {TOOLS.map((it) => <Card key={it.name} it={it} />)}
-        </div>
-      </section>
-
-      {/* Why */}
-      <section className="px-6 pb-16 max-w-5xl mx-auto">
-        <div className="bg-white border border-gray-200 rounded-2xl p-6 sm:p-8">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div className="bg-white border border-gray-200 rounded-2xl p-6 sm:p-8 shadow-sm">
+          <div className="flex flex-wrap items-center gap-2.5 mb-3">
+            <p className="text-2xl font-extrabold text-[#0A192F]">TikTok Shop</p>
+            <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-1">เชื่อมต่อแล้ว</span>
+            <span className="text-[11px] font-semibold text-gray-500 bg-gray-100 rounded-full px-2.5 py-1">เผยแพร่บน Service Market</span>
+          </div>
+          <p className="text-sm text-gray-500 leading-relaxed mb-5">
+            Vendee Finance เชื่อมต่อ TikTok Shop ผ่าน API ทางการ (TikTok Shop Partner Center) —
+            ดึงข้อมูลเข้าระบบให้อัตโนมัติ ไม่ต้องกรอกมือ
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2.5">
             {[
-              { Icon: IconCheck,  t: "ผ่าน API ทางการ", d: "ข้อมูลตรงจากแพลตฟอร์ม ไม่ต้องกรอกมือ" },
-              { Icon: IconShield, t: "ปลอดภัย เชื่อมเมื่อคุณอนุญาต", d: "เข้าถึงเฉพาะเมื่อคุณกดยินยอม ถอนสิทธิ์ได้ทุกเมื่อ" },
-              { Icon: IconSparkle, t: "อัตโนมัติทั้งหมด", d: "รายรับ ค่าธรรมเนียม สต็อก และภาษี คำนวณให้เอง" },
-            ].map((b) => (
-              <div key={b.t} className="text-center">
-                <span className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 mb-3">
-                  <b.Icon className="w-6 h-6" />
-                </span>
-                <p className="font-bold text-gray-900">{b.t}</p>
-                <p className="text-sm text-gray-500 mt-1 leading-relaxed">{b.d}</p>
+              "ออเดอร์ → รายรับอัตโนมัติ",
+              "สินค้า/สต็อก แบบเรียลไทม์",
+              "ค่าธรรมเนียม (GP) รายออเดอร์",
+              "ยอดเงินเข้าจริงหลังหักค่าธรรมเนียม",
+            ].map((f) => (
+              <div key={f} className="flex items-center gap-2 text-sm text-gray-700">
+                <IconCheck className="w-4 h-4 text-emerald-500 flex-shrink-0" /> {f}
               </div>
             ))}
           </div>
         </div>
       </section>
 
+      {/* Tools — clean rows, no icons */}
+      <section className="px-6 pb-16 max-w-4xl mx-auto">
+        <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wide mb-4">เครื่องมือที่เชื่อมต่อ</h2>
+        <div className="bg-white border border-gray-200 rounded-2xl divide-y divide-gray-100 overflow-hidden">
+          {TOOLS.map((t) => (
+            <div key={t.name} className="flex items-center justify-between gap-4 px-5 py-4">
+              <div className="min-w-0">
+                <p className="font-semibold text-gray-900">{t.name}</p>
+                <p className="text-sm text-gray-500 mt-0.5">{t.desc}</p>
+              </div>
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 flex-shrink-0">
+                <IconCheck className="w-4 h-4 text-emerald-500" /> เชื่อมต่อแล้ว
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Why */}
+      <section className="px-6 pb-16 max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[
+            { t: "ผ่าน API ทางการ", d: "ข้อมูลตรงจากแพลตฟอร์ม ไม่ต้องกรอกมือ" },
+            { t: "เชื่อมเมื่อคุณอนุญาต", d: "เข้าถึงเฉพาะเมื่อคุณกดยินยอม ถอนสิทธิ์ได้ทุกเมื่อ" },
+            { t: "อัตโนมัติทั้งหมด", d: "รายรับ ค่าธรรมเนียม สต็อก และภาษี คำนวณให้เอง" },
+          ].map((b) => (
+            <div key={b.t} className="bg-white border border-gray-200 rounded-2xl p-5">
+              <p className="font-bold text-gray-900">{b.t}</p>
+              <p className="text-sm text-gray-500 mt-1.5 leading-relaxed">{b.d}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* CTA banner */}
-      <section className="px-6 pb-16 max-w-5xl mx-auto">
+      <section className="px-6 pb-16 max-w-4xl mx-auto">
         <div className="rounded-3xl bg-gradient-to-br from-emerald-500 to-cyan-500 p-8 sm:p-12 shadow-lg shadow-emerald-500/20 relative overflow-hidden">
           <div className="absolute -right-10 -top-10 w-48 h-48 rounded-full bg-white/10" aria-hidden />
           <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-6">
