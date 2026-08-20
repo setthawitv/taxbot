@@ -89,6 +89,25 @@ export async function GET(req: NextRequest) {
   if (txRes.error) return NextResponse.json({ error: txRes.error.message }, { status: 500 });
   if (poRes.error) return NextResponse.json({ error: poRes.error.message }, { status: 500 });
 
+  // Per-order settlement (net after fees) keyed by order_id.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const orderIds = [...new Set((poRes.data ?? []).map((o: any) => o.order_id).filter(Boolean))];
+  const settleMap: Record<string, { net: number; fee: number; gross: number }> = {};
+  if (orderIds.length) {
+    const { data: os } = await supabaseAdmin
+      .from("order_settlements")
+      .select("order_id, net_amount, fee_amount, gross_amount")
+      .eq("user_id", userId)
+      .in("order_id", orderIds);
+    for (const s of os ?? []) {
+      settleMap[String(s.order_id)] = {
+        net: Number(s.net_amount ?? 0),
+        fee: Number(s.fee_amount ?? 0),
+        gross: Number(s.gross_amount ?? 0),
+      };
+    }
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const platformTxns = (poRes.data ?? []).map((o: any) => ({
     id:               o.id,
@@ -100,6 +119,8 @@ export async function GET(req: NextRequest) {
     created_at:       o.imported_at,
     source:           o.platform,
     order_id:         o.order_id,
+    order_net:        settleMap[o.order_id]?.net ?? null,
+    order_fee:        settleMap[o.order_id]?.fee ?? null,
   }));
 
   const all = [...(txRes.data ?? []), ...platformTxns].sort(

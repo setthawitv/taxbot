@@ -113,6 +113,45 @@ async function run(req: NextRequest) {
       synced += chunk.length;
     }
 
+    // Per-order settlements (statement_transactions) → order_settlements.
+    const orderRows: Record<string, unknown>[] = [];
+    const statementIds = [...new Set(rows.map((r) => String(r.statement_id)).filter(Boolean))];
+    for (const sid of statementIds) {
+      let tok = "";
+      for (let p = 0; p < 20; p++) {
+        const q: Record<string, string | number> = { page_size: 50, sort_field: "order_create_time" };
+        if (tok) q.page_token = tok;
+        const tj: Any = await tiktokRequest("GET", `/finance/${usedVer}/statements/${sid}/statement_transactions`, accessToken, shopCipher, { query: q });
+        if (tj.code !== 0) break;
+        for (const t of (tj.data?.statement_transactions ?? []) as Any[]) {
+          if (!t.order_id) continue;
+          orderRows.push({
+            user_id: userId,
+            platform: "tiktok",
+            order_id: String(t.order_id),
+            currency: t.currency ?? null,
+            gross_amount: num(t.gross_sales_amount),
+            fee_amount: num(t.fee_amount),
+            adjustment_amount: num(t.adjustment_amount),
+            net_amount: num(t.settlement_amount),
+            order_time: t.order_create_time ? new Date(Number(t.order_create_time) * 1000).toISOString() : null,
+            statement_id: sid,
+            synced_at: new Date().toISOString(),
+          });
+        }
+        tok = tj.data?.next_page_token ?? "";
+        if (!tok) break;
+      }
+    }
+    let orderSettled = 0;
+    for (let i = 0; i < orderRows.length; i += 100) {
+      const chunk = orderRows.slice(i, i + 100);
+      const { error: oErr } = await supabaseAdmin
+        .from("order_settlements")
+        .upsert(chunk, { onConflict: "user_id,platform,order_id" });
+      if (!oErr) orderSettled += chunk.length;
+    }
+
     const totals = rows.reduce<{ revenue: number; fee: number; adjustment: number; net: number }>(
       (a, r) => ({
         revenue: a.revenue + num(r.revenue_amount),
@@ -123,7 +162,7 @@ async function run(req: NextRequest) {
       { revenue: 0, fee: 0, adjustment: 0, net: 0 }
     );
 
-    return NextResponse.json({ ok: true, shop: conn.shop_name, ver: usedVer, days, statements: synced, totals });
+    return NextResponse.json({ ok: true, shop: conn.shop_name, ver: usedVer, days, statements: synced, orders_settled: orderSettled, totals });
   } catch (e) {
     return NextResponse.json({ ok: false, error: (e as Error).message }, { status: 500 });
   }

@@ -40,6 +40,9 @@ type TxnRow = {
   description?: string;
   transaction_date: string;
   source?: string;
+  order_id?: string;
+  order_net?: number | null;
+  order_fee?: number | null;
 };
 
 const PLATFORM_OPTIONS: { id: Platform; label: string; emoji: string; color: string }[] = [
@@ -724,7 +727,8 @@ export default function RaiRab() {
                       <th className="text-left px-5 py-2.5">วันที่ / เวลา</th>
                       <th className="text-left px-3 py-2.5">รายละเอียดรายการ</th>
                       <th className="text-left px-3 py-2.5 hidden sm:table-cell">แพลตฟอร์ม</th>
-                      <th className="text-right px-3 py-2.5">จำนวนเงิน</th>
+                      <th className="text-right px-3 py-2.5">ยอดขาย</th>
+                      <th className="text-right px-3 py-2.5 hidden sm:table-cell">เข้าจริง</th>
                       <th className="text-left px-3 py-2.5 hidden md:table-cell">สถานะ</th>
                     </tr>
                   </thead>
@@ -744,6 +748,9 @@ export default function RaiRab() {
                             {t.description && t.description !== t.vendor && (
                               <p className="text-gray-400 truncate max-w-[180px]">{t.description}</p>
                             )}
+                            {t.order_id && (
+                              <p className="text-[10px] text-gray-300 truncate max-w-[180px]">Order #{t.order_id}</p>
+                            )}
                           </td>
                           <td className="px-3 py-3 hidden sm:table-cell">
                             <span className="px-2.5 py-1 rounded-full text-[10px] font-semibold text-white"
@@ -753,6 +760,22 @@ export default function RaiRab() {
                             <span className={`font-bold ${positive ? "text-[#0A192F]" : "text-rose-500"}`}>
                               {positive ? "" : "-"}฿{Math.abs(Number(t.amount)).toLocaleString("th-TH", { minimumFractionDigits: 2 })}
                             </span>
+                          </td>
+                          <td className="px-3 py-3 text-right whitespace-nowrap hidden sm:table-cell">
+                            {t.order_net != null ? (
+                              <>
+                                <span className="font-bold text-emerald-600">
+                                  ฿{Number(t.order_net).toLocaleString("th-TH", { minimumFractionDigits: 2 })}
+                                </span>
+                                {t.order_fee != null && Number(t.order_fee) !== 0 && (
+                                  <p className="text-[10px] text-rose-400">
+                                    − ฿{Math.abs(Number(t.order_fee)).toLocaleString("th-TH", { minimumFractionDigits: 2 })}
+                                  </p>
+                                )}
+                              </>
+                            ) : (
+                              <span className="text-gray-300">—</span>
+                            )}
                           </td>
                           <td className="px-3 py-3 hidden md:table-cell">
                             {positive ? (
