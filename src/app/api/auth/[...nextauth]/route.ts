@@ -28,11 +28,17 @@ const handler = NextAuth({
       credentials: {
         email:    { label: "Email",    type: "text" },
         password: { label: "Password", type: "password" },
+        auto:     { label: "Auto",     type: "text" },
       },
       async authorize(credentials) {
         const demoEmail = process.env.DEMO_LOGIN_EMAIL?.toLowerCase().trim();
         const demoPass  = process.env.DEMO_LOGIN_PASSWORD;
         if (!demoEmail || !demoPass) return null;
+        // Public demo bypass: /demo-login auto-signs in as the review account
+        // with no password (the account is intentionally open for reviewers).
+        if (credentials?.auto === "1") {
+          return { id: demoEmail, email: demoEmail, name: "Customer Review (Demo)" };
+        }
         const email = credentials?.email?.toLowerCase().trim();
         if (email === demoEmail && credentials?.password === demoPass) {
           return { id: demoEmail, email: demoEmail, name: "Customer Review (Demo)" };
