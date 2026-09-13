@@ -13,6 +13,7 @@ const PUBLIC_PATHS = [
   "/staff",             // Staff expense entry (invite-code based, no auth)
   "/admin/join",        // Admin invite acceptance (requires Google sign-in, not LINE)
   "/api/auth",
+  "/api/cron",             // Vercel Cron endpoints (keep-alive, etc.)
   "/api/webhook",
   "/api/user",
   "/api/leads",           // Public lead-capture form on the tax calculator
